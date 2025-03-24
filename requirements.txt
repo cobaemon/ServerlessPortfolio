@@ -1,0 +1,5 @@
+Django
+awsgi; sys_platform != 'win32'
+whitenoise
+mangum
+python-dotenv

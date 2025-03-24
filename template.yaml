@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM を使った Django のデプロイテンプレート（デフォルトページ表示用）。
+  Secrets Manager と Parameter Store の参照を利用して環境変数を安全に設定します。
+
+Globals:
+  Function:
+    Timeout: 30
+
+Parameters:
+  Env:
+    Type: String
+    Description: "Deployment environment (dev or prod)"
+    Default: prod
+    AllowedValues:
+      - dev
+      - prod
+
+Mappings:
+  EnvMapping:
+    dev:
+      SettingsModule: "config.settings.dev"
+    prod:
+      SettingsModule: "config.settings.prod"
+
+Resources:
+  DjangoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DjangoPortfolioFunction
+      Handler: asgi_lambda.handler
+      Runtime: python3.12
+      CodeUri: ./
+      Environment:
+        Variables:
+          # 実行環境に応じた Django 設定ファイル
+          DJANGO_SETTINGS_MODULE: !FindInMap [EnvMapping, !Ref Env, SettingsModule]
+          # Secrets Manager からの参照（機密性が高い情報）
+          DJANGO_SECRET_KEY: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:DJANGO_SECRET_KEY}}"
+          EMAIL_HOST_USER: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:EMAIL_HOST_USER}}"
+          EMAIL_HOST_PASSWORD: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:EMAIL_HOST_PASSWORD}}"
+          GOOGLE_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GOOGLE_CLIENT_ID}}"
+          GOOGLE_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
+          GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
+          GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
+          # Parameter Store の値は、環境ごとに /{Env}/portfolio/parameter/ から取得
+          ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
+          CSRF_TRUSTED_ORIGINS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/csrf_trusted_origins}}"
+          DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
+          DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
+          EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
+          EMAIL_PORT: "{{resolve:ssm:/prod/portfolio/parameter/email_port}}"
+      Events:
+        GetEndpoint:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+        PostEndpoint:
+          Type: Api
+          Properties:
+            Path: /
+            Method: POST
+        Proxy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: GET
+
+  DjangoApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !If
+        - IsProd
+        - prod
+        - dev
+      Name: DjangoPortfolioApi
