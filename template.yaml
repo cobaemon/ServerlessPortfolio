@@ -1,8 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  SAM を使った Django のデプロイテンプレート（デフォルトページ表示用）。
-  Secrets Manager と Parameter Store の参照を利用して環境変数を安全に設定します。
+Description: CodePipeline for Serverless Portfolio using SAM
 
 Globals:
   Function:
@@ -16,6 +14,37 @@ Parameters:
     AllowedValues:
       - dev
       - prod
+  S3Bucket:
+    Type: String
+    Description: "The S3 bucket name for storing packaged artifacts."
+    Default: cobaemon-serverless-portfolio-prod-artifacts
+  CodePipelineName:
+    Type: String
+    Description: "The CodePipeline pipeline name."
+    Default: cobaemon-serverless-portfolio-pipeline
+  FullRepositoryId:
+    Type: String
+    Description: "The full repository ID to use with your CodeConnections connection."
+    Default: cobaemon/ServerlessPortfolio
+  BranchName:
+    Type: String
+    Description: "The branch name to use with your CodeConnections connection."
+    Default: main
+  StackName:
+    Type: String
+    Description: "The CloudFormation stack name that you want to create or update."
+    Default: cobaemon-serverless-portfolio-stack
+  TemplatePath:
+    Type: String
+    Description: "The path in your source repository to the CloudFormation template file."
+    Default: packaged.yaml
+  AllowedOrigin:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
+    Default: /portfolio/parameter/allowed_origin
+
+Conditions:
+  IsProd: !Equals [ !Ref Env, prod ]
 
 Mappings:
   EnvMapping:
@@ -34,9 +63,7 @@ Resources:
       CodeUri: ./
       Environment:
         Variables:
-          # 実行環境に応じた Django 設定ファイル
           DJANGO_SETTINGS_MODULE: !FindInMap [EnvMapping, !Ref Env, SettingsModule]
-          # Secrets Manager からの参照（機密性が高い情報）
           DJANGO_SECRET_KEY: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:DJANGO_SECRET_KEY}}"
           EMAIL_HOST_USER: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:EMAIL_HOST_USER}}"
           EMAIL_HOST_PASSWORD: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:EMAIL_HOST_PASSWORD}}"
@@ -44,9 +71,8 @@ Resources:
           GOOGLE_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
           GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
           GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
-          # Parameter Store の値は、環境ごとに /{Env}/portfolio/parameter/ から取得
           ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
-          CSRF_TRUSTED_ORIGINS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/csrf_trusted_origins}}"
+          CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
           DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
           DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
           EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
@@ -55,24 +81,316 @@ Resources:
         GetEndpoint:
           Type: Api
           Properties:
+            RestApiId: !Ref DjangoApi
             Path: /
             Method: GET
         PostEndpoint:
           Type: Api
           Properties:
+            RestApiId: !Ref DjangoApi
             Path: /
             Method: POST
-        Proxy:
+        ProxyGet:
           Type: Api
           Properties:
+            RestApiId: !Ref DjangoApi
             Path: /{proxy+}
             Method: GET
-
+        ProxyPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DjangoApi
+            Path: /{proxy+}
+            Method: POST
+        ProxyOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DjangoApi
+            Path: /{proxy+}
+            Method: OPTIONS
+  
   DjangoApi:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: !If
-        - IsProd
-        - prod
-        - dev
+      StageName: !If [IsProd, prod, dev]
       Name: DjangoPortfolioApi
+      Cors:
+        AllowOrigin: !Ref AllowedOrigin
+        # OPTIONS メソッドは、CORS（クロスオリジンリソースシェアリング）のプリフライトリクエスト用
+        AllowMethods: "'GET,POST,OPTIONS'"
+
+  # CodePipeline 用 S3 バケット（アーティファクト保存用）
+  PipelineArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3Bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # CodeBuild 用 IAM ロール（最小限の権限）
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${CodePipelineName}-CodeBuildRole"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # 指定の S3 バケットへのアクセス（パラメータ化）
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${S3Bucket}"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+  # CodePipeline 用 IAM ロール（最小限の権限）
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${CodePipelineName}-ServiceRole"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodePipelineMinimalAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # S3 バケットへのアクセス
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub "arn:aws:s3:::${S3Bucket}"
+                  - !Sub "arn:aws:s3:::${S3Bucket}/*"
+              # CodeBuild プロジェクトの起動
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: !GetAtt CodeBuildProject.Arn
+              # CloudFormation の操作（対象リソースの絞り込みが難しいため必要最小限のアクションのみ）
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:ValidateTemplate
+                Resource: "*"
+
+  # CodeBuild プロジェクト
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${CodePipelineName}-Build"
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:6.0
+        Type: LINUX_CONTAINER
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ENV
+            Value: !Ref Env
+      Source:
+        Type: CODEPIPELINE
+      Artifacts:
+        Type: CODEPIPELINE
+      BuildSpec: |
+        version: 0.2
+        phases:
+          install:
+            runtime-versions:
+              python: 3.12
+            commands:
+              - echo "Installing dependencies..."
+              - pip install --upgrade pip
+              - pip install -r requirements.txt
+              - pip install aws-sam-cli
+          pre_build:
+            commands:
+              - echo "Preparing SAM build..."
+          build:
+            commands:
+              - echo "Running sam build..."
+              - sam build --use-container
+          post_build:
+            commands:
+              - echo "Running sam package..."
+              - sam package --output-template-file packaged.yaml --s3-bucket !Ref S3Bucket
+        artifacts:
+          type: zip
+          files:
+            - packaged.yaml
+
+  # CodePipeline の定義
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Ref CodePipelineName
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref S3Bucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: CodeConnectionsSource
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: "arn:aws:codeconnections:ap-northeast-1:864454139429:connection/fcbb3ce3-d1c2-4b93-89e5-ac0f45ae943f"
+                FullRepositoryId: !Ref FullRepositoryId
+                BranchName: !Ref BranchName
+              OutputArtifacts:
+                - Name: SourceOutput
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: CodeBuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              RunOrder: 1
+        - Name: Deploy
+          Actions:
+            - Name: CloudFormationDeploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              InputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
+                StackName: !Ref StackName
+                TemplatePath: !Sub "BuildOutput::${TemplatePath}"
+                OutputFileName: output.json
+              RunOrder: 1
+
+  # WAF の WebACL 定義
+  WAFWebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: DjangoPortfolioWebACL
+      Scope: REGIONAL
+      DefaultAction:
+        Allow: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: DjangoPortfolioWebACL
+      Rules:
+        - Name: AWSManagedRulesCommonRuleSet
+          Priority: 0
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesCommonRuleSet
+        - Name: AWSManagedRulesSQLiRuleSet
+          Priority: 1
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesSQLiRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesSQLiRuleSet
+        - Name: AWSManagedRulesKnownBadInputsRuleSet
+          Priority: 2
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesKnownBadInputsRuleSet
+        - Name: AWSManagedRulesAmazonIpReputationList
+          Priority: 3
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAmazonIpReputationList
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesAmazonIpReputationList
+        - Name: AWSManagedRulesBotControlRuleSet
+          Priority: 4
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesBotControlRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesBotControlRuleSet
+
+  # WAF の WebACL を API Gateway に関連付けるリソース
+  WAFWebACLAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      WebACLArn: !GetAtt WAFWebACL.Arn
+      ResourceArn: !If 
+        - IsProd
+        - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/prod"
+        - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/dev"
+
+Outputs:
+  ApiUrl:
+    Description: "The URL of the API Gateway"
+    Value: !Ref DjangoApi
+  PipelineName:
+    Description: "The name of the created CodePipeline."
+    Value: !Ref CodePipeline
