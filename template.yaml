@@ -57,7 +57,7 @@ Resources:
   DjangoFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: DjangoPortfolioFunction
+      FunctionName: CobaemonServerlessPortfolioFunction
       Handler: asgi_lambda.handler
       Runtime: python3.12
       CodeUri: ./
@@ -108,16 +108,30 @@ Resources:
             RestApiId: !Ref DjangoApi
             Path: /{proxy+}
             Method: OPTIONS
+    Tags:
+      - Key: env
+        Value: !Ref Env
+      - Key: app
+        Value: portfolio
+      - Key: service
+        Value: lambda
   
   DjangoApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !If [IsProd, prod, dev]
-      Name: DjangoPortfolioApi
+      Name: CobaemonServerlessPortfolioApi
       Cors:
-        AllowOrigin: !Ref AllowedOrigin
+        AllowOrigin: !Sub "'${AllowedOrigin}'"
         # OPTIONS メソッドは、CORS（クロスオリジンリソースシェアリング）のプリフライトリクエスト用
         AllowMethods: "'GET,POST,OPTIONS'"
+      # Tags:
+      #   - Key: env
+      #     Value: !Ref Env
+      #   - Key: app
+      #     Value: portfolio
+      #   - Key: service
+      #     Value: api
 
   # CodePipeline 用 S3 バケット（アーティファクト保存用）
   PipelineArtifactsBucket:
@@ -129,6 +143,13 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: s3
 
   # CodeBuild 用 IAM ロール（最小限の権限）
   CodeBuildServiceRole:
@@ -157,6 +178,13 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                 Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: role
 
   # CodePipeline 用 IAM ロール（最小限の権限）
   CodePipelineServiceRole:
@@ -199,6 +227,13 @@ Resources:
                   - cloudformation:DescribeStackResources
                   - cloudformation:ValidateTemplate
                 Resource: "*"
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: role
 
   # CodeBuild プロジェクト
   CodeBuildProject:
@@ -218,32 +253,39 @@ Resources:
         Type: CODEPIPELINE
       Artifacts:
         Type: CODEPIPELINE
-      BuildSpec: |
-        version: 0.2
-        phases:
-          install:
-            runtime-versions:
-              python: 3.12
-            commands:
-              - echo "Installing dependencies..."
-              - pip install --upgrade pip
-              - pip install -r requirements.txt
-              - pip install aws-sam-cli
-          pre_build:
-            commands:
-              - echo "Preparing SAM build..."
-          build:
-            commands:
-              - echo "Running sam build..."
-              - sam build --use-container
-          post_build:
-            commands:
-              - echo "Running sam package..."
-              - sam package --output-template-file packaged.yaml --s3-bucket !Ref S3Bucket
-        artifacts:
-          type: zip
-          files:
-            - packaged.yaml
+      # BuildSpec: |
+      #   version: 0.2
+      #   phases:
+      #     install:
+      #       runtime-versions:
+      #         python: 3.12
+      #       commands:
+      #         - echo "Installing dependencies..."
+      #         - pip install --upgrade pip
+      #         - pip install -r requirements.txt
+      #         - pip install aws-sam-cli
+      #     pre_build:
+      #       commands:
+      #         - echo "Preparing SAM build..."
+      #     build:
+      #       commands:
+      #         - echo "Running sam build..."
+      #         - sam build --use-container
+      #     post_build:
+      #       commands:
+      #         - echo "Running sam package..."
+      #         - sam package --output-template-file packaged.yaml --s3-bucket !Ref S3Bucket
+      #   artifacts:
+      #     type: zip
+      #     files:
+      #       - packaged.yaml
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: codebuild
 
   # CodePipeline の定義
   CodePipeline:
@@ -302,12 +344,19 @@ Resources:
                 TemplatePath: !Sub "BuildOutput::${TemplatePath}"
                 OutputFileName: output.json
               RunOrder: 1
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: codepipeline
 
   # WAF の WebACL 定義
   WAFWebACL:
     Type: AWS::WAFv2::WebACL
     Properties:
-      Name: DjangoPortfolioWebACL
+      Name: CobaemonServerlessPortfolioWebACL
       Scope: REGIONAL
       DefaultAction:
         Allow: {}
@@ -376,6 +425,13 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: AWSManagedRulesBotControlRuleSet
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: waf
 
   # WAF の WebACL を API Gateway に関連付けるリソース
   WAFWebACLAssociation:

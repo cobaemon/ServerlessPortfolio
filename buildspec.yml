@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - echo "Installing dependencies..."
+      - pip install --upgrade pip
+      - pip install -r requirements.txt
+      - pip install aws-sam-cli
+  pre_build:
+    commands:
+      - echo "Preparing SAM build..."
+  build:
+    commands:
+      - echo "Running sam build..."
+      - sam build --use-container
+  post_build:
+    commands:
+      - echo "Running sam package..."
+      - sam package --output-template-file packaged.yaml --s3-bucket $S3Bucket
+
+artifacts:
+  type: zip
+  files:
+    - packaged.yaml
