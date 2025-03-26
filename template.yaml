@@ -39,7 +39,7 @@ Parameters:
     Description: "The path in your source repository to the CloudFormation template file."
     Default: packaged.yaml
   AllowedOrigin:
-    Type: AWS::SSM::Parameter::Value<String>
+    Type: AWS::SSM::Parameter::Value<StringList>
     Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
     Default: /prod/portfolio/parameter/csrf_trusted_origins
 

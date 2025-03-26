@@ -6,6 +6,6 @@ s3_prefix = "CobaemonServerlessPortfolio"
 region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM"
 disable_rollback = true
-parameter_overrides = "Env=\"prod\" S3Bucket=\"cobaemon-serverless-portfolio-prod-artifacts\" CodePipelineName=\"cobaemon-serverless-portfolio-pipeline\" FullRepositoryId=\"cobaemon/ServerlessPortfolio\" BranchName=\"main\" StackName=\"cobaemon-serverless-portfolio-stack\" TemplatePath=\"packaged.yaml\" AllowedOrigin=\"/portfolio/parameter/allowed_origin\""
+parameter_overrides = "Env=\"prod\" S3Bucket=\"cobaemon-serverless-portfolio-prod-artifacts\" CodePipelineName=\"cobaemon-serverless-portfolio-pipeline\" FullRepositoryId=\"cobaemon/ServerlessPortfolio\" BranchName=\"main\" StackName=\"cobaemon-serverless-portfolio-stack\" TemplatePath=\"packaged.yaml\" AllowedOrigin=\"/prod/portfolio/parameter/csrf_trusted_origins\""
 image_repositories = []
 profile = "aws_portfolio_profile"
