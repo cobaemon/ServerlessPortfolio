@@ -41,7 +41,7 @@ Parameters:
   AllowedOrigin:
     Type: AWS::SSM::Parameter::Value<String>
     Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
-    Default: /portfolio/parameter/allowed_origin
+    Default: /prod/portfolio/parameter/csrf_trusted_origins
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
