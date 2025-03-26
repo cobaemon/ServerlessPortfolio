@@ -72,7 +72,7 @@ Resources:
           GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
           GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
           ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
-          CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
+          CSRF_TRUSTED_ORIGINS: !Join [ ",", !Ref AllowedOrigin ]
           DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
           DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
           EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
@@ -122,7 +122,7 @@ Resources:
       StageName: !If [IsProd, prod, dev]
       Name: CobaemonServerlessPortfolioApi
       Cors:
-        AllowOrigin: !Sub "'${AllowedOrigin}'"
+        AllowOrigin: !Join [ ",", !Ref AllowedOrigin ]
         AllowMethods: "'GET,POST,OPTIONS'"
       # Tags:
       #   - Key: env
