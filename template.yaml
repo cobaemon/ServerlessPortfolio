@@ -123,7 +123,6 @@ Resources:
       Name: CobaemonServerlessPortfolioApi
       Cors:
         AllowOrigin: !Sub "'${AllowedOrigin}'"
-        # OPTIONS メソッドは、CORS（クロスオリジンリソースシェアリング）のプリフライトリクエスト用
         AllowMethods: "'GET,POST,OPTIONS'"
       # Tags:
       #   - Key: env
@@ -133,7 +132,6 @@ Resources:
       #   - Key: service
       #     Value: api
 
-  # CodePipeline 用 S3 バケット（アーティファクト保存用）
   PipelineArtifactsBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -151,7 +149,6 @@ Resources:
         - Key: service
           Value: s3
 
-  # CodeBuild 用 IAM ロール（最小限の権限）
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -168,7 +165,6 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # 指定の S3 バケットへのアクセス（パラメータ化）
               - Effect: Allow
                 Action:
                   - s3:ListBucket
@@ -186,7 +182,6 @@ Resources:
         - Key: service
           Value: role
 
-  # CodePipeline 用 IAM ロール（最小限の権限）
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -203,7 +198,6 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # S3 バケットへのアクセス
               - Effect: Allow
                 Action:
                   - s3:ListBucket
@@ -212,13 +206,11 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:s3:::${S3Bucket}"
                   - !Sub "arn:aws:s3:::${S3Bucket}/*"
-              # CodeBuild プロジェクトの起動
               - Effect: Allow
                 Action:
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuilds
                 Resource: !GetAtt CodeBuildProject.Arn
-              # CloudFormation の操作（対象リソースの絞り込みが難しいため必要最小限のアクションのみ）
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack
@@ -235,7 +227,6 @@ Resources:
         - Key: service
           Value: role
 
-  # CodeBuild プロジェクト
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -287,7 +278,6 @@ Resources:
         - Key: service
           Value: codebuild
 
-  # CodePipeline の定義
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -352,7 +342,6 @@ Resources:
         - Key: service
           Value: codepipeline
 
-  # WAF の WebACL 定義
   WAFWebACL:
     Type: AWS::WAFv2::WebACL
     Properties:
@@ -433,7 +422,6 @@ Resources:
         - Key: service
           Value: waf
 
-  # WAF の WebACL を API Gateway に関連付けるリソース
   WAFWebACLAssociation:
     Type: AWS::WAFv2::WebACLAssociation
     Properties:
