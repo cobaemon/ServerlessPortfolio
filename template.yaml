@@ -245,6 +245,8 @@ Resources:
         EnvironmentVariables:
           - Name: ENV
             Value: !Ref Env
+          - Name: S3Bucket
+            Value: !Ref S3Bucket
       Source:
         Type: CODEPIPELINE
       Artifacts:
