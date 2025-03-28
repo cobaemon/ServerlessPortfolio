@@ -426,6 +426,7 @@ Resources:
 
   WAFWebACLAssociation:
     Type: AWS::WAFv2::WebACLAssociation
+    DependsOn: DjangoApiStage
     Properties:
       WebACLArn: !GetAtt WAFWebACL.Arn
       ResourceArn: !If 
