@@ -43,7 +43,7 @@ Parameters:
     Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
     Default: /prod/portfolio/parameter/csrf_trusted_origins
   AllowedHosts:
-    Type: AWS::SSM::Parameter::Value<StringList>
+    Type: AWS::SSM::Parameter::Value<String>
     Default: /prod/portfolio/parameter/allowed_hosts
 
 Conditions:
