@@ -333,7 +333,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
-                TemplatePath: !Sub "BuildOutput::${TemplatePath}"
+                TemplatePath: !Join ["", ["BuildOutput::", !Ref TemplatePath]]
                 OutputFileName: output.json
               RunOrder: 1
       Tags:
