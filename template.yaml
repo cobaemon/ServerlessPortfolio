@@ -122,7 +122,7 @@ Resources:
       StageName: !If [IsProd, prod, dev]
       Name: CobaemonServerlessPortfolioApi
       Cors:
-        AllowOrigin: !Join [ ",", !Ref AllowedOrigin ]
+        AllowOrigin: !Ref AllowedOrigin
         AllowMethods: "'GET,POST,OPTIONS'"
       # Tags:
       #   - Key: env
