@@ -42,6 +42,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
     Default: /prod/portfolio/parameter/csrf_trusted_origins
+  AllowedHosts:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /prod/portfolio/parameter/allowed_hosts
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
@@ -71,7 +74,7 @@ Resources:
           GOOGLE_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
           GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
           GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
-          ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
+          ALLOWED_HOSTS: !Ref AllowedHosts
           CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
           DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
           DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
