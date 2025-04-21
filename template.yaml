@@ -149,6 +149,17 @@ Resources:
       DomainName: !Ref AllowedHosts
       ValidationMethod: DNS
 
+CertificateValidationRecord:
+  Type: AWS::Route53::RecordSet
+  Properties:
+    HostedZoneId: !Ref HostedZoneId
+    # DomainValidationOptions はリストなので、最初の要素を取る想定
+    Name: !Select [ 0, !GetAtt ApiCertificate.DomainValidationOptions ]
+    Type: !Select [ 1, !GetAtt ApiCertificate.DomainValidationOptions ]
+    TTL: 300
+    ResourceRecords:
+      - !Select [ 2, !GetAtt ApiCertificate.DomainValidationOptions ]
+
   ApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
     Properties:
