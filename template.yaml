@@ -45,6 +45,10 @@ Parameters:
   AllowedHosts:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /prod/portfolio/parameter/allowed_hosts
+  HostedZoneId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /portfolio/parameter/hostzoneid
+    Description: "Route53 Hosted Zone ID for custom domain"
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
@@ -139,24 +143,38 @@ Resources:
         AllowOrigin: !Sub "'${AllowedOrigin}'"
         AllowMethods: "'GET,POST,OPTIONS'"
 
-  # PipelineArtifactsBucket:
-  #   Type: AWS::S3::Bucket
-  #   DeletionPolicy: Retain
-  #   UpdateReplacePolicy: Retain
-  #   Properties:
-  #     BucketName: !Ref S3Bucket
-  #     PublicAccessBlockConfiguration:
-  #       BlockPublicAcls: true
-  #       BlockPublicPolicy: true
-  #       IgnorePublicAcls: true
-  #       RestrictPublicBuckets: true
-  #     Tags:
-  #       - Key: env
-  #         Value: !Ref Env
-  #       - Key: app
-  #         Value: portfolio
-  #       - Key: service
-  #         Value: s3
+  ApiCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref AllowedHosts
+      ValidationMethod: DNS
+
+  ApiGatewayCustomDomain:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: !Ref AllowedHosts
+      RegionalCertificateArn: !Ref ApiCertificate
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiGatewayBasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !Ref ApiGatewayCustomDomain
+      RestApiId: !Ref DjangoApi
+      Stage: !If [IsProd, prod, dev]
+      BasePath: ""
+
+  ApiGatewayRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: portfolio.cobaemon.com.
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
 
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
