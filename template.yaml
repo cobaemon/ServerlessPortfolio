@@ -39,7 +39,7 @@ Parameters:
     Description: "The path in your source repository to the CloudFormation template file."
     Default: packaged.yaml
   AllowedOrigin:
-    Type: AWS::SSM::Parameter::Value<List<String>>
+    Type: AWS::SSM::Parameter::Value<String>
     Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
     Default: /prod/portfolio/parameter/csrf_trusted_origins
 
@@ -72,7 +72,7 @@ Resources:
           GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
           GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
           ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
-          CSRF_TRUSTED_ORIGINS: !Join [ ",", !Ref AllowedOrigin ]
+          CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
           DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
           DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
           EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
@@ -108,6 +108,17 @@ Resources:
             RestApiId: !Ref DjangoApi
             Path: /{proxy+}
             Method: OPTIONS
+    Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: arn:aws:secretsmanager:ap-northeast-1:864454139429:secret:prod/portfolio/secret-*
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: arn:aws:ssm:ap-northeast-1:864454139429:parameter/prod/portfolio/parameter/*
     Tags:
       - Key: env
         Value: !Ref Env
@@ -122,15 +133,8 @@ Resources:
       StageName: !If [IsProd, prod, dev]
       Name: CobaemonServerlessPortfolioApi
       Cors:
-        AllowOrigin: !Join [ ",", !Ref AllowedOrigin ]
-        AllowMethods: "'GET,POST,OPTIONS'"
-      # Tags:
-      #   - Key: env
-      #     Value: !Ref Env
-      #   - Key: app
-      #     Value: portfolio
-      #   - Key: service
-      #     Value: api
+        AllowOrigin: !Ref AllowedOrigin
+        AllowMethods: GET,POST,OPTIONS
 
   PipelineArtifactsBucket:
     Type: AWS::S3::Bucket
@@ -242,36 +246,12 @@ Resources:
         EnvironmentVariables:
           - Name: ENV
             Value: !Ref Env
+          - Name: S3Bucket
+            Value: !Ref S3Bucket
       Source:
         Type: CODEPIPELINE
       Artifacts:
         Type: CODEPIPELINE
-      # BuildSpec: |
-      #   version: 0.2
-      #   phases:
-      #     install:
-      #       runtime-versions:
-      #         python: 3.12
-      #       commands:
-      #         - echo "Installing dependencies..."
-      #         - pip install --upgrade pip
-      #         - pip install -r requirements.txt
-      #         - pip install aws-sam-cli
-      #     pre_build:
-      #       commands:
-      #         - echo "Preparing SAM build..."
-      #     build:
-      #       commands:
-      #         - echo "Running sam build..."
-      #         - sam build --use-container
-      #     post_build:
-      #       commands:
-      #         - echo "Running sam package..."
-      #         - sam package --output-template-file packaged.yaml --s3-bucket !Ref S3Bucket
-      #   artifacts:
-      #     type: zip
-      #     files:
-      #       - packaged.yaml
       Tags:
         - Key: env
           Value: !Ref Env
