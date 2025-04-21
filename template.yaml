@@ -137,7 +137,7 @@ Resources:
       Name: CobaemonServerlessPortfolioApi
       Cors:
         AllowOrigin: !Ref AllowedOrigin
-        AllowMethods: GET,POST,OPTIONS
+        AllowMethods: "'GET,POST,OPTIONS'"
 
   PipelineArtifactsBucket:
     Type: AWS::S3::Bucket
