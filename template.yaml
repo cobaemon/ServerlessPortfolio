@@ -42,6 +42,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
     Default: /prod/portfolio/parameter/csrf_trusted_origins
+  AllowedHosts:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /prod/portfolio/parameter/allowed_hosts
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
@@ -313,7 +316,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
-                TemplatePath: !Sub "BuildOutput::${TemplatePath}"
+                TemplatePath: !Join ["", ["BuildOutput::", !Ref TemplatePath]]
                 OutputFileName: output.json
               RunOrder: 1
       Tags:
@@ -406,6 +409,7 @@ Resources:
 
   WAFWebACLAssociation:
     Type: AWS::WAFv2::WebACLAssociation
+    DependsOn: DjangoApiStage
     Properties:
       WebACLArn: !GetAtt WAFWebACL.Arn
       ResourceArn: !If 
