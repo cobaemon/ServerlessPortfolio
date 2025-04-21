@@ -75,7 +75,7 @@ Resources:
           GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
           GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
           ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
-          CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
+          CSRF_TRUSTED_ORIGINS: !Sub "'${AllowedOrigin}'"
           DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
           DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
           EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
@@ -136,27 +136,27 @@ Resources:
       StageName: !If [IsProd, prod, dev]
       Name: CobaemonServerlessPortfolioApi
       Cors:
-        AllowOrigin: !Ref AllowedOrigin
+        AllowOrigin: !Sub "'${AllowedOrigin}'"
         AllowMethods: "'GET,POST,OPTIONS'"
 
-  PipelineArtifactsBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      BucketName: !Ref S3Bucket
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      Tags:
-        - Key: env
-          Value: !Ref Env
-        - Key: app
-          Value: portfolio
-        - Key: service
-          Value: s3
+  # PipelineArtifactsBucket:
+  #   Type: AWS::S3::Bucket
+  #   DeletionPolicy: Retain
+  #   UpdateReplacePolicy: Retain
+  #   Properties:
+  #     BucketName: !Ref S3Bucket
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: true
+  #       BlockPublicPolicy: true
+  #       IgnorePublicAcls: true
+  #       RestrictPublicBuckets: true
+  #     Tags:
+  #       - Key: env
+  #         Value: !Ref Env
+  #       - Key: app
+  #         Value: portfolio
+  #       - Key: service
+  #         Value: s3
 
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
