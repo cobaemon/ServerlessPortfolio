@@ -152,8 +152,15 @@ Resources:
         - DomainName: !Ref AllowedHosts
           HostedZoneId: !Ref HostedZoneId
 
+  ApiGatewayServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: apigateway.amazonaws.com
+      Description: "SLR for API Gateway custom domain"
+
   ApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
+    DependsOn: ApiGatewayServiceLinkedRole
     Properties:
       DomainName: !Ref AllowedHosts
       RegionalCertificateArn: !Ref ApiCertificate
