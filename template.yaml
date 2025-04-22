@@ -148,21 +148,9 @@ Resources:
     Properties:
       DomainName: !Ref AllowedHosts
       ValidationMethod: DNS
-
-  CertificateValidationRecord:
-    Type: AWS::Route53::RecordSet
-    Metadata:
-      cfn-lint:
-        config:
-          ignore_checks:
-            - E1017
-    Properties:
-      HostedZoneId: !Ref HostedZoneId
-      Name: !Select [ 0, !GetAtt ApiCertificate.DomainValidationOptions ]
-      Type: !Select [ 1, !GetAtt ApiCertificate.DomainValidationOptions ]
-      TTL: 300
-      ResourceRecords:
-        - !Select [ 2, !GetAtt ApiCertificate.DomainValidationOptions ]
+      DomainValidationOptions:
+        - DomainName: !Ref AllowedHosts
+          HostedZoneId: !Ref HostedZoneId
 
   ApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
