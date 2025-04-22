@@ -166,6 +166,8 @@ Resources:
 
   ApiGatewayBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
+    DependsOn:
+    - DjangoApiStage
     Properties:
       DomainName: !Ref ApiGatewayCustomDomain
       RestApiId: !Ref DjangoApi
