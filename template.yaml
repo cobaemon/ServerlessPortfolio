@@ -154,7 +154,6 @@ Resources:
 
   ApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
-    DependsOn: ApiGatewayServiceLinkedRole
     Properties:
       DomainName: !Ref AllowedHosts
       RegionalCertificateArn: !Ref ApiCertificate
