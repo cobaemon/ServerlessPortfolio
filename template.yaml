@@ -49,6 +49,9 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /portfolio/parameter/hostzoneid
     Description: "Route53 Hosted Zone ID for custom domain"
+  DomainName:
+    Type: String
+    Default: serverless.portfolio.cobaemon.com
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
@@ -146,16 +149,16 @@ Resources:
   ApiCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Ref AllowedHosts
+      DomainName: !Ref DomainName
       ValidationMethod: DNS
       DomainValidationOptions:
-        - DomainName: !Ref AllowedHosts
+        - DomainName: !Ref DomainName
           HostedZoneId: !Ref HostedZoneId
 
   ApiGatewayCustomDomain:
     Type: AWS::ApiGateway::DomainName
     Properties:
-      DomainName: !Ref AllowedHosts
+      DomainName: !Ref DomainName
       RegionalCertificateArn: !Ref ApiCertificate
       EndpointConfiguration:
         Types:
@@ -173,7 +176,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Ref HostedZoneId
-      Name: portfolio.cobaemon.com.
+      Name: !Sub "${DomainName}."
       Type: A
       AliasTarget:
         DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
