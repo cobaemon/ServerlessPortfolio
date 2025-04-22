@@ -155,10 +155,9 @@ Resources:
       cfn-lint:
         config:
           ignore_checks:
-            - E1017   # DomainValidationOptions による !Select の警告を無視
+            - E1017
     Properties:
       HostedZoneId: !Ref HostedZoneId
-      # DomainValidationOptions はリストなので、最初の要素を取る想定
       Name: !Select [ 0, !GetAtt ApiCertificate.DomainValidationOptions ]
       Type: !Select [ 1, !GetAtt ApiCertificate.DomainValidationOptions ]
       TTL: 300
