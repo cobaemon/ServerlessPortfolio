@@ -359,6 +359,7 @@ Resources:
               InputArtifacts:
                 - Name: BuildOutput
               Configuration:
+                RoleArn: !GetAtt CodePipelineServiceRole.Arn
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
