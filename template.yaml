@@ -187,7 +187,7 @@ Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      # RoleName: !Sub "${CodePipelineName}-CodeBuildRole"
+      RoleName: !Sub "${CodePipelineName}-CodeBuildRole"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -235,7 +235,7 @@ Resources:
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      # RoleName: !Sub "${CodePipelineName}-ServiceRole"
+      RoleName: !Sub "${CodePipelineName}-ServiceRole"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
