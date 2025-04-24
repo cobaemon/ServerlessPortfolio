@@ -319,7 +319,7 @@ Resources:
                   - iam:DetachRolePolicy
                   - iam:DeleteRolePolicy
                 Resource:
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/${CodePipelineName}-*"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
         - PolicyName: CloudFormationACMAccess
           PolicyDocument:
             Version: '2012-10-17'
