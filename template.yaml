@@ -277,6 +277,13 @@ Resources:
                   - codestar-connections:UseConnection
                 Resource:
                   - arn:aws:codeconnections:ap-northeast-1:864454139429:connection/fcbb3ce3-d1c2-4b93-89e5-ac0f45ae943f
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                Resource: "*"
         - PolicyName: CodePipelinePassRole
           PolicyDocument:
             Version: '2012-10-17'
