@@ -269,6 +269,7 @@ Resources:
                   - cloudformation:UpdateStack
                   - cloudformation:DescribeStacks
                   - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStackEvents
                   - cloudformation:ValidateTemplate
                 Resource: "*"
               - Effect: Allow
