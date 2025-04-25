@@ -187,7 +187,7 @@ Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${CodePipelineName}-CodeBuildRole"
+      # RoleName: !Sub "${CodePipelineName}-CodeBuildRole"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -318,8 +318,8 @@ Resources:
                   - iam:AttachRolePolicy
                   - iam:DetachRolePolicy
                   - iam:DeleteRolePolicy
-                Resource:
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/${StackName}-*"
+                  - iam:GetRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
         - PolicyName: CloudFormationACMAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -329,6 +329,9 @@ Resources:
                   - acm:RequestCertificate
                   - acm:DescribeCertificate
                   - acm:DeleteCertificate
+                  - acm:AddTagsToCertificate
+                  - acm:ListTagsForCertificate
+                  - acm:RemoveTagsFromCertificate
                 Resource: "*"
       Tags:
         - Key: env
