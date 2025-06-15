@@ -247,110 +247,112 @@ Resources:
                 - codepipeline.amazonaws.com
                 - cloudformation.amazonaws.com
             Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CodePipelineMinimalAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:ListBucket
-                  - s3:GetObject
-                  - s3:PutObject
-                Resource:
-                  - !Sub "arn:aws:s3:::${S3Bucket}"
-                  - !Sub "arn:aws:s3:::${S3Bucket}/*"
-              - Effect: Allow
-                Action:
-                  - codebuild:StartBuild
-                  - codebuild:BatchGetBuilds
-                Resource: !GetAtt CodeBuildProject.Arn
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:UpdateStack
-                  - cloudformation:DescribeStacks
-                  - cloudformation:DescribeStackResources
-                  - cloudformation:DescribeStackEvents
-                  - cloudformation:ValidateTemplate
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - codestar-connections:UseConnection
-                Resource:
-                  - arn:aws:codeconnections:ap-northeast-1:864454139429:connection/fcbb3ce3-d1c2-4b93-89e5-ac0f45ae943f
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:DeleteChangeSet
-                  - cloudformation:DescribeChangeSet
-                Resource: "*"
-        - PolicyName: CodePipelinePassRole
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
-                Resource:
-                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/${CodePipelineName}-ServiceRole"
-                  - !GetAtt CodeBuildServiceRole.Arn
-        - PolicyName: CodePipelineSSMReadAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ssm:GetParameter
-                  - ssm:GetParameters
-                Resource:
-                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/prod/portfolio/parameter/*"
-                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/portfolio/parameter/*"
-        - PolicyName: CloudFormationIAMManagement
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - iam:CreateRole
-                  - iam:DeleteRole
-                  - iam:TagRole
-                  - iam:UntagRole
-                  - iam:AttachRolePolicy
-                  - iam:DetachRolePolicy
-                  - iam:DeleteRolePolicy
-                  - iam:GetRole
-                  - iam:PutRolePolicy
-                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
-        - PolicyName: CloudFormationACMAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - acm:RequestCertificate
-                  - acm:DescribeCertificate
-                  - acm:DeleteCertificate
-                  - acm:AddTagsToCertificate
-                  - acm:ListTagsForCertificate
-                  - acm:RemoveTagsFromCertificate
-                Resource: "*"
-        - PolicyName: CloudFormationWAFAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - wafv2:CreateWebACL
-                  - wafv2:GetWebACL
-                  - wafv2:UpdateWebACL
-                  - wafv2:DeleteWebACL
-                  - wafv2:TagResource      # エラーで指摘されたタグ付け権限
-                  - wafv2:UntagResource    # 念のためタグ解除権限も追加
-                  - wafv2:AssociateWebACL
-                  - wafv2:DisassociateWebACL
-                Resource: "*" # WAFはリージョンリソースなので'*'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AdministratorAccess
+      # Policies:
+      #   - PolicyName: CodePipelineMinimalAccess
+      #     PolicyDocument:
+      #       Version: '2012-10-17'
+      #       Statement:
+      #         - Effect: Allow
+      #           Action:
+      #             - s3:ListBucket
+      #             - s3:GetObject
+      #             - s3:PutObject
+      #           Resource:
+      #             - !Sub "arn:aws:s3:::${S3Bucket}"
+      #             - !Sub "arn:aws:s3:::${S3Bucket}/*"
+      #         - Effect: Allow
+      #           Action:
+      #             - codebuild:StartBuild
+      #             - codebuild:BatchGetBuilds
+      #           Resource: !GetAtt CodeBuildProject.Arn
+      #         - Effect: Allow
+      #           Action:
+      #             - cloudformation:CreateStack
+      #             - cloudformation:UpdateStack
+      #             - cloudformation:DescribeStacks
+      #             - cloudformation:DescribeStackResources
+      #             - cloudformation:DescribeStackEvents
+      #             - cloudformation:ValidateTemplate
+      #           Resource: "*"
+      #         - Effect: Allow
+      #           Action:
+      #             - codestar-connections:UseConnection
+      #           Resource:
+      #             - arn:aws:codeconnections:ap-northeast-1:864454139429:connection/fcbb3ce3-d1c2-4b93-89e5-ac0f45ae943f
+      #         - Effect: Allow
+      #           Action:
+      #             - cloudformation:CreateChangeSet
+      #             - cloudformation:ExecuteChangeSet
+      #             - cloudformation:DeleteChangeSet
+      #             - cloudformation:DescribeChangeSet
+      #           Resource: "*"
+      #   - PolicyName: CodePipelinePassRole
+      #     PolicyDocument:
+      #       Version: '2012-10-17'
+      #       Statement:
+      #         - Effect: Allow
+      #           Action:
+      #             - iam:PassRole
+      #           Resource:
+      #             - !Sub "arn:aws:iam::${AWS::AccountId}:role/${CodePipelineName}-ServiceRole"
+      #             - !GetAtt CodeBuildServiceRole.Arn
+      #   - PolicyName: CodePipelineSSMReadAccess
+      #     PolicyDocument:
+      #       Version: '2012-10-17'
+      #       Statement:
+      #         - Effect: Allow
+      #           Action:
+      #             - ssm:GetParameter
+      #             - ssm:GetParameters
+      #           Resource:
+      #             - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/prod/portfolio/parameter/*"
+      #             - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/portfolio/parameter/*"
+      #   - PolicyName: CloudFormationIAMManagement
+      #     PolicyDocument:
+      #       Version: '2012-10-17'
+      #       Statement:
+      #         - Effect: Allow
+      #           Action:
+      #             - iam:CreateRole
+      #             - iam:DeleteRole
+      #             - iam:TagRole
+      #             - iam:UntagRole
+      #             - iam:AttachRolePolicy
+      #             - iam:DetachRolePolicy
+      #             - iam:DeleteRolePolicy
+      #             - iam:GetRole
+      #             - iam:PutRolePolicy
+      #           Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+      #   - PolicyName: CloudFormationACMAccess
+      #     PolicyDocument:
+      #       Version: '2012-10-17'
+      #       Statement:
+      #         - Effect: Allow
+      #           Action:
+      #             - acm:RequestCertificate
+      #             - acm:DescribeCertificate
+      #             - acm:DeleteCertificate
+      #             - acm:AddTagsToCertificate
+      #             - acm:ListTagsForCertificate
+      #             - acm:RemoveTagsFromCertificate
+      #           Resource: "*"
+      #   - PolicyName: CloudFormationWAFAccess
+      #     PolicyDocument:
+      #       Version: '2012-10-17'
+      #       Statement:
+      #         - Effect: Allow
+      #           Action:
+      #             - wafv2:CreateWebACL
+      #             - wafv2:GetWebACL
+      #             - wafv2:UpdateWebACL
+      #             - wafv2:DeleteWebACL
+      #             - wafv2:TagResource      # エラーで指摘されたタグ付け権限
+      #             - wafv2:UntagResource    # 念のためタグ解除権限も追加
+      #             - wafv2:AssociateWebACL
+      #             - wafv2:DisassociateWebACL
+      #           Resource: "*" # WAFはリージョンリソースなので'*'
       Tags:
         - Key: env
           Value: !Ref Env
