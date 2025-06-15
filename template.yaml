@@ -119,16 +119,18 @@ Resources:
             Path: /{proxy+}
             Method: OPTIONS
     Policies:
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource: arn:aws:secretsmanager:ap-northeast-1:864454139429:secret:prod/portfolio/secret-*
-            - Effect: Allow
-              Action:
-                - ssm:GetParameter
-              Resource: arn:aws:ssm:ap-northeast-1:864454139429:parameter/prod/portfolio/parameter/*
+      - AWSLambdaBasicExecutionRole
+      - SecretsManagerReadWrite
+        # - Version: '2012-10-17'
+        #   Statement:
+        #     - Effect: Allow
+        #       Action:
+        #         - secretsmanager:GetSecretValue
+        #       Resource: arn:aws:secretsmanager:ap-northeast-1:864454139429:secret:prod/portfolio/secret-*
+        #     - Effect: Allow
+        #       Action:
+        #         - ssm:GetParameter
+        #       Resource: arn:aws:ssm:ap-northeast-1:864454139429:parameter/prod/portfolio/parameter/*
     Tags:
       - Key: env
         Value: !Ref Env
