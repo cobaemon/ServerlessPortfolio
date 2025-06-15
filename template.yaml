@@ -335,6 +335,21 @@ Resources:
                   - acm:ListTagsForCertificate
                   - acm:RemoveTagsFromCertificate
                 Resource: "*"
+        - PolicyName: CloudFormationWAFAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - wafv2:CreateWebACL
+                  - wafv2:GetWebACL
+                  - wafv2:UpdateWebACL
+                  - wafv2:DeleteWebACL
+                  - wafv2:TagResource      # エラーで指摘されたタグ付け権限
+                  - wafv2:UntagResource    # 念のためタグ解除権限も追加
+                  - wafv2:AssociateWebACL
+                  - wafv2:DisassociateWebACL
+                Resource: "*" # WAFはリージョンリソースなので'*'
       Tags:
         - Key: env
           Value: !Ref Env
