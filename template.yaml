@@ -450,95 +450,95 @@ Resources:
         - Key: service
           Value: codepipeline
 
-  WAFWebACL:
-    Type: AWS::WAFv2::WebACL
-    Properties:
-      Name: CobaemonServerlessPortfolioWebACL
-      Scope: REGIONAL
-      DefaultAction:
-        Allow: {}
-      VisibilityConfig:
-        SampledRequestsEnabled: true
-        CloudWatchMetricsEnabled: true
-        MetricName: DjangoPortfolioWebACL
-      Rules:
-        - Name: AWSManagedRulesCommonRuleSet
-          Priority: 0
-          OverrideAction:
-            None: {}
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesCommonRuleSet
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: AWSManagedRulesCommonRuleSet
-        - Name: AWSManagedRulesSQLiRuleSet
-          Priority: 1
-          OverrideAction:
-            None: {}
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesSQLiRuleSet
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: AWSManagedRulesSQLiRuleSet
-        - Name: AWSManagedRulesKnownBadInputsRuleSet
-          Priority: 2
-          OverrideAction:
-            None: {}
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesKnownBadInputsRuleSet
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: AWSManagedRulesKnownBadInputsRuleSet
-        - Name: AWSManagedRulesAmazonIpReputationList
-          Priority: 3
-          OverrideAction:
-            None: {}
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesAmazonIpReputationList
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: AWSManagedRulesAmazonIpReputationList
-        - Name: AWSManagedRulesBotControlRuleSet
-          Priority: 4
-          OverrideAction:
-            None: {}
-          Statement:
-            ManagedRuleGroupStatement:
-              VendorName: AWS
-              Name: AWSManagedRulesBotControlRuleSet
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: AWSManagedRulesBotControlRuleSet
-      Tags:
-        - Key: env
-          Value: !Ref Env
-        - Key: app
-          Value: portfolio
-        - Key: service
-          Value: waf
+  # WAFWebACL:
+  #   Type: AWS::WAFv2::WebACL
+  #   Properties:
+  #     Name: CobaemonServerlessPortfolioWebACL
+  #     Scope: REGIONAL
+  #     DefaultAction:
+  #       Allow: {}
+  #     VisibilityConfig:
+  #       SampledRequestsEnabled: true
+  #       CloudWatchMetricsEnabled: true
+  #       MetricName: DjangoPortfolioWebACL
+  #     Rules:
+  #       - Name: AWSManagedRulesCommonRuleSet
+  #         Priority: 0
+  #         OverrideAction:
+  #           None: {}
+  #         Statement:
+  #           ManagedRuleGroupStatement:
+  #             VendorName: AWS
+  #             Name: AWSManagedRulesCommonRuleSet
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: AWSManagedRulesCommonRuleSet
+  #       - Name: AWSManagedRulesSQLiRuleSet
+  #         Priority: 1
+  #         OverrideAction:
+  #           None: {}
+  #         Statement:
+  #           ManagedRuleGroupStatement:
+  #             VendorName: AWS
+  #             Name: AWSManagedRulesSQLiRuleSet
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: AWSManagedRulesSQLiRuleSet
+  #       - Name: AWSManagedRulesKnownBadInputsRuleSet
+  #         Priority: 2
+  #         OverrideAction:
+  #           None: {}
+  #         Statement:
+  #           ManagedRuleGroupStatement:
+  #             VendorName: AWS
+  #             Name: AWSManagedRulesKnownBadInputsRuleSet
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: AWSManagedRulesKnownBadInputsRuleSet
+  #       - Name: AWSManagedRulesAmazonIpReputationList
+  #         Priority: 3
+  #         OverrideAction:
+  #           None: {}
+  #         Statement:
+  #           ManagedRuleGroupStatement:
+  #             VendorName: AWS
+  #             Name: AWSManagedRulesAmazonIpReputationList
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: AWSManagedRulesAmazonIpReputationList
+  #       - Name: AWSManagedRulesBotControlRuleSet
+  #         Priority: 4
+  #         OverrideAction:
+  #           None: {}
+  #         Statement:
+  #           ManagedRuleGroupStatement:
+  #             VendorName: AWS
+  #             Name: AWSManagedRulesBotControlRuleSet
+  #         VisibilityConfig:
+  #           SampledRequestsEnabled: true
+  #           CloudWatchMetricsEnabled: true
+  #           MetricName: AWSManagedRulesBotControlRuleSet
+  #     Tags:
+  #       - Key: env
+  #         Value: !Ref Env
+  #       - Key: app
+  #         Value: portfolio
+  #       - Key: service
+  #         Value: waf
 
-  WAFWebACLAssociation:
-    Type: AWS::WAFv2::WebACLAssociation
-    DependsOn: DjangoApiStage
-    Properties:
-      WebACLArn: !GetAtt WAFWebACL.Arn
-      ResourceArn: !If 
-        - IsProd
-        - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/prod"
-        - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/dev"
+  # WAFWebACLAssociation:
+  #   Type: AWS::WAFv2::WebACLAssociation
+  #   DependsOn: DjangoApiStage
+  #   Properties:
+  #     WebACLArn: !GetAtt WAFWebACL.Arn
+  #     ResourceArn: !If 
+  #       - IsProd
+  #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/prod"
+  #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/dev"
 
 Outputs:
   ApiUrl:
