@@ -321,6 +321,7 @@ Resources:
                   - iam:DetachRolePolicy
                   - iam:DeleteRolePolicy
                   - iam:GetRole
+                  - iam:PutRolePolicy
                 Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
         - PolicyName: CloudFormationACMAccess
           PolicyDocument:
