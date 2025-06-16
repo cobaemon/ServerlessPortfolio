@@ -246,6 +246,3 @@ Outputs:
   ApiUrl:
     Description: "The URL of the API Gateway"
     Value: !Ref DjangoApi
-  PipelineName:
-    Description: "The name of the created CodePipeline."
-    Value: !Ref CodePipeline
