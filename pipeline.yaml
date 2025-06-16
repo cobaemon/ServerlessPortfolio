@@ -1,11 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CI/CD Pipeline for the Serverless Portfolio Application
 
-
-Globals:
-  Function:
-    Timeout: 30
-
 Parameters:
   Env:
     Type: String
