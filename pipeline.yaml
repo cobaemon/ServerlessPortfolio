@@ -1,0 +1,181 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CI/CD Pipeline for the Serverless Portfolio Application
+
+
+Globals:
+  Function:
+    Timeout: 30
+
+Parameters:
+  Env:
+    Type: String
+    Description: "Deployment environment (dev or prod)"
+    Default: prod
+    AllowedValues:
+      - dev
+      - prod
+  S3Bucket:
+    Type: String
+    Description: "The S3 bucket name for storing packaged artifacts."
+    Default: cobaemon-serverless-portfolio-prod-artifacts
+  CodePipelineName:
+    Type: String
+    Description: "The CodePipeline pipeline name."
+    Default: cobaemon-serverless-portfolio-pipeline
+  FullRepositoryId:
+    Type: String
+    Description: "The full repository ID to use with your CodeConnections connection."
+    Default: cobaemon/ServerlessPortfolio
+  BranchName:
+    Type: String
+    Description: "The branch name to use with your CodeConnections connection."
+    Default: main
+  StackName:
+    Type: String
+    Description: "The CloudFormation stack name that you want to create or update."
+    Default: cobaemon-serverless-portfolio-stack
+  TemplatePath:
+    Type: String
+    Description: "The path in your source repository to the CloudFormation template file."
+    Default: packaged.yaml
+
+Conditions:
+  IsProd: !Equals [ !Ref Env, prod ]
+
+Resources:
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Ref CodePipelineName
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref S3Bucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: CodeConnectionsSource
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: "arn:aws:codeconnections:ap-northeast-1:864454139429:connection/fcbb3ce3-d1c2-4b93-89e5-ac0f45ae943f"
+                FullRepositoryId: !Ref FullRepositoryId
+                BranchName: !Ref BranchName
+              OutputArtifacts:
+                - Name: SourceOutput
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: CodeBuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              RunOrder: 1
+        - Name: Deploy
+          Actions:
+            - Name: CloudFormationDeploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              InputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                RoleArn: !GetAtt CodePipelineServiceRole.Arn
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
+                StackName: !Ref StackName
+                TemplatePath: !Join ["", ["BuildOutput::", !Ref TemplatePath]]
+                OutputFileName: output.json
+              RunOrder: 1
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: codepipeline
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${CodePipelineName}-Build"
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:6.0
+        Type: LINUX_CONTAINER
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: ENV
+            Value: !Ref Env
+          - Name: S3Bucket
+            Value: !Ref S3Bucket
+      Source:
+        Type: CODEPIPELINE
+      Artifacts:
+        Type: CODEPIPELINE
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: codebuild
+
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${CodePipelineName}-ServiceRole"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: role
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: role
+
