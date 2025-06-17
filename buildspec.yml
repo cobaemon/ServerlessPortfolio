@@ -12,6 +12,7 @@ phases:
   pre_build:
     commands:
       - echo "Preparing SAM build..."
+      - python manage.py collectstatic --noinput
   build:
     commands:
       - echo "Running sam build..."
