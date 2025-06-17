@@ -5,6 +5,8 @@ env:
     DJANGO_SETTINGS_MODULE: "config.settings.prod"
   secrets-manager:
     DJANGO_SECRET_KEY: "prod/portfolio/secret:DJANGO_SECRET_KEY"
+  parameter-store:
+    ALLOWED_HOSTS: "/prod/portfolio/parameter/allowed_hosts"
 
 phases:
   install:
