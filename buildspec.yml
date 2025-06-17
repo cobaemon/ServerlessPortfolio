@@ -1,5 +1,11 @@
 version: 0.2
 
+env:
+  variables:
+    DJANGO_SETTINGS_MODULE: "config.settings.prod"
+  secrets-manager:
+    DJANGO_SECRET_KEY: "prod/portfolio/secret:DJANGO_SECRET_KEY"
+
 phases:
   install:
     runtime-versions:
@@ -12,7 +18,7 @@ phases:
   pre_build:
     commands:
       - echo "Preparing SAM build..."
-      - DJANGO_SETTINGS_MODULE=config.settings.prod python manage.py collectstatic --noinput
+      - python manage.py collectstatic --noinput
   build:
     commands:
       - echo "Running sam build..."
