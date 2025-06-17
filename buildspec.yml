@@ -3,10 +3,26 @@ version: 0.2
 env:
   variables:
     DJANGO_SETTINGS_MODULE: "config.settings.prod"
+    ENV: "prod"
+    
+  # Secrets Managerから取得するすべての秘密情報を定義
   secrets-manager:
     DJANGO_SECRET_KEY: "prod/portfolio/secret:DJANGO_SECRET_KEY"
+    EMAIL_HOST_USER: "prod/portfolio/secret:EMAIL_HOST_USER"
+    EMAIL_HOST_PASSWORD: "prod/portfolio/secret:EMAIL_HOST_PASSWORD"
+    GOOGLE_CLIENT_ID: "prod/portfolio/secret:GOOGLE_CLIENT_ID"
+    GOOGLE_CLIENT_SECRET: "prod/portfolio/secret:GOOGLE_CLIENT_SECRET"
+    GITHUB_CLIENT_ID: "prod/portfolio/secret:GITHUB_CLIENT_ID"
+    GITHUB_CLIENT_SECRET: "prod/portfolio/secret:GITHUB_CLIENT_SECRET"
+
+  # Parameter Storeから取得するすべてのパラメータを定義
   parameter-store:
     ALLOWED_HOSTS: "/prod/portfolio/parameter/allowed_hosts"
+    CSRF_TRUSTED_ORIGINS: "/prod/portfolio/parameter/csrf_trusted_origins"
+    DEFAULT_FROM_EMAIL: "/prod/portfolio/parameter/default_from_email"
+    DEFAULT_TO_EMAIL: "/prod/portfolio/parameter/default_to_mail"
+    EMAIL_HOST: "/prod/portfolio/parameter/email_host"
+    EMAIL_PORT: "/prod/portfolio/parameter/email_port"
 
 phases:
   install:
