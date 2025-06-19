@@ -1,4 +1,18 @@
-Django
+django
+django-environ
+django-storages
+boto3
+gunicorn
+pillow
+pillow-avif-plugin
+django-csp
+psycopg2-binary
+cryptography
+django-allauth
+django-otp
+qrcode
+requests
+pyjwt
 awsgi; sys_platform != 'win32'
 whitenoise
 mangum

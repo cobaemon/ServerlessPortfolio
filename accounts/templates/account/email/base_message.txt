@@ -1,0 +1,11 @@
+{% load i18n %}
+{% autoescape off %}
+{% block content %}{% endblock content %}
+
+----------
+
+Name: Kobayashi Hirotaka
+Email: cobaemon@outlook.com
+Website: https://portfolio.cobaemon.com
+GitHub: https://github.com/cobaemon
+{% endautoescape %}

@@ -1,0 +1,18 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth %}
+
+{% block extra_body_head_title %}
+    {% trans "Sign Up Closed" %}
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+    {% element h1 %}
+        {% trans "Sign Up Closed" %}
+    {% endelement %}
+    {% element p %}
+        {% trans "We are sorry, but the sign up is currently closed." %}
+    {% endelement %}
+{% endblock extra_body_form %}

@@ -1,0 +1,43 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth account %}
+{% load form_tags %}
+
+{% block extra_body_form %}
+<div class="container pb-5">
+    <form id="loginForm" method="post" action="{{ attrs.action }}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="form-floating mb-3">
+            {{ form.login|add_attrs:'class:form-control,placeholder:Enter your email...' }}
+            <label for="{{ form.login.id_for_label }}">{{ form.login.label }}</label>
+            {% if form.login.errors %}
+                {% for error in form.login.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="form-floating mb-3">
+            {{ form.password|add_attrs:'class:form-control,placeholder:Enter your password...' }}
+            <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+            {% if form.password.errors %}
+                {% for error in form.password.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="form-check mb-3">
+            {{ form.remember|add_attrs:'class:form-check-input' }}
+            <label class="form-check-label" for="{{ form.remember.id_for_label }}">{{ form.remember.label }}</label>
+        </div>
+        <button class="btn btn-primary btn-xl float-end" id="submitButton" type="submit">{% trans "Sign In" %}</button>
+    </form>
+</div>
+{% if SOCIALACCOUNT_ENABLED %}
+    <div class="container pt-5">
+        {% include "socialaccount/snippets/login.html" with page_layout="entrance" %}
+    </div>
+{% endif %}
+{% endblock extra_body_form %}

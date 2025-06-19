@@ -1,0 +1,21 @@
+{% extends "account/base_reauthenticate.html" %}
+{% load allauth %}
+{% load i18n %}
+{% load form_tags %}
+
+{% block reauthenticate_content %}
+<form id="reauthenticatenForm" method="post" action="{{ attrs.action }}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="form-floating mb-3">
+        {{ form.password|add_attrs:'class:form-control,placeholder:Enter your email...' }}
+        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+        {% if form.password.errors %}
+            {% for error in form.password.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <button class="btn btn-primary btn-xl float-end" id="submitButton" type="submit">{% trans "Confirm" %}</button>
+</form>
+{% endblock reauthenticate_content %}

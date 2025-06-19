@@ -1,0 +1,39 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth %}
+{% load socialaccount %}
+
+{% block extra_body_head_title %}
+    {% trans "Signup" %}
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+<div class="container pb-5">
+    <h1 class="h3 mb-3 fw-normal">
+        {% trans "Sign Up" %}
+    </h1>
+    <p class="text-center">
+        {% blocktrans with provider_name=account.get_provider.name site_name=site.name %}You are about to use your {{ provider_name }} account to login to {{ site_name }}. As a final step, please complete the following form:{% endblocktrans %}
+    </p>
+    <form method="post" action="{% url 'socialaccount_signup' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+            {% for field in form %}
+                <div class="form-floating mb-3">
+                    {{ field|add_attrs:"class:form-control" }}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% if field.errors %}
+                        <div class="invalid-feedback">
+                            {{ field.errors|join:", " }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            {{ redirect_field }}
+        </div>
+        <button class="btn btn-primary btn-lg float-end mt-2" type="submit">{% trans "Sign Up" %}</button>
+    </form>
+</div>
+{% endblock extra_body_form %}

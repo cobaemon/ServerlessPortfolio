@@ -1,0 +1,58 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth %}
+{% load socialaccount %}
+
+{% block extra_body_head_title %}
+    {% trans "Account Connections" %}
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+<div class="container pb-5">
+    {% if form.accounts %}
+        <p class="py-2">
+            {% blocktrans %}You can sign in to your account using any of the following third-party accounts:{% endblocktrans %}
+        </p>
+        <form method="post" action="{% url 'socialaccount_connections' %}" class="pb-4">
+            {% csrf_token %}
+            <div class="py-3 pb-5 h4">
+                {% for acc in form.fields.account.choices %}
+                    {% with account=acc.0.instance.get_provider_account %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="account" id="id_account_{{ account.account.pk }}" value="{{ account.account.pk }}">
+                            <label class="form-check-label" for="id_account_{{ account.account.pk }}">
+                                {{ account }}
+                                <span class="badge bg-secondary">{{ account.get_brand.name }}</span>
+                            </label>
+                        </div>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+            <button class="btn btn-lg btn-danger float-end" type="submit">{% trans "Remove" %}</button>
+        </form>
+    {% else %}
+        <p>
+            {% trans 'You currently have no third-party accounts connected to this account.' %}
+        </p>
+    {% endif %}
+</div>
+<div class="container">
+    <hr class="py-4">
+    <h2 class="h4 pb-4">
+        {% trans 'Add a Third-Party Account' %}
+    </h2>
+    <div class="social-login-buttons">
+        {% get_providers as socialaccount_providers %}
+        {% if socialaccount_providers %}
+            {% for provider in socialaccount_providers %}
+                <a class="btn btn-outline-primary btn-xl d-block mb-4" href="{% provider_login_url provider.id %}">
+                    {{ provider.name }}
+                </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+    {% include "socialaccount/snippets/login_extra.html" %}
+</div>
+{% endblock extra_body_form %}

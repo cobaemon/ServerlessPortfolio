@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+{% load static %}
+{% load i18n %}
+{% load csp %}
+<html lang="ja">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+        {% block head_title %}
+        <title>Portfolio</title>
+        {% endblock head_title %}
+        <!-- Favicon-->
+        <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}" />
+        <!-- Google fonts-->
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css" />
+        <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css" />
+        <!-- Core theme CSS (includes Bootstrap)-->
+        <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+        {% block extra_head %}
+        {% endblock extra_head %}
+    </head>
+    {% block body %}
+    <body id="page-top">
+        {% block body_nav %}
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg bg-secondary text-uppercase fixed-top" id="mainNav">
+            <div class="container">
+                <a class="navbar-brand text-primary fs-1" href="{% url 'portfolio:top' %}#page-top">Portfolio</a>
+                <button class="navbar-toggler text-uppercase fw-bold bg-primary text-white rounded fs-5" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                    Menu
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarResponsive">
+                    {% block body_nav_collapse_nav_items %}
+                    <ul class="navbar-nav ms-auto">
+                        {% block body_nav_collapse_nav_item_portfolio %}
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded fs-4" href="#portfolio">Portfolio</a></li>
+                        {% endblock body_nav_collapse_nav_item_portfolio %}
+                        {% block body_nav_collapse_nav_item_about %}
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded fs-4" href="#about">About</a></li>
+                        {% endblock body_nav_collapse_nav_item_about %}
+                        {% block body_nav_collapse_nav_item_contact %}
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded fs-4" href="#contact">Contact</a></li>
+                        {% endblock body_nav_collapse_nav_item_contact %}
+                        {% block extra_body_nav_collapse_nav_items %}
+                        {% endblock extra_body_nav_collapse_nav_items %}
+                        <hr>
+                        {% block body_nav_collapse_nav_item_account %}
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded fs-4" href="#" data-bs-toggle="modal" data-bs-target="#accountModal">Account</a></li>
+                        {% endblock body_nav_collapse_nav_item_account %}
+                        {% block body_nav_collapse_nav_item_languages %}
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded fs-4" href="#" data-bs-toggle="modal" data-bs-target="#languagesModal">Languages</a></li>
+                        {% endblock body_nav_collapse_nav_item_languages %}
+                    </ul>
+                    {% endblock body_nav_collapse_nav_items %}
+                </div>
+            </div>
+        </nav>
+        {% endblock body_nav %}
+        {% block body_header %}
+        <!-- Masthead-->
+        <header class="masthead bg-primary text-white text-center">
+            {% block body_header_messages %}
+            {% if messages %}
+                <div class="alert-container mx-3">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            <strong>{{ message.tags|title }}:</strong> {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+                <br><br><br>
+            {% endif %}
+            {% endblock body_header_messages %}
+            <div class="container d-flex align-items-center flex-column">
+                {% block body_header_contents %}
+                <!-- Masthead Avatar Image-->
+                <picture>
+                    <source srcset="{% static 'assets/img/avatar.avif' %}" type="image/avif">
+                    <source srcset="{% static 'assets/img/avatar.webp' %}" type="image/webp">
+                    <img class="masthead-avatar mb-5" src="{% static 'assets/img/avatar.jpg' %}" alt="..." loading="lazy">
+                </picture>
+                <!-- Masthead Heading-->
+                <h1 class="masthead-heading text-uppercase mb-0">Hirotaka Kobayashi</h1>
+                <!-- Icon Divider-->
+                <div class="divider-custom divider-light">
+                    <div class="divider-custom-line"></div>
+                    <div class="divider-custom-icon"><img src="{% static 'assets/img/star-fill.svg' %}" alt="Star Icon" class="img-fluid"></i></div>
+                    <div class="divider-custom-line"></div>
+                </div>
+                <!-- Masthead Subheading-->
+                <p class="masthead-subheading font-weight-light mb-0">Programmer</p>
+                {% endblock body_header_contents %}
+                {% block extra_body_body_header %}
+                {% endblock extra_body_body_header %}
+            </div>
+        </header>
+        {% endblock body_header %}
+        {% block body_section %}
+        {% block body_section_portfolio %}
+        <!-- Portfolio Section-->
+        <section class="page-section portfolio" id="portfolio">
+            <div class="container">
+                <!-- Portfolio Section Heading-->
+                <h2 class="page-section-heading text-center text-uppercase text-secondary mb-0">Portfolio</h2>
+                <!-- Icon Divider-->
+                <div class="divider-custom">
+                    <div class="divider-custom-line"></div>
+                    <div class="divider-custom-icon"><i class="bi bi-star-fill"></i></div>
+                    <div class="divider-custom-line"></div>
+                </div>
+                <!-- Portfolio Grid Items-->
+                <div class="row justify-content-center">
+                    <!-- Portfolio Item 1-->
+                    <div class="col-md-6 col-lg-4 mb-5">
+                        <div class="portfolio-item mx-auto" data-bs-toggle="modal" data-bs-target="#portfolioModal1">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <picture>
+                                <source srcset="{% static 'assets/img/portfolio/password-box.avif' %}" type="image/avif">
+                                <source srcset="{% static 'assets/img/portfolio/password-box.webp' %}" type="image/webp">
+                                <img class="img-fluid" src="{% static 'assets/img/portfolio/password-box.png' %}" alt="..." loading="lazy">
+                            </picture>
+                        </div>
+                    </div>
+                    <!-- Portfolio Item 2-->
+                    <div class="col-md-6 col-lg-4 mb-5">
+                        <div class="portfolio-item mx-auto" data-bs-toggle="modal" data-bs-target="#portfolioModal2">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <picture>
+                                <source srcset="{% static 'assets/img/portfolio/vocabulary-notebook.avif' %}" type="image/avif">
+                                <source srcset="{% static 'assets/img/portfolio/vocabulary-notebook.webp' %}" type="image/webp">
+                                <img class="img-fluid" src="{% static 'assets/img/portfolio/vocabulary-notebook.png' %}" alt="..." loading="lazy">
+                            </picture>
+                        </div>
+                    </div>
+                    <!-- Portfolio Item 3-->
+                    <div class="col-md-6 col-lg-4 mb-5">
+                        <div class="portfolio-item mx-auto" data-bs-toggle="modal" data-bs-target="#portfolioModal3">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <picture>
+                                <source srcset="{% static 'assets/img/portfolio/dbpepro.avif' %}" type="image/avif">
+                                <source srcset="{% static 'assets/img/portfolio/dbpepro.webp' %}" type="image/webp">
+                                <img class="img-fluid" src="{% static 'assets/img/portfolio/dbpepro.png' %}" alt="..." loading="lazy">
+                            </picture>
+                        </div>
+                    </div>
+                    <!-- Portfolio Item 4-->
+                    <div class="col-md-6 col-lg-4 mb-5 mb-lg-0">
+                        <div class="portfolio-item mx-auto" data-bs-toggle="modal" data-bs-target="#portfolioModal4">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <picture>
+                                <source srcset="{% static 'assets/img/portfolio/kakeboo.avif' %}" type="image/avif">
+                                <source srcset="{% static 'assets/img/portfolio/kakeboo.webp' %}" type="image/webp">
+                                <img class="img-fluid" src="{% static 'assets/img/portfolio/kakeboo.png' %}" alt="..." loading="lazy">
+                            </picture>
+                        </div>
+                    </div>
+                    <!-- Portfolio Item 5-->
+                    <div class="col-md-6 col-lg-4 mb-5 mb-md-0">
+                        <div class="portfolio-item mx-auto" data-bs-toggle="modal" data-bs-target="#portfolioModal5">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <picture>
+                                <source srcset="{% static 'assets/img/portfolio/tegaki.avif' %}" type="image/avif">
+                                <source srcset="{% static 'assets/img/portfolio/tegaki.webp' %}" type="image/webp">
+                                <img class="img-fluid" src="{% static 'assets/img/portfolio/tegaki.png' %}" alt="..." loading="lazy">
+                            </picture>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endblock body_section_portfolio %}
+        {% block body_section_about %}
+        <!-- About Section-->
+        <section class="page-section bg-primary text-white mb-0" id="about">
+            <div class="container">
+                <!-- About Section Heading-->
+                <h2 class="page-section-heading text-center text-uppercase text-white">About</h2>
+                <!-- Icon Divider-->
+                <div class="divider-custom divider-light">
+                    <div class="divider-custom-line"></div>
+                    <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                    <div class="divider-custom-line"></div>
+                </div>
+                <!-- About Section Content-->
+                <div class="row">
+                    <div class="col-lg-4 ms-auto"><p class="lead">{% trans "With 4 years of programming experience, I have acquired a wide range of languages and technologies. I have studied C++, C, and C#, and have also self-taught Python and Dart/Flutter. Utilizing these skills, I have tackled various projects." %}</p></div>
+                    <div class="col-lg-4 me-auto"><p class="lead"></p>{% trans "In Python-based projects, I developed a household budget app, a password management app, and a web portfolio using the Django framework. Additionally, I created a handwritten character recognition app by leveraging machine learning technology." %}</div>
+                    <div class="col-lg-4 me-auto"><p class="lead"></p>{% trans "In Dart/Flutter development, I created a database access control app. Through this experience, I have been able to improve my development capabilities across different platforms and environments." %}</div>
+                    <div class="col-lg-4 me-auto"><p class="lead"></p>{% trans "I have actively participated in team projects, developing file-sharing apps and household budget apps. This has allowed me to hone my team development skills and acquire the ability to collaborate with other members to advance projects. My diverse technical expertise and teamwork will surely be put to good use in future projects." %}</div>
+                </div>
+            </div>
+        </section>
+        {% endblock body_section_about %}
+        {% block body_section_contact %}
+        <!-- Contact Section-->
+        <section class="page-section" id="contact">
+            <div class="container">
+                <!-- Contact Section Heading-->
+                <h2 class="page-section-heading text-center text-uppercase text-secondary mb-0">Contact Me</h2>
+                <!-- Icon Divider-->
+                <div class="divider-custom">
+                    <div class="divider-custom-line"></div>
+                    <div class="divider-custom-icon"><img src="{% static 'assets/img/star-fill.svg' %}" alt="Star Icon" class="img-fluid"></i></div>
+                    <div class="divider-custom-line"></div>
+                </div>
+                <!-- Contact Section Form-->
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 col-xl-7">
+                        <form id="contactForm" method="post" action="{% url 'portfolio:top' %}">
+                            {% csrf_token %}
+                            <!-- Name input-->
+                            <div class="form-floating mb-3">
+                                {{ form.full_name }}
+                                <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                                {% if form.full_name.errors %}
+                                    {% for error in form.full_name.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <!-- Email address input-->
+                            <div class="form-floating mb-3">
+                                {{ form.email }}
+                                <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                                <div class="invalid-feedback" id="emailError"></div>
+                                {% if form.email.errors %}
+                                    {% for error in form.email.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <!-- Phone number input-->
+                            <div class="form-floating mb-3">
+                                {{ form.phone_number }}
+                                <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+                                <div class="invalid-feedback" id="phoneError"></div>
+                                {% if form.phone_number.errors %}
+                                    {% for error in form.phone_number.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <!-- Message input-->
+                            <div class="form-floating mb-3">
+                                {{ form.message }}
+                                <label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
+                                {% if form.message.errors %}
+                                    {% for error in form.message.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            <!-- Submit Button-->
+                            <div id="successMessage" class="alert alert-success custom-success" role="alert" nonce="{{ request.csp_nonce }}">
+                                {% trans "Your message has been sent successfully." %}
+                                <button type="button" class="btn-close float-end" aria-label="Close"></button>
+                            </div>
+                            <div id="errorMessage" class="alert alert-danger custom-error" role="alert" nonce="{{ request.csp_nonce }}">
+                                {% trans "Your message could not be sent. Please try again." %}
+                                <button type="button" class="btn-close float-end" aria-label="Close"></button>
+                            </div>
+                            <button class="btn btn-primary btn-xl float-end" id="submitButton" type="submit">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endblock body_section_contact %}
+        {% endblock body_section %}
+
+        {% block extra_body %}
+        {% endblock extra_body %}
+
+        {% block body_footer %}
+        <!-- Footer-->
+        <footer class="footer text-center">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <!-- Footer Social Icons-->
+                    <div class="col-lg-4 mb-5 mb-lg-0">
+                        <h4 class="text-uppercase mb-4">Around the Web</h4>
+                        <a class="btn btn-social p-0" href="https://github.com/cobaemon" target="_blank">
+                            <picture>
+                                <source srcset="{% static 'assets/img/github-mark-white.avif' %}" type="image/avif">
+                                <source srcset="{% static 'assets/img/github-mark-white.webp' %}" type="image/webp">
+                                <img class="img-fluid" src="{% static 'assets/img/github-mark-white.png' %}" alt="..." loading="lazy">
+                            </picture>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        {% endblock body_footer %}
+        {% block body_account_modal %}
+        <!-- Account Modal -->
+        <div class="modal fade" id="accountModal" tabindex="-1" aria-labelledby="accountModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-secondary">
+                    <div class="modal-header">
+                    <h1 class="modal-title fs-3 text-uppercase text-primary" id="languagesModalLabel">Account</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body pt-4">
+                        {% if user.is_authenticated %}
+                            {% url 'account_email' as email_url %}
+                            {% if email_url %}
+                                <a href="{{ email_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Change Email" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'account_email' as settings_email %}
+                            {% if settings_email %}
+                                <a href="{{ settings_email }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Email" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'account_change_password' as change_password_url %}
+                            {% if change_password_url %}
+                                <a href="{{ change_password_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Change Password" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'two_factor_authentication_settings' as settings_two_factor_authentication_url %}
+                            {% if settings_two_factor_authentication_url %}
+                                <a href="{{ settings_two_factor_authentication_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Settings Two-Factor Authentication" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'mfa_index' as mfa_url %}
+                            {% if mfa_url %}
+                                <a href="{{ mfa_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Two-Factor Authentication" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'usersessions_list' as usersessions_list_url %}
+                            {% if usersessions_list_url %}
+                                <a href="{{ usersessions_list_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Sessions" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'socialaccount_connections' as socialaccount_connections_url %}
+                            {% if socialaccount_connections_url %}
+                                <a href="{{ socialaccount_connections_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Socialaccount" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'account_logout' as logout_url %}
+                            {% if logout_url %}
+                                <a href="{{ logout_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Sign Out" %}</div>
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            {% url 'account_login' as login_url %}
+                            {% if login_url %}
+                                <a href="{{ login_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Sign In" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'account_signup' as signup_url %}
+                            {% if signup_url %}
+                                <a href="{{ signup_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Sign Up" %}</div>
+                                </a>
+                            {% endif %}
+                            {% url 'account_reset_password' as account_reset_password_url %}
+                            {% if account_reset_password_url %}
+                                <a href="{{ account_reset_password_url }}" class="navbar-toggler rounded text-center d-block py-3 px-5 text-decoration-none">
+                                    <div class="fw-bold fs-4 text-white p-3 bg-primary rounded">{% trans "Rset Password" %}</div>
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_account_modal %}
+        {% block body_languages_modal %}
+        <!-- Languages Modal -->
+        <div class="modal fade" id="languagesModal" tabindex="-1" aria-labelledby="languagesModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-secondary">
+                    <div class="modal-header">
+                    <h1 class="modal-title fs-3 text-uppercase text-primary" id="languagesModalLabel">Languages</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body pt-4">
+                        {% get_current_language as LANGUAGE_CODE %}
+                        {% get_available_languages as LANGUAGES %}
+                        {% get_language_info_list for LANGUAGES as languages %}
+                        {% for language in languages %}
+                            <form action="{% url 'set_language' %}" method="post" class="py-3">
+                                {% csrf_token %}
+                                <input name="next" type="hidden" value="{{ request.path }}">
+                                <button type="submit" name="language" value="{{ language.code }}" class="navbar-toggler rounded w-100 px-5" {% if language.code == LANGUAGE_CODE %} disabled {% endif %}>
+                                    <div class="fw-bold fs-4 p-3 bg-primary rounded {% if language.code == LANGUAGE_CODE %} text-info {% else %} text-white {% endif %}">{{ language.name_local }}</div>
+                                </button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_languages_modal %}
+        {% block body_portfolio_modals %}
+        <!-- Portfolio Modals-->
+        {% block body_portfolio_modal_1 %}
+        <!-- Portfolio Modal 1-->
+        <div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" aria-labelledby="portfolioModal1" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header border-0"><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body text-center pb-5">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">Password Box</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <picture>
+                                        <source srcset="{% static 'assets/img/portfolio/password-box.avif' %}" type="image/avif">
+                                        <source srcset="{% static 'assets/img/portfolio/password-box.webp' %}" type="image/webp">
+                                        <img class="img-fluid rounded mb-5" src="{% static 'assets/img/portfolio/password-box.png' %}" alt="..." loading="lazy">
+                                    </picture>
+                                    <!-- Portfolio Modal - Text-->
+                                    <h5>Summary</h5>
+                                    <p class="mb-4">{% trans "Password Box is a service that allows you to store passwords, account names, and email addresses." %}</p>
+                                    <h5>Purpose</h5>
+                                    <p class="mb-4">{% trans "I created this service because it became cumbersome to remember passwords and account names while using various web services." %}</p>
+                                    <button class="btn btn-primary" data-bs-dismiss="modal">
+                                        <i class="fas fa-xmark fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_portfolio_modal_1 %}
+        {% block body_portfolio_modal_2 %}
+        <!-- Portfolio Modal 2-->
+        <div class="portfolio-modal modal fade" id="portfolioModal2" tabindex="-1" aria-labelledby="portfolioModal2" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header border-0"><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body text-center pb-5">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">Vocabulary Notebook</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <picture>
+                                        <source srcset="{% static 'assets/img/portfolio/vocabulary-notebook.avif' %}" type="image/avif">
+                                        <source srcset="{% static 'assets/img/portfolio/vocabulary-notebook.webp' %}" type="image/webp">
+                                        <img class="img-fluid rounded mb-5" src="{% static 'assets/img/vocabulary-notebook.png' %}" alt="..." loading="lazy">
+                                    </picture>
+                                    <!-- Portfolio Modal - Text-->
+                                    <h5>Summary</h5>
+                                    <p class="mb-4"></p>{% trans "This is an implementation of a vocabulary notebook on the web." %}</p>
+                                    <h5>Purpose</h5>
+                                    <p class="mb-4">{% trans "Having a vocabulary notebook is convenient for remembering words and phrases when studying for national exams and the like. I created this because I thought it would be even more convenient if such a notebook could be used on the web." %}</p>
+                                    <button class="btn btn-primary" data-bs-dismiss="modal">
+                                        <i class="fas fa-xmark fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_portfolio_modal_2 %}
+        {% block body_portfolio_modal_3 %}
+        <!-- Portfolio Modal 3-->
+        <div class="portfolio-modal modal fade" id="portfolioModal3" tabindex="-1" aria-labelledby="portfolioModal3" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header border-0"><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body text-center pb-5">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">DBPePro</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <picture>
+                                        <source srcset="{% static 'assets/img/portfolio/dbpepro.avif' %}" type="image/avif">
+                                        <source srcset="{% static 'assets/img/portfolio/dbpepro.webp' %}" type="image/webp">
+                                        <img class="img-fluid rounded mb-5" src="{% static 'assets/img/portfolio/dbpepro.png' %}" alt="..." loading="lazy">
+                                    </picture>
+                                    <!-- Portfolio Modal - Text-->
+                                    <h5>Summary</h5>
+                                    <p class="mb-4">{% trans "This is an app that allows you to manage database permissions in bulk using a GUI." %}</p>
+                                    <h5>Purpose</h5>
+                                    <p class="mb-4">{% trans "I created this app because I thought it would be convenient to manage database permissions in bulk, and it would reduce careless mistakes." %}</p>
+                                    <button class="btn btn-primary" data-bs-dismiss="modal">
+                                        <i class="fas fa-xmark fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_portfolio_modal_3 %}
+        {% block body_portfolio_modal_4 %}
+        <!-- Portfolio Modal 4-->
+        <div class="portfolio-modal modal fade" id="portfolioModal4" tabindex="-1" aria-labelledby="portfolioModal4" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header border-0"><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body text-center pb-5">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">Kakeboo</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <picture>
+                                        <source srcset="{% static 'assets/img/portfolio/kakeboo.avif' %}" type="image/avif">
+                                        <source srcset="{% static 'assets/img/portfolio/kakeboo.webp' %}" type="image/webp">
+                                        <img class="img-fluid rounded mb-5" src="{% static 'assets/img/portfolio/kakeboo.png' %}" alt="..." loading="lazy">
+                                    </picture>
+                                    <!-- Portfolio Modal - Text-->
+                                    <h5>Summary</h5>
+                                    <p class="mb-4">{% trans "This is a household accounting app." %}</p>
+                                    <h5>Purpose</h5>
+                                    <p class="mb-4">{% trans "I created this app as part of my graduation research at a vocational school." %}</p>
+                                    <p class="mb-4">{% trans "Each member used their preferred language to create it." %}</p>
+                                    <p class="mb-4">{% trans "I was responsible for the feature that automatically generates a household accounting book from receipt images." %}</p>
+                                    <button class="btn btn-primary" data-bs-dismiss="modal">
+                                        <i class="fas fa-xmark fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_portfolio_modal_4 %}
+        {% block body_portfolio_modal_5 %}
+        <!-- Portfolio Modal 5-->
+        <div class="portfolio-modal modal fade" id="portfolioModal5" tabindex="-1" aria-labelledby="portfolioModal5" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header border-0"><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body text-center pb-5">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">Tegaki</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <picture>
+                                        <source srcset="{% static 'assets/img/portfolio/tegaki.avif' %}" type="image/avif">
+                                        <source srcset="{% static 'assets/img/portfolio/tegaki.webp' %}" type="image/webp">
+                                        <img class="img-fluid rounded mb-5" src="{% static 'assets/img/portfolio/tegaki.png' %}" alt="..." loading="lazy">
+                                    </picture>
+                                    <!-- Portfolio Modal - Text-->
+                                    <h5>Summary</h5>
+                                    <p class="mb-4">{% trans "This is an app that recognizes handwritten characters." %}</p>
+                                    <h5>Purpose</h5>
+                                    <p class="mb-4">{% trans "I created this app to explore computer vision in machine learning, which I was interested in at the time." %}</p>
+                                    <button class="btn btn-primary" data-bs-dismiss="modal">
+                                        <i class="fas fa-xmark fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock body_portfolio_modal_5 %}
+        {% endblock body_portfolio_modals %}
+
+        {% block extra_body_modal %}
+        {% endblock extra_body_modal %}
+
+        <!-- Bootstrap core JS-->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" nonce="{{ request.csp_nonce }}"></script>
+        <!-- Core theme JS-->
+        <script src="{% static 'js/scripts.js' %}" nonce="{{ request.csp_nonce }}"></script>
+    </body>
+    {% endblock body %}
+</html>

@@ -1,0 +1,18 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth %}
+
+{% block extra_body_head_title %}
+    {% trans "Third-Party Login Failure" %}
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+<div class="container pb-5">
+    <p>
+        {% trans "An error occurred while attempting to login via your third-party account." %}
+    </p>
+    <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg float-end mt-4">{% trans "Return to Login" %}</a>
+</div>
+{% endblock extra_body_form %}

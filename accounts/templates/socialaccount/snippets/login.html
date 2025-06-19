@@ -1,0 +1,21 @@
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth %}
+{% load socialaccount %}
+
+{% get_providers as socialaccount_providers %}
+{% if socialaccount_providers %}
+    {% if not SOCIALACCOUNT_ONLY %}
+        <hr>
+        <h2 class="pt-3 pb-5">{% trans "Or use a third-party" %}</h2>
+    {% endif %}
+    <div class="social-login-buttons">
+        {% for provider in socialaccount_providers %}
+            <a class="btn btn-outline-primary btn-xl d-block mb-4" href="{% provider_login_url provider.id %}">
+                {{ provider.name }}
+            </a>
+        {% endfor %}
+    </div>
+    {% include "socialaccount/snippets/login_extra.html" %}
+{% endif %}

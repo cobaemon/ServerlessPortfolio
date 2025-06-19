@@ -1,0 +1,158 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-05-21 09:48+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\portfolio\templates\index.html:154
+msgid ""
+"With 4 years of programming experience, I have acquired a wide range of "
+"languages and technologies. I have studied C++, C, and C#, and have also "
+"self-taught Python and Dart/Flutter. Utilizing these skills, I have tackled "
+"various projects."
+msgstr ""
+"Con 4 años de experiencia en programación, he adquirido una amplia gama de "
+"lenguajes y tecnologías. He estudiado C++, C y C#, y también he aprendido "
+"Python y Dart/Flutter de forma autodidacta. Utilizando estas habilidades, he "
+"abordado varios proyectos."
+
+#: .\portfolio\templates\index.html:155
+msgid ""
+"In Python-based projects, I developed a household budget app, a password "
+"management app, and a web portfolio using the Django framework. "
+"Additionally, I created a handwritten character recognition app by "
+"leveraging machine learning technology."
+msgstr ""
+"En proyectos basados en Python, desarrollé una aplicación de presupuesto "
+"familiar, una aplicación de gestión de contraseñas y un portafolio web "
+"utilizando el framework Django. Además, creé una aplicación de reconocimiento "
+"de caracteres manuscritos aprovechando la tecnología de aprendizaje automático."
+
+#: .\portfolio\templates\index.html:156
+msgid ""
+"In Dart/Flutter development, I created a database access control app. "
+"Through this experience, I have been able to improve my development "
+"capabilities across different platforms and environments."
+msgstr ""
+"En el desarrollo de Dart/Flutter, creé una aplicación de control de acceso a "
+"bases de datos. A través de esta experiencia, he podido mejorar mis "
+"capacidades de desarrollo en diferentes plataformas y entornos."
+
+#: .\portfolio\templates\index.html:157
+msgid ""
+"I have actively participated in team projects, developing file-sharing apps "
+"and household budget apps. This has allowed me to hone my team development "
+"skills and acquire the ability to collaborate with other members to advance "
+"projects. My diverse technical expertise and teamwork will surely be put to "
+"good use in future projects."
+msgstr ""
+"He participado activamente en proyectos de equipo, desarrollando aplicaciones "
+"de compartición de archivos y aplicaciones de presupuesto familiar. Esto me "
+"ha permitido perfeccionar mis habilidades de desarrollo en equipo y adquirir "
+"la capacidad de colaborar con otros miembros para avanzar en los proyectos. "
+"Mi diversa experiencia técnica y trabajo en equipo seguramente se aprovecharán "
+"en futuros proyectos."
+
+#: .\portfolio\templates\index.html:221
+msgid "Your message has been sent successfully."
+msgstr "Tu mensaje ha sido enviado con éxito."
+
+#: .\portfolio\templates\index.html:225
+msgid "Your message could not be sent. Please try again."
+msgstr "No se pudo enviar tu mensaje. Por favor, inténtalo de nuevo."
+
+#: .\portfolio\templates\index.html:272
+msgid ""
+"Password Box is a service that allows you to store passwords, account names, "
+"and email addresses."
+msgstr ""
+"Password Box es un servicio que te permite almacenar contraseñas, nombres de "
+"cuentas y direcciones de correo electrónico."
+
+#: .\portfolio\templates\index.html:274
+msgid ""
+"I created this service because it became cumbersome to remember passwords "
+"and account names while using various web services."
+msgstr ""
+"Creé este servicio porque se volvió engorroso recordar las contraseñas y los "
+"nombres de las cuentas mientras usaba varios servicios web."
+
+#: .\portfolio\templates\index.html:311
+msgid "This is an implementation of a vocabulary notebook on the web."
+msgstr "Esta es una implementación de un cuaderno de vocabulario en la web."
+
+#: .\portfolio\templates\index.html:313
+msgid ""
+"Having a vocabulary notebook is convenient for remembering words and phrases "
+"when studying for national exams and the like. I created this because I "
+"thought it would be even more convenient if such a notebook could be used on "
+"the web."
+msgstr ""
+"Tener un cuaderno de vocabulario es conveniente para recordar palabras y "
+"frases cuando se estudia para exámenes nacionales y similares. Creé esto porque "
+"pensé que sería aún más conveniente si tal cuaderno pudiera usarse en la web."
+
+#: .\portfolio\templates\index.html:350
+msgid ""
+"This is an app that allows you to manage database permissions in bulk using "
+"a GUI."
+msgstr ""
+"Esta es una aplicación que te permite gestionar permisos de bases de datos en "
+"masa utilizando una interfaz gráfica de usuario (GUI)."
+
+#: .\portfolio\templates\index.html:352
+msgid ""
+"I created this app because I thought it would be convenient to manage "
+"database permissions in bulk, and it would reduce careless mistakes."
+msgstr ""
+"Creé esta aplicación porque pensé que sería conveniente gestionar permisos de "
+"bases de datos en masa, y reduciría errores descuidados."
+
+#: .\portfolio\templates\index.html:389
+msgid "This is a household accounting app."
+msgstr "Esta es una aplicación de contabilidad doméstica."
+
+#: .\portfolio\templates\index.html:391
+msgid ""
+"I created this app as part of my graduation research at a vocational school."
+msgstr ""
+"Creé esta aplicación como parte de mi investigación de graduación en una "
+"escuela vocacional."
+
+#: .\portfolio\templates\index.html:392
+msgid "Each member used their preferred language to create it."
+msgstr "Cada miembro usó su lenguaje preferido para crearla."
+
+#: .\portfolio\templates\index.html:393
+msgid ""
+"I was responsible for the feature that automatically generates a household "
+"accounting book from receipt images."
+msgstr ""
+"Yo fui responsable de la función que genera automáticamente un libro de "
+"contabilidad doméstica a partir de imágenes de recibos."
+
+#: .\portfolio\templates\index.html:430
+msgid "This is an app that recognizes handwritten characters."
+msgstr "Esta es una aplicación que reconoce caracteres manuscritos."
+
+#: .\portfolio\templates\index.html:432
+msgid ""
+"I created this app to explore computer vision in machine learning, which I "
+"was interested in at the time."
+msgstr ""
+"Creé esta aplicación para explorar la visión por computadora en el aprendizaje "
+"automático, lo cual me interesaba en ese momento."

@@ -1,0 +1,53 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth i18n %}
+{% load form_tags %}
+
+{% block extra_body_head_title %}
+    {% trans "Signup" %}
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+<form id="signupForm" method="post" action="{{ attrs.action }}">
+    {% csrf_token %}
+    <div class="form-floating mb-3">
+        {{ form.email|add_attrs:'class:form-control,placeholder:Enter your email...' }}
+        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+        {% if form.email.errors %}
+            {% for error in form.email.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="form-floating mb-3">
+        {{ form.username|add_attrs:'class:form-control,placeholder:Enter your username...' }}
+        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+        {% if form.username.errors %}
+            {% for error in form.username.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="form-floating mb-3">
+        {{ form.password1|add_attrs:'class:form-control,placeholder:Enter your password...' }}
+        <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+        {% if form.password1.errors %}
+            {% for error in form.password1.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="form-floating mb-3">
+        {{ form.password2|add_attrs:'class:form-control,placeholder:Confirm your password...' }}
+        <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+        {% if form.password2.errors %}
+            {% for error in form.password2.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <button class="btn btn-primary btn-xl float-end" id="submitButton" type="submit">{% trans "Sign Up" %}</button>
+</form>
+{% endblock extra_body_form %}

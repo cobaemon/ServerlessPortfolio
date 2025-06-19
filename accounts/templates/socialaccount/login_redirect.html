@@ -1,0 +1,18 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth %}
+
+{% block extra_body_head_title %}
+    {% trans "Sign In" %} | {{ provider }}
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+<div class="container pb-5">
+    <meta http-equiv="refresh" content="0;URL='{{ redirect_to }}'" />
+    <p>
+        <a href="{{ redirect_to }}">{% trans "Continue" %}</a>
+    </p>
+</div>
+{% endblock extra_body_form %}

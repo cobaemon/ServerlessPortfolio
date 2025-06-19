@@ -1,0 +1,24 @@
+{% extends "account/base_entrance.html" %}
+{% load static %}
+{% load i18n %}
+{% load csp %}
+{% load allauth account %}
+{% load form_tags %}
+
+{% block extra_body_head_title %}
+Setup TOTP
+{% endblock extra_body_head_title %}
+
+{% block extra_body_form %}
+<form id="setupTOTPForm" method="post" action="{{ attrs.action }}" class="py-4">
+    {% csrf_token %}
+    <div class="form-floating mb-3">
+        <p class="text-center">{% trans "Scan the QR code with your Microsoft Authenticator app and enter the code below." %}</p>
+        <div class="text-center">
+            <img src="data:image/png;base64,{{ image_base64 }}" alt="QR Code"/>
+            <p>{% trans "Secret: " %}{{ secret }}</p>
+        </div>
+    </div>
+    <button class="btn btn-primary btn-xl float-end mt-4" id="submitButton" type="submit">{% trans "Next" %}</button>
+</form>
+{% endblock extra_body_form %}
