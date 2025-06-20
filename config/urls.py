@@ -21,11 +21,13 @@ from django.views.generic import RedirectView
 
 urlpatterns = [
     # Adminのログインページをallauthのログインページにリダイレクト
-    path('admin/login/', RedirectView.as_view(url='/accounts/login/', query_string=True), name='admin_login_redirect'),
+    # path('admin/login/', RedirectView.as_view(url='/accounts/login/', query_string=True), name='admin_login_redirect'),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
 
     path('', lambda request: redirect('portfolio/top/', permanent=True)),  # リダイレクト設定
-    path('accounts/', include('accounts.urls')),
+    # path('accounts/', include('accounts.urls')),
     path('portfolio/', include('portfolio.urls')),
+
+    path("favicon.ico", RedirectView.as_view(url="/static/favicon.ico")),
 ]
