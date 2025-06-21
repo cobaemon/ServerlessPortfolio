@@ -38,7 +38,7 @@ phases:
       - echo "Preparing SAM build..."
       - python manage.py collectstatic --noinput
       - echo "Syncing static files to S3..."
-      - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
+      - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}"
       - aws s3 sync staticfiles/ s3://${BUCKET_NAME}/ --delete
   build:
     commands:
