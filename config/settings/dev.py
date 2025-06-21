@@ -13,7 +13,7 @@ dotenv_file = BASE_DIR / '.env'
 if dotenv_file.exists():
     dotenv.load_dotenv(dotenv_path=dotenv_file)
 
-DEBUG = True
+DEBUG = False
 
 # SECRET_KEY は .env にあればそちらを、なければ環境変数、さらになければデフォルト値
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-default-secret-key")
