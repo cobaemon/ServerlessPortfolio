@@ -190,6 +190,15 @@ Resources:
                   - "arn:aws:s3:::cobaemon-serverless-portfolio-prod-static/*"
                   - "arn:aws:s3:::cobaemon-serverless-portfolio-dev-static"
                   - "arn:aws:s3:::cobaemon-serverless-portfolio-dev-static/*"
+        - PolicyName: CodeBuildSSMParameterAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                  - ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/prod/portfolio/parameter/*"
       Tags:
         - Key: env
           Value: !Ref Env
