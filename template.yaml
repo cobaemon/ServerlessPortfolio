@@ -243,44 +243,44 @@ Resources:
   #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/prod"
   #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/dev"
 
-  # 静的ファイル配信用S3バケット
-  StaticFilesBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "cobaemon-serverless-portfolio-${Env}"
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+  # # 静的ファイル配信用S3バケット
+  # StaticFilesBucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: !Sub "cobaemon-serverless-portfolio-${Env}"
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: true
+  #       BlockPublicPolicy: true
+  #       IgnorePublicAcls: true
+  #       RestrictPublicBuckets: true
 
-  # CloudFrontからS3へのアクセスを許可するOriginAccessControl
-  CloudFrontOriginAccessControl:
-    Type: AWS::CloudFront::OriginAccessControl
-    Properties:
-      OriginAccessControlConfig:
-        Name: !Sub "OAC for ${StaticFilesBucket}"
-        OriginAccessControlOriginType: s3
-        SigningBehavior: always
-        SigningProtocol: sigv4
+  # # CloudFrontからS3へのアクセスを許可するOriginAccessControl
+  # CloudFrontOriginAccessControl:
+  #   Type: AWS::CloudFront::OriginAccessControl
+  #   Properties:
+  #     OriginAccessControlConfig:
+  #       Name: !Sub "OAC for ${StaticFilesBucket}"
+  #       OriginAccessControlOriginType: s3
+  #       SigningBehavior: always
+  #       SigningProtocol: sigv4
 
-  # S3バケットポリシー（CloudFrontからのアクセスのみ許可）
-  StaticFilesBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref StaticFilesBucket
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: AllowCloudFrontServicePrincipal
-            Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
-            Action: s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
-            Condition:
-              StringEquals:
-                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+  # # S3バケットポリシー（CloudFrontからのアクセスのみ許可）
+  # StaticFilesBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref StaticFilesBucket
+  #     PolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Sid: AllowCloudFrontServicePrincipal
+  #           Effect: Allow
+  #           Principal:
+  #             Service: cloudfront.amazonaws.com
+  #           Action: s3:GetObject
+  #           Resource: !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
+  #           Condition:
+  #             StringEquals:
+  #               "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   # CloudFrontディストリビューション
   CloudFrontDistribution:
@@ -288,16 +288,17 @@ Resources:
     Properties:
       DistributionConfig:
         Origins:
-          - Id: !Sub "S3-${StaticFilesBucket}"
-            DomainName: !GetAtt StaticFilesBucket.RegionalDomainName
+          - Id: !Sub "S3-cobaemon-serverless-portfolio-${Env}-static"
+            DomainName: !Sub "cobaemon-serverless-portfolio-${Env}-static.s3.${AWS::Region}.amazonaws.com"
+            # ↓↓↓ 以下の2行を追加 ↓↓↓
             S3OriginConfig:
-              OriginAccessIdentity: "" # OACを使用するため空にする
-            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !ImportValue !Sub "cobaemon-portfolio-${Env}-oac-id"
         Enabled: true
         DefaultRootObject: index.html
         HttpVersion: http2and3
         DefaultCacheBehavior:
-          TargetOriginId: !Sub "S3-${StaticFilesBucket}"
+          TargetOriginId: !Sub "S3-cobaemon-serverless-portfolio-${Env}-static"
           ViewerProtocolPolicy: redirect-to-https
           AllowedMethods:
             - GET

@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: "Dependencies for the Serverless Portfolio application."
+
+Parameters:
+  Env:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, prod]
+
+Resources:
+  StaticFilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "cobaemon-serverless-portfolio-${Env}-static" # 「-static」を付ける命名規則とします
+
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "OAC-for-cobaemon-serverless-portfolio-${Env}-static"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  StaticFilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticFilesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFront
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
+            # Condition: ... (CloudFrontのARNを特定できないため、ここでは省略するのが一般的)
+
+Outputs:
+  OACId:
+    Description: "ID of the Origin Access Control for CloudFront"
+    Value: !GetAtt CloudFrontOriginAccessControl.Id
+    Export:
+      Name: !Sub "cobaemon-portfolio-${Env}-oac-id"
