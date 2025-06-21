@@ -43,7 +43,7 @@ Resources:
   DjangoFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: CobaemonServerlessPortfolioFunction
+      # FunctionName: CobaemonServerlessPortfolioFunction
       Handler: asgi_lambda.handler
       Runtime: python3.12
       CodeUri: ./
