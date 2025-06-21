@@ -247,7 +247,7 @@ Resources:
   StaticFilesBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "cobaemon-serverless-portfolio-${Env}-static"
+      BucketName: !Sub "cobaemon-serverless-portfolio-${Env}"
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true

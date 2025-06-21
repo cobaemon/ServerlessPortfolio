@@ -186,10 +186,10 @@ Resources:
                   - "s3:ListBucket"
                   - "s3:DeleteObject"
                 Resource:
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-prod-static"
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-prod-static/*"
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-dev-static"
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-dev-static/*"
+                  - "arn:aws:s3:::cobaemon-serverless-portfolio-prod"
+                  - "arn:aws:s3:::cobaemon-serverless-portfolio-prod/*"
+                  - "arn:aws:s3:::cobaemon-serverless-portfolio-dev"
+                  - "arn:aws:s3:::cobaemon-serverless-portfolio-dev/*"
         - PolicyName: CodeBuildSSMParameterAccess
           PolicyDocument:
             Version: '2012-10-17'
