@@ -290,10 +290,11 @@ Resources:
         Origins:
           - Id: !Sub "S3-cobaemon-serverless-portfolio-${Env}-static"
             DomainName: !Sub "cobaemon-serverless-portfolio-${Env}-static.s3.${AWS::Region}.amazonaws.com"
-            # ↓↓↓ 以下の2行を追加 ↓↓↓
             S3OriginConfig:
               OriginAccessIdentity: ""
-            OriginAccessControlId: !ImportValue !Sub "cobaemon-portfolio-${Env}-oac-id"
+            OriginAccessControlId:
+              Fn::ImportValue:
+                Fn::Sub: "cobaemon-portfolio-${Env}-oac-id"
         Enabled: true
         DefaultRootObject: index.html
         HttpVersion: http2and3

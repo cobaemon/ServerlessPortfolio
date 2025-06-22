@@ -12,7 +12,7 @@ Resources:
   StaticFilesBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "cobaemon-serverless-portfolio-${Env}-static" # 「-static」を付ける命名規則とします
+      BucketName: !Sub "cobaemon-serverless-portfolio-${Env}-static"
 
   CloudFrontOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
@@ -36,7 +36,6 @@ Resources:
               Service: cloudfront.amazonaws.com
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
-            # Condition: ... (CloudFrontのARNを特定できないため、ここでは省略するのが一般的)
 
 Outputs:
   OACId:
