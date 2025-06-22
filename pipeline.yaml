@@ -88,7 +88,7 @@ Resources:
               InputArtifacts:
                 - Name: BuildOutput
               Configuration:
-                RoleArn: !GetAtt CodePipelineServiceRole.Arn
+                RoleArn: !GetAtt CloudFormationServiceRole.Arn
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
@@ -142,10 +142,22 @@ Resources:
             Principal:
               Service:
                 - codepipeline.amazonaws.com
-                - cloudformation.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
+      Policies:
+        - PolicyName: PassRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: 
+                  - !GetAtt CloudFormationServiceRole.Arn
+                Condition:
+                  StringEquals:
+                    'iam:PassedToService': cloudformation.amazonaws.com
       Tags:
         - Key: env
           Value: !Ref Env
@@ -207,3 +219,24 @@ Resources:
         - Key: service
           Value: role
 
+  CloudFormationServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${CodePipelineName}-CloudFormation-ServiceRole"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Tags:
+        - Key: env
+          Value: !Ref Env
+        - Key: app
+          Value: portfolio
+        - Key: service
+          Value: cloudformation-role

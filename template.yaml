@@ -64,6 +64,8 @@ Resources:
           EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
           EMAIL_PORT: "{{resolve:ssm:/prod/portfolio/parameter/email_port}}"
           STATIC_URL: !Sub "https://${CloudFrontDistribution.DomainName}/"
+          CLOUDFRONT_DOMAIN_NAME: !GetAtt CloudFrontDistribution.DomainName
+          ENV: !Ref Env
       Events:
         GetEndpoint:
           Type: Api

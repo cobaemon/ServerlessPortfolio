@@ -36,6 +36,17 @@ phases:
   pre_build:
     commands:
       - echo "Preparing SAM build..."
+      # 翻訳ファイルの生成とコンパイル（追加）
+      - echo "Generating and compiling translation files..."
+      - python manage.py makemessages -l ja --ignore=venv --ignore=.venv
+      - python manage.py makemessages -l en --ignore=venv --ignore=.venv
+      - python manage.py makemessages -l fr --ignore=venv --ignore=.venv
+      - python manage.py makemessages -l es --ignore=venv --ignore=.venv
+      - python manage.py makemessages -l ru --ignore=venv --ignore=.venv
+      - python manage.py makemessages -l zh-hans --ignore=venv --ignore=.venv
+      - python manage.py makemessages -l ar --ignore=venv --ignore=.venv
+      - python manage.py compilemessages
+      # 静的ファイルの収集
       - python manage.py collectstatic --noinput
       - echo "Syncing static files to S3..."
       - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
