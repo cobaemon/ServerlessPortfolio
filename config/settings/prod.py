@@ -59,7 +59,8 @@ CSRF_COOKIE_SECURE = True
 # AWS S3とCloudFrontの設定
 AWS_ACCESS_KEY_ID = get_env_variable("AWS_ACCESS_KEY_ID") if os.environ.get("AWS_ACCESS_KEY_ID") else None
 AWS_SECRET_ACCESS_KEY = get_env_variable("AWS_SECRET_ACCESS_KEY") if os.environ.get("AWS_SECRET_ACCESS_KEY") else None
-AWS_STORAGE_BUCKET_NAME = f"cobaemon-serverless-portfolio-{get_env_variable('ENV', 'prod')}-static"
+ENV = get_env_variable('ENV', 'prod')
+AWS_STORAGE_BUCKET_NAME = f"cobaemon-serverless-portfolio-{ENV}-static"
 AWS_S3_REGION_NAME = 'ap-northeast-1'
 
 # CloudFrontの設定

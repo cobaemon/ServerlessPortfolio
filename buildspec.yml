@@ -36,16 +36,27 @@ phases:
   pre_build:
     commands:
       - echo "Preparing SAM build..."
-      # 翻訳ファイルの生成とコンパイル（追加）
+      # 翻訳ファイル処理を条件付きで実行
+      - echo "Setting up locale directory..."
+      - mkdir -p locale
+      
+      # 既存の翻訳ファイルがあるかチェックしてから実行
       - echo "Generating and compiling translation files..."
-      - python manage.py makemessages -l ja --ignore=venv --ignore=.venv
-      - python manage.py makemessages -l en --ignore=venv --ignore=.venv
-      - python manage.py makemessages -l fr --ignore=venv --ignore=.venv
-      - python manage.py makemessages -l es --ignore=venv --ignore=.venv
-      - python manage.py makemessages -l ru --ignore=venv --ignore=.venv
-      - python manage.py makemessages -l zh-hans --ignore=venv --ignore=.venv
-      - python manage.py makemessages -l ar --ignore=venv --ignore=.venv
-      - python manage.py compilemessages
+      - |
+        if [ -f "templates/portfolio_base.html" ]; then
+          echo "Found templates, generating translation files..."
+          python manage.py makemessages -l ja --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for ja failed, continuing..."
+          python manage.py makemessages -l en --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for en failed, continuing..."
+          python manage.py makemessages -l fr --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for fr failed, continuing..."
+          python manage.py makemessages -l es --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for es failed, continuing..."
+          python manage.py makemessages -l ru --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for ru failed, continuing..."
+          python manage.py makemessages -l zh-hans --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for zh-hans failed, continuing..."
+          python manage.py makemessages -l ar --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for ar failed, continuing..."
+          python manage.py compilemessages || echo "compilemessages failed, continuing..."
+        else
+          echo "No templates found, skipping translation file generation"
+        fi
+        
       # 静的ファイルの収集
       - python manage.py collectstatic --noinput
       - echo "Syncing static files to S3..."

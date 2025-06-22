@@ -134,7 +134,7 @@ Resources:
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${CodePipelineName}-ServiceRole"
+      RoleName: !Sub "${Env}-portfolio-pipeline-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -169,6 +169,7 @@ Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${Env}-portfolio-build-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -222,7 +223,7 @@ Resources:
   CloudFormationServiceRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${CodePipelineName}-CloudFormation-ServiceRole"
+      RoleName: !Sub "${Env}-portfolio-cfn-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
