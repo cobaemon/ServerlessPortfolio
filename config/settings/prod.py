@@ -7,18 +7,11 @@ from .base import *
 
 DEBUG = False
 
-def get_env_variable(var_name):
-    """
-    Returns the value of the environment variable var_name.
-    Raises ImproperlyConfigured if the variable is not set.
-    """
-    try:
-        return os.environ[var_name]
-    except KeyError:
-        raise ImproperlyConfigured(f"Set the {var_name} environment variable")
 
-# 本番環境では、デフォルト値を設定せず必須項目とする
-SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY")
+# 本番環境では、環境変数が設定されていない場合はエラーにする
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("Set the DJANGO_SECRET_KEY environment variable")
 
 # ALLOWED_HOSTS はカンマ区切りの文字列として環境変数に設定されている前提
 allowed_hosts = os.environ.get("ALLOWED_HOSTS")
@@ -33,33 +26,66 @@ DATABASES = {
     }
 }
 
-EMAIL_HOST_USER = get_env_variable("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = get_env_variable("EMAIL_HOST_PASSWORD")
-GOOGLE_CLIENT_ID = get_env_variable("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = get_env_variable("GOOGLE_CLIENT_SECRET")
-GITHUB_CLIENT_ID = get_env_variable("GITHUB_CLIENT_ID")
-GITHUB_CLIENT_SECRET = get_env_variable("GITHUB_CLIENT_SECRET")
+# メール設定 - 必須項目
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+if not EMAIL_HOST_USER:
+    raise ImproperlyConfigured("Set the EMAIL_HOST_USER environment variable")
+
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+if not EMAIL_HOST_PASSWORD:
+    raise ImproperlyConfigured("Set the EMAIL_HOST_PASSWORD environment variable")
+
+# OAuth設定 - 必須項目
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+if not GOOGLE_CLIENT_ID:
+    raise ImproperlyConfigured("Set the GOOGLE_CLIENT_ID environment variable")
+
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+if not GOOGLE_CLIENT_SECRET:
+    raise ImproperlyConfigured("Set the GOOGLE_CLIENT_SECRET environment variable")
+
+GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
+if not GITHUB_CLIENT_ID:
+    raise ImproperlyConfigured("Set the GITHUB_CLIENT_ID environment variable")
+
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+if not GITHUB_CLIENT_SECRET:
+    raise ImproperlyConfigured("Set the GITHUB_CLIENT_SECRET environment variable")
 
 csrf_trusted_origins = os.environ.get("CSRF_TRUSTED_ORIGINS")
 if not csrf_trusted_origins:
     raise ImproperlyConfigured("Set the CSRF_TRUSTED_ORIGINS environment variable")
 CSRF_TRUSTED_ORIGINS = csrf_trusted_origins.split(",")
 
-DEFAULT_FROM_EMAIL = get_env_variable("DEFAULT_FROM_EMAIL")
-DEFAULT_TO_EMAIL = get_env_variable("DEFAULT_TO_EMAIL")
-EMAIL_HOST = get_env_variable("EMAIL_HOST")
-EMAIL_PORT = get_env_variable("EMAIL_PORT")
+# メール設定 - 必須項目
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+if not DEFAULT_FROM_EMAIL:
+    raise ImproperlyConfigured("Set the DEFAULT_FROM_EMAIL environment variable")
+
+DEFAULT_TO_EMAIL = os.environ.get("DEFAULT_TO_EMAIL")
+if not DEFAULT_TO_EMAIL:
+    raise ImproperlyConfigured("Set the DEFAULT_TO_EMAIL environment variable")
+
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+if not EMAIL_HOST:
+    raise ImproperlyConfigured("Set the EMAIL_HOST environment variable")
+
+EMAIL_PORT = os.environ.get("EMAIL_PORT")
+if not EMAIL_PORT:
+    raise ImproperlyConfigured("Set the EMAIL_PORT environment variable")
 
 # セキュリティ強化のための設定
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+# AWS S3とCloudFrontの設定 - オプション項目
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 
-# AWS S3とCloudFrontの設定
-AWS_ACCESS_KEY_ID = get_env_variable("AWS_ACCESS_KEY_ID") if os.environ.get("AWS_ACCESS_KEY_ID") else None
-AWS_SECRET_ACCESS_KEY = get_env_variable("AWS_SECRET_ACCESS_KEY") if os.environ.get("AWS_SECRET_ACCESS_KEY") else None
-ENV = get_env_variable('ENV', 'prod')
+# ENV設定 - デフォルト値あり
+ENV = os.environ.get('ENV', 'prod')
+
 AWS_STORAGE_BUCKET_NAME = f"cobaemon-serverless-portfolio-{ENV}-static"
 AWS_S3_REGION_NAME = 'ap-northeast-1'
 
