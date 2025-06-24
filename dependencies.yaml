@@ -49,6 +49,16 @@ Resources:
             Condition:
               StringEquals:
                 'AWS:SourceArn': !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
+          - Sid: AllowAccountRead
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub "arn:aws:s3:::${StaticFilesBucket}"
+              - !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
 
 Outputs:
   OACId:
