@@ -99,6 +99,14 @@ AWS_S3_OBJECT_PARAMETERS = {
 if AWS_S3_CUSTOM_DOMAIN:
     STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "storages.backends.s3boto3.S3ManifestStaticStorage",
+        },
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+    }
 else:
     # CloudFrontが設定されていない場合のフォールバック
     STATIC_URL = '/static/'
@@ -107,5 +115,5 @@ else:
 AWS_DEFAULT_ACL = 'public-read'
 AWS_S3_FILE_OVERWRITE = False
 
-# django-storagesを有効化
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# # django-storagesを有効化
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
