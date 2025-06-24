@@ -5,6 +5,13 @@ from django.core.exceptions import ImproperlyConfigured
 
 from .base import *
 
+# WhiteNoise is unnecessary when serving static files via CloudFront
+MIDDLEWARE = [mw for mw in MIDDLEWARE if mw != 'whitenoise.middleware.WhiteNoiseMiddleware']
+
+# WhiteNoise's runserver helper is also unnecessary in production
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'whitenoise.runserver_nostatic']
+
+
 DEBUG = False
 
 
@@ -107,6 +114,15 @@ if AWS_S3_CUSTOM_DOMAIN:
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
         },
     }
+    # Include the CloudFront domain in CSP directives so static assets load
+    _STATIC_DOMAIN = f"https://{AWS_S3_CUSTOM_DOMAIN}"
+    CSP_DEFAULT_SRC += (_STATIC_DOMAIN,)
+    CSP_SCRIPT_SRC += (_STATIC_DOMAIN,)
+    CSP_SCRIPT_SRC_ELEM += (_STATIC_DOMAIN,)
+    CSP_STYLE_SRC += (_STATIC_DOMAIN,)
+    CSP_STYLE_SRC_ELEM += (_STATIC_DOMAIN,)
+    CSP_FONT_SRC += (_STATIC_DOMAIN,)
+    CSP_IMG_SRC += (_STATIC_DOMAIN,)
 else:
     # CloudFrontが設定されていない場合のフォールバック
     STATIC_URL = '/static/'
