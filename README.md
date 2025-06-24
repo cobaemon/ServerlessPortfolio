@@ -108,8 +108,15 @@ aws configure --profile aws_portfolio_profile
 
 #### 1. 依存関係のデプロイ
 
-まず、S3バケットやCloudFrontのOrigin Access Controlなどの依存リソースをデプロイします：
+まず、S3バケットやCloudFrontのOrigin Access Controlなどの依存リソースをデプロイします。
+**既存のCloudFront Origin Access Controlは自動的に検出され、再利用されます：**
 
+**自動デプロイ（推奨）:**
+```powershell
+.\deploy-deps.ps1
+```
+
+**手動デプロイ:**
 ```bash
 sam deploy --template-file dependencies.yaml --stack-name cobaemon-portfolio-dependencies-prod --parameter-overrides Env=prod --capabilities CAPABILITY_IAM --profile aws_portfolio_profile
 ```
@@ -119,7 +126,7 @@ sam deploy --template-file dependencies.yaml --stack-name cobaemon-portfolio-dep
 次に、CodePipelineを使用したCI/CDパイプラインをデプロイします。このパイプラインは、コードの変更を検知して自動的にアプリケーションをビルド・デプロイします：
 
 ```bash
-sam deploy --template-file pipeline.yaml --stack-name CobaemonServerlessPortfolio-Pipeline --parameter-overrides Env=prod,S3Bucket=cobaemon-serverless-portfolio-prod-artifacts,StackName=cobaemon-serverless-portfolio-stack --capabilities CAPABILITY_NAMED_IAM --profile aws_portfolio_profile
+sam deploy --template-file pipeline.yaml --stack-name CobaemonServerlessPortfolio-Pipeline --parameter-overrides "Env=prod" "S3Bucket=cobaemon-serverless-portfolio-prod-artifacts" "StackName=cobaemon-serverless-portfolio-stack" --capabilities CAPABILITY_NAMED_IAM --profile aws_portfolio_profile
 ```
 
 **注意**: パイプラインがデプロイされると、`template.yaml`は自動的にパイプライン内で処理されるため、手動でデプロイする必要はありません。
@@ -162,8 +169,9 @@ sam deploy --template-file dependencies.yaml `
 
 ### 依存関係（dependencies.yaml）
 - S3バケット（静的ファイル用）
-- CloudFront Origin Access Control
+- CloudFront Origin Access Control（既存リソースの再利用可能）
 - S3バケットポリシー
+- **PowerShellスクリプトにより既存のCloudFront Origin Access Controlを自動検出し、存在する場合は新規作成をスキップ**
 
 ### メインアプリケーション（template.yaml）
 - AWS Lambda関数（Djangoアプリケーション）
@@ -298,6 +306,7 @@ aws logs tail /aws/lambda/CobaemonServerlessPortfolioFunction --profile aws_port
 - デプロイ前に必要なシークレットとパラメータがAWS Secrets ManagerとParameter Storeに設定されていることを確認してください
 - **CI/CDパイプラインを使用する場合**: 依存関係→パイプラインの順序でデプロイしてください。パイプラインがデプロイされると、`template.yaml`は自動的に処理されます
 - **手動デプロイの場合**: 依存関係→メインアプリケーションの順序でデプロイしてください
+- **既存リソースの自動検出**: PowerShellスクリプトによりCloudFront Origin Access Controlが自動的に検出され、既存のものがあれば再利用されます
 - 本番環境では `Env=prod` パラメータを使用してください
 - カスタムドメインを使用する場合は、Route53でホストゾーンが設定されていることを確認してください
 

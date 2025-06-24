@@ -8,6 +8,16 @@ Parameters:
     Default: prod
     AllowedValues: [dev, prod]
     Description: "デプロイ環境（dev または prod）"
+  
+  # 既存のCloudFront Origin Access Control ID（新規作成しない場合に指定）
+  ExistingOACId:
+    Type: String
+    Default: ""
+    Description: "既存のCloudFront Origin Access Control ID（新規作成しない場合に指定）"
+
+Conditions:
+  # 既存OAC IDが指定されていない場合のみ新規作成
+  CreateOAC: !Equals [!Ref ExistingOACId, ""]
 
 Resources:
   # 静的ファイル配信用S3バケット
@@ -29,8 +39,10 @@ Resources:
 
   # CloudFrontからS3へのアクセスを制御するOrigin Access Control
   # S3バケットへの直接アクセスを防ぎ、CloudFront経由でのみアクセス可能にする
+  # 既存OAC IDが指定されている場合は新規作成しない
   CloudFrontOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
+    Condition: CreateOAC
     Properties:
       OriginAccessControlConfig:
         Name: !Sub "OAC-for-cobaemon-serverless-portfolio-${Env}-static"
@@ -69,9 +81,9 @@ Resources:
 
 Outputs:
   # Origin Access Control IDをエクスポート
-  # メインのCloudFormationスタックで参照するため
+  # 新規作成した場合はそのID、既存の場合は指定されたIDを使用
   OACId:
     Description: "CloudFront用のOrigin Access Control ID"
-    Value: !GetAtt CloudFrontOriginAccessControl.Id
+    Value: !If [CreateOAC, !GetAtt CloudFrontOriginAccessControl.Id, !Ref ExistingOACId]
     Export:
       Name: !Sub "cobaemon-portfolio-${Env}-oac-id"
