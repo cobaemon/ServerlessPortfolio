@@ -1,8 +1,13 @@
 from django import forms
-from django.core.mail import EmailMessage
 from django.conf import settings
+from django.core.mail import EmailMessage
+
 
 class ContactForm(forms.Form):
+    """
+    お問い合わせフォームクラス
+    ユーザーからの問い合わせを受け付けるためのフォーム
+    """
     full_name = forms.CharField(
         label='Full Name', 
         max_length=100,
@@ -10,7 +15,7 @@ class ContactForm(forms.Form):
             'name': 'full_name',
             'class': 'form-control',
             'placeholder': 'Enter your name...',
-            'autocomplete': 'name'  # autocomplete属性を追加
+            'autocomplete': 'name'  # ブラウザの自動補完機能を有効化
         })
     )
     email = forms.EmailField(
@@ -20,7 +25,7 @@ class ContactForm(forms.Form):
             'class': 'form-control',
             'placeholder': 'name@example.com',
             'data-sb-validations': 'required,email',
-            'autocomplete': 'email'  # autocomplete属性を追加
+            'autocomplete': 'email'  # メールアドレスの自動補完を有効化
         })
     )
     phone_number = forms.CharField(
@@ -30,7 +35,7 @@ class ContactForm(forms.Form):
             'name': 'phone_number',
             'class': 'form-control',
             'placeholder': '(123) 456-7890',
-            'autocomplete': 'tel'  # autocomplete属性を追加
+            'autocomplete': 'tel'  # 電話番号の自動補完を有効化
         })
     )
     message = forms.CharField(
@@ -39,17 +44,25 @@ class ContactForm(forms.Form):
             'name': 'message',
             'class': 'form-control',
             'placeholder': 'Enter your message here...',
-            'autocomplete': 'off'  # メッセージフィールドにはautocompleteをオフに設定
+            'autocomplete': 'off'  # メッセージフィールドでは自動補完を無効化（セキュリティ上の理由）
         })
     )
 
     def clean_phone_number(self):
+        """
+        電話番号のバリデーション
+        数字のみを許可し、不正な文字が含まれている場合はエラーを発生
+        """
         phone_number = self.cleaned_data.get('phone_number')
         if not phone_number.isdigit():
             raise forms.ValidationError('Phone number should only contain digits')
         return phone_number
     
     def send_email(self):
+        """
+        お問い合わせ内容をメールで送信
+        フォームの内容を管理者宛にメール送信する
+        """
         full_name = self.cleaned_data['full_name']
         email = self.cleaned_data['email']
         phone_number = self.cleaned_data['phone_number']

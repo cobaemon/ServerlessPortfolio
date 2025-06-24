@@ -1,14 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: "Dependencies for the Serverless Portfolio application."
+Description: "Serverless Portfolioアプリケーションの依存リソース（S3バケット、CloudFront Origin Access Control等）"
 
 Parameters:
   Env:
     Type: String
     Default: prod
     AllowedValues: [dev, prod]
+    Description: "デプロイ環境（dev または prod）"
 
 Resources:
+  # 静的ファイル配信用S3バケット
+  # CSS、JavaScript、画像などの静的ファイルを格納
   StaticFilesBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -24,6 +27,8 @@ Resources:
               - "*"
             MaxAge: 3000
 
+  # CloudFrontからS3へのアクセスを制御するOrigin Access Control
+  # S3バケットへの直接アクセスを防ぎ、CloudFront経由でのみアクセス可能にする
   CloudFrontOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
@@ -33,6 +38,8 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
+  # S3バケットポリシー
+  # CloudFrontからのアクセスのみを許可し、セキュリティを確保
   StaticFilesBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -51,8 +58,10 @@ Resources:
                 'AWS:SourceArn': !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
 
 Outputs:
+  # Origin Access Control IDをエクスポート
+  # メインのCloudFormationスタックで参照するため
   OACId:
-    Description: "ID of the Origin Access Control for CloudFront"
+    Description: "CloudFront用のOrigin Access Control ID"
     Value: !GetAtt CloudFrontOriginAccessControl.Id
     Export:
       Name: !Sub "cobaemon-portfolio-${Env}-oac-id"

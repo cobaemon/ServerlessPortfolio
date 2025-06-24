@@ -163,6 +163,7 @@ Resources:
         DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
 
+  # WAF設定（セキュリティ強化が必要な場合に有効化）
   # WAFWebACL:
   #   Type: AWS::WAFv2::WebACL
   #   Properties:
@@ -253,7 +254,8 @@ Resources:
   #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/prod"
   #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/dev"
 
-  # # 静的ファイル配信用S3バケット
+  # 静的ファイル配信用S3バケット（dependencies.yamlで管理）
+  # 以下のリソースは dependencies.yaml で定義されているため、ここではコメントアウト
   # StaticFilesBucket:
   #   Type: AWS::S3::Bucket
   #   Properties:
@@ -264,7 +266,7 @@ Resources:
   #       IgnorePublicAcls: true
   #       RestrictPublicBuckets: true
 
-  # # CloudFrontからS3へのアクセスを許可するOriginAccessControl
+  # CloudFrontからS3へのアクセスを許可するOriginAccessControl（dependencies.yamlで管理）
   # CloudFrontOriginAccessControl:
   #   Type: AWS::CloudFront::OriginAccessControl
   #   Properties:
@@ -274,7 +276,7 @@ Resources:
   #       SigningBehavior: always
   #       SigningProtocol: sigv4
 
-  # # S3バケットポリシー（CloudFrontからのアクセスのみ許可）
+  # S3バケットポリシー（CloudFrontからのアクセスのみ許可）（dependencies.yamlで管理）
   # StaticFilesBucketPolicy:
   #   Type: AWS::S3::BucketPolicy
   #   Properties:
@@ -292,7 +294,7 @@ Resources:
   #             StringEquals:
   #               "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
-  # CloudFrontディストリビューション
+  # CloudFrontディストリビューション（静的ファイル配信用）
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:

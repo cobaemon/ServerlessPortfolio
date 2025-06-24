@@ -5,7 +5,7 @@ env:
     DJANGO_SETTINGS_MODULE: "config.settings.prod"
     ENV: "prod"
     
-  # Secrets Managerから取得するすべての秘密情報を定義
+  # AWS Secrets Managerから取得する機密情報の定義
   secrets-manager:
     DJANGO_SECRET_KEY: "prod/portfolio/secret:DJANGO_SECRET_KEY"
     EMAIL_HOST_USER: "prod/portfolio/secret:EMAIL_HOST_USER"
@@ -15,7 +15,7 @@ env:
     GITHUB_CLIENT_ID: "prod/portfolio/secret:GITHUB_CLIENT_ID"
     GITHUB_CLIENT_SECRET: "prod/portfolio/secret:GITHUB_CLIENT_SECRET"
 
-  # Parameter Storeから取得するすべてのパラメータを定義
+  # AWS Systems Manager Parameter Storeから取得する設定値の定義
   parameter-store:
     ALLOWED_HOSTS: "/prod/portfolio/parameter/allowed_hosts"
     CSRF_TRUSTED_ORIGINS: "/prod/portfolio/parameter/csrf_trusted_origins"
@@ -29,46 +29,46 @@ phases:
     runtime-versions:
       python: 3.12
     commands:
-      - echo "Installing dependencies..."
+      - echo "依存関係のインストールを開始..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
       - pip install aws-sam-cli
   pre_build:
     commands:
-      - echo "Preparing SAM build..."
-      # 翻訳ファイル処理を条件付きで実行
-      - echo "Setting up locale directory..."
+      - echo "SAMビルドの準備を開始..."
+      # 多言語対応のための翻訳ファイル処理
+      - echo "ロケールディレクトリの設定..."
       - mkdir -p locale
       
-      # 既存の翻訳ファイルがあるかチェックしてから実行
-      - echo "Generating and compiling translation files..."
+      # テンプレートファイルの存在確認後に翻訳ファイルを生成・コンパイル
+      - echo "翻訳ファイルの生成とコンパイルを開始..."
       - |
         if [ -f "templates/portfolio_base.html" ]; then
-          echo "Found templates, generating translation files..."
-          python manage.py makemessages -l ja --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for ja failed, continuing..."
-          python manage.py makemessages -l en --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for en failed, continuing..."
-          python manage.py makemessages -l fr --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for fr failed, continuing..."
-          python manage.py makemessages -l es --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for es failed, continuing..."
-          python manage.py makemessages -l ru --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for ru failed, continuing..."
-          python manage.py makemessages -l zh-hans --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for zh-hans failed, continuing..."
-          python manage.py makemessages -l ar --ignore=venv --ignore=.venv --ignore=node_modules || echo "makemessages for ar failed, continuing..."
-          python manage.py compilemessages || echo "compilemessages failed, continuing..."
+          echo "テンプレートファイルを発見、翻訳ファイルを生成中..."
+          python manage.py makemessages -l ja --ignore=venv --ignore=.venv --ignore=node_modules || echo "日本語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py makemessages -l en --ignore=venv --ignore=.venv --ignore=node_modules || echo "英語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py makemessages -l fr --ignore=venv --ignore=.venv --ignore=node_modules || echo "フランス語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py makemessages -l es --ignore=venv --ignore=.venv --ignore=node_modules || echo "スペイン語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py makemessages -l ru --ignore=venv --ignore=.venv --ignore=node_modules || echo "ロシア語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py makemessages -l zh-hans --ignore=venv --ignore=.venv --ignore=node_modules || echo "中国語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py makemessages -l ar --ignore=venv --ignore=.venv --ignore=node_modules || echo "アラビア語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
+          python manage.py compilemessages || echo "翻訳ファイルのコンパイルに失敗しましたが、処理を継続します..."
         else
-          echo "No templates found, skipping translation file generation"
+          echo "テンプレートファイルが見つからないため、翻訳ファイルの生成をスキップします"
         fi
         
-      # 静的ファイルの収集
+      # 静的ファイルの収集とS3への同期
       - python manage.py collectstatic --noinput
-      - echo "Syncing static files to S3..."
+      - echo "静的ファイルをS3に同期中..."
       - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
       - aws s3 sync staticfiles/ s3://${BUCKET_NAME}/ --delete
   build:
     commands:
-      - echo "Running sam build..."
+      - echo "SAMビルドを実行中..."
       - sam build --use-container
   post_build:
     commands:
-      - echo "Running sam package..."
+      - echo "SAMパッケージングを実行中..."
       - sam package --output-template-file packaged.yaml --s3-bucket $S3Bucket
 
 artifacts:
