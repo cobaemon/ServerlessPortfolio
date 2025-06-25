@@ -106,30 +106,15 @@ aws configure --profile aws_portfolio_profile
 
 ### 方法1: CI/CDパイプラインを使用した自動デプロイ（推奨）
 
-#### 1. 依存関係のデプロイ
+#### 1. パイプラインのデプロイ
 
-まず、S3バケットやCloudFrontのOrigin Access Controlなどの依存リソースをデプロイします。
-**既存のCloudFront Origin Access Controlは自動的に検出され、再利用されます：**
-
-**自動デプロイ（推奨）:**
-```powershell
-.\deploy-deps.ps1
-```
-
-**手動デプロイ:**
-```bash
-sam deploy --template-file dependencies.yaml --stack-name cobaemon-portfolio-dependencies-prod --parameter-overrides Env=prod --capabilities CAPABILITY_IAM --profile aws_portfolio_profile
-```
-
-#### 2. CI/CDパイプラインのデプロイ
-
-次に、CodePipelineを使用したCI/CDパイプラインをデプロイします。このパイプラインは、コードの変更を検知して自動的にアプリケーションをビルド・デプロイします：
+パイプラインには `dependencies.yaml` を利用した依存リソースのデプロイ処理が含まれているため、まずパイプラインだけをデプロイします。以降はコードをプッシュするだけで自動的に依存リソースとアプリケーションが更新されます。
 
 ```bash
 sam deploy --template-file pipeline.yaml --stack-name CobaemonServerlessPortfolio-Pipeline --parameter-overrides "Env=prod" "S3Bucket=cobaemon-serverless-portfolio-prod-artifacts" "StackName=cobaemon-serverless-portfolio-stack" --capabilities CAPABILITY_NAMED_IAM --profile aws_portfolio_profile
 ```
 
-**注意**: パイプラインがデプロイされると、`template.yaml`は自動的にパイプライン内で処理されるため、手動でデプロイする必要はありません。
+**注意**: パイプラインがデプロイされると、`pipeline.yaml` からパイプライン自身を更新するステージが実行され、その後 `template.yaml` を用いたアプリケーションのデプロイまで自動で行われます。以降はコードをプッシュするだけで自動的にパイプラインが更新され、最新のアプリケーションがデプロイされます。
 
 ### 方法2: 手動デプロイ
 
@@ -304,7 +289,7 @@ aws logs tail /aws/lambda/CobaemonServerlessPortfolioFunction --profile aws_port
 ## 注意事項
 
 - デプロイ前に必要なシークレットとパラメータがAWS Secrets ManagerとParameter Storeに設定されていることを確認してください
-- **CI/CDパイプラインを使用する場合**: 依存関係→パイプラインの順序でデプロイしてください。パイプラインがデプロイされると、`template.yaml`は自動的に処理されます
+- **CI/CDパイプラインを使用する場合**: パイプラインを一度デプロイすれば、依存リソースとメインアプリケーションの両方が自動的に展開・更新されます
 - **手動デプロイの場合**: 依存関係→メインアプリケーションの順序でデプロイしてください
 - **既存リソースの自動検出**: PowerShellスクリプトによりCloudFront Origin Access Controlが自動的に検出され、既存のものがあれば再利用されます
 - 本番環境では `Env=prod` パラメータを使用してください
