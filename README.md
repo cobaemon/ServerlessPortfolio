@@ -129,7 +129,7 @@ sam deploy --template-file dependencies.yaml --stack-name cobaemon-portfolio-dep
 sam deploy --template-file pipeline.yaml --stack-name CobaemonServerlessPortfolio-Pipeline --parameter-overrides "Env=prod" "S3Bucket=cobaemon-serverless-portfolio-prod-artifacts" "StackName=cobaemon-serverless-portfolio-stack" --capabilities CAPABILITY_NAMED_IAM --profile aws_portfolio_profile
 ```
 
-**注意**: パイプラインがデプロイされると、`template.yaml`は自動的にパイプライン内で処理されるため、手動でデプロイする必要はありません。
+**注意**: パイプラインがデプロイされると、`pipeline.yaml` からパイプライン自身を更新するステージが実行され、その後 `template.yaml` を用いたアプリケーションのデプロイまで自動で行われます。以降はコードをプッシュするだけで自動的にパイプラインが更新され、最新のアプリケーションがデプロイされます。
 
 ### 方法2: 手動デプロイ
 
@@ -304,7 +304,7 @@ aws logs tail /aws/lambda/CobaemonServerlessPortfolioFunction --profile aws_port
 ## 注意事項
 
 - デプロイ前に必要なシークレットとパラメータがAWS Secrets ManagerとParameter Storeに設定されていることを確認してください
-- **CI/CDパイプラインを使用する場合**: 依存関係→パイプラインの順序でデプロイしてください。パイプラインがデプロイされると、`template.yaml`は自動的に処理されます
+- **CI/CDパイプラインを使用する場合**: 依存関係 → パイプラインの順に一度デプロイするだけで、その後はパイプラインが自動的に自己更新しアプリケーションも展開します
 - **手動デプロイの場合**: 依存関係→メインアプリケーションの順序でデプロイしてください
 - **既存リソースの自動検出**: PowerShellスクリプトによりCloudFront Origin Access Controlが自動的に検出され、既存のものがあれば再利用されます
 - 本番環境では `Env=prod` パラメータを使用してください
