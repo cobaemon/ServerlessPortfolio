@@ -15,15 +15,24 @@ Parameters:
     Default: ""
     Description: "既存のCloudFront Origin Access Control ID（新規作成しない場合に指定）"
 
+  # 既存の静的ファイルS3バケット名（新規作成しない場合に指定）
+  ExistingStaticBucketName:
+    Type: String
+    Default: ""
+    Description: "既存の静的ファイルS3バケット名（新規作成しない場合に指定）"
+
 Conditions:
   # 既存OAC IDが指定されていない場合のみ新規作成
   CreateOAC: !Equals [!Ref ExistingOACId, ""]
+  # 既存バケット名が指定されていない場合のみ新規作成
+  CreateBucket: !Equals [!Ref ExistingStaticBucketName, ""]
 
 Resources:
   # 静的ファイル配信用S3バケット
   # CSS、JavaScript、画像などの静的ファイルを格納
   StaticFilesBucket:
     Type: AWS::S3::Bucket
+    Condition: CreateBucket
     Properties:
       BucketName: !Sub "cobaemon-serverless-portfolio-${Env}-static"
       CorsConfiguration:
@@ -55,7 +64,7 @@ Resources:
   StaticFilesBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref StaticFilesBucket
+      Bucket: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -64,7 +73,10 @@ Resources:
             Principal:
               Service: cloudfront.amazonaws.com
             Action: s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
+            Resource:
+              !Sub
+                - "arn:aws:s3:::${BucketName}/*"
+                - { BucketName: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName] }
           - Sid: AllowAccountRead
             Effect: Allow
             Principal:
@@ -73,8 +85,12 @@ Resources:
               - s3:GetObject
               - s3:ListBucket
             Resource:
-              - !Sub "arn:aws:s3:::${StaticFilesBucket}"
-              - !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
+              - !Sub
+                  - "arn:aws:s3:::${BucketName}"
+                  - { BucketName: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName] }
+              - !Sub
+                  - "arn:aws:s3:::${BucketName}/*"
+                  - { BucketName: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName] }
 
 Outputs:
   # Origin Access Control IDをエクスポート
@@ -84,3 +100,8 @@ Outputs:
     Value: !If [CreateOAC, !GetAtt CloudFrontOriginAccessControl.Id, !Ref ExistingOACId]
     Export:
       Name: !Sub "cobaemon-portfolio-${Env}-oac-id"
+  StaticFilesBucketName:
+    Description: "静的ファイルS3バケット名"
+    Value: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName]
+    Export:
+      Name: !Sub "cobaemon-portfolio-${Env}-static-bucket"
