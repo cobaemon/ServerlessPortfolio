@@ -109,7 +109,7 @@ Resources:
               Configuration:
                 RoleArn: !GetAtt CloudFormationServiceRole.Arn
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_IAM
+                Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND
                 StackName: !Sub "cobaemon-portfolio-dependencies-${Env}"
                 TemplatePath: "SourceOutput::dependencies.yaml"
                 TemplateConfiguration: DepsBuildOutput::deps-parameters.json
