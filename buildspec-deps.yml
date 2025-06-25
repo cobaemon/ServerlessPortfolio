@@ -22,7 +22,7 @@ phases:
           EXISTING_OAC_ID="";
         fi
       - |
-        cat > deps-parameters.json <<'EOP'
+        cat > deps-parameters.json <<EOP
         {
           "Parameters": {
             "Env": "${ENV}",
