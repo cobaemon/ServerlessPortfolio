@@ -105,10 +105,10 @@ AWS_S3_OBJECT_PARAMETERS = {
 # 静的ファイルの設定
 if AWS_S3_CUSTOM_DOMAIN:
     STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
-    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
+    STATICFILES_STORAGE = 'config.storage_backends.LocalManifestS3Storage'
     STORAGES = {
         "staticfiles": {
-            "BACKEND": "storages.backends.s3boto3.S3ManifestStaticStorage",
+            "BACKEND": "config.storage_backends.LocalManifestS3Storage",
         },
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
