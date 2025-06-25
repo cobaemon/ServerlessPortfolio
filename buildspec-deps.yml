@@ -21,12 +21,20 @@ phases:
       - if [ "$EXISTING_OAC_ID" = "None" ] || [ -z "$EXISTING_OAC_ID" ]; then
           EXISTING_OAC_ID="";
         fi
+      - echo "Detecting existing static files bucket..."
+      - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
+      - if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+          EXISTING_BUCKET_NAME="$BUCKET_NAME";
+        else
+          EXISTING_BUCKET_NAME="";
+        fi
       - |
         cat > deps-parameters.json <<EOP
         {
           "Parameters": {
             "Env": "${ENV}",
-            "ExistingOACId": "${EXISTING_OAC_ID}"
+            "ExistingOACId": "${EXISTING_OAC_ID}",
+            "ExistingStaticBucketName": "${EXISTING_BUCKET_NAME}"
           }
         }
         EOP
