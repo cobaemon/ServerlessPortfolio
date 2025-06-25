@@ -1,0 +1,33 @@
+version: 0.2
+
+env:
+  variables:
+    ENV: "prod"
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - pip install --upgrade pip
+      - pip install awscli
+  build:
+    commands:
+      - echo "Detecting existing CloudFront Origin Access Control..."
+      - OAC_NAME="OAC-for-cobaemon-serverless-portfolio-${ENV}-static"
+      - EXISTING_OAC_ID=$(aws cloudfront list-origin-access-controls \
+          --query "OriginAccessControlList.Items[?Name=='${OAC_NAME}'].Id | [0]" \
+          --output text || true)
+      - if [ "$EXISTING_OAC_ID" = "None" ] || [ -z "$EXISTING_OAC_ID" ]; then
+          EXISTING_OAC_ID="";
+        fi
+      - |
+        cat > deps-parameters.json <<EOP
+        [
+          {"ParameterKey": "Env", "ParameterValue": "${ENV}"},
+          {"ParameterKey": "ExistingOACId", "ParameterValue": "${EXISTING_OAC_ID}"}
+        ]
+        EOP
+artifacts:
+  files:
+    - deps-parameters.json
