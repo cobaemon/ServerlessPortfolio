@@ -215,9 +215,9 @@ Resources:
             Value: !Ref Env
       Source:
         Type: CODEPIPELINE
+        BuildSpec: buildspec-deps.yml
       Artifacts:
         Type: CODEPIPELINE
-      BuildSpec: buildspec-deps.yml
       Tags:
         - Key: env
           Value: !Ref Env
