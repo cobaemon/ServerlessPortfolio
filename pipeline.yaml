@@ -112,7 +112,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM
                 StackName: !Sub "cobaemon-portfolio-dependencies-${Env}"
                 TemplatePath: "SourceOutput::dependencies.yaml"
-                ParameterOverrides: !Join ["", ["DepsBuildOutput::deps-parameters.json"]]
+                TemplateConfiguration: DepsBuildOutput::deps-parameters.json
                 OutputFileName: output-deps.json
               RunOrder: 1
         - Name: Build
@@ -146,7 +146,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
                 TemplatePath: !Join ["", ["BuildOutput::", !Ref TemplatePath]]
-                ParameterOverrides: !Join ["", ["BuildOutput::parameters.json"]]
+                TemplateConfiguration: BuildOutput::parameters.json
                 OutputFileName: output.json
               RunOrder: 1
             - Name: BucketPolicyDeploy
@@ -163,7 +163,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Sub "cobaemon-serverless-portfolio-bucketpolicy-${Env}"
                 TemplatePath: "BuildOutput::bucketpolicy.yaml"
-                ParameterOverrides: !Join ["", ["BuildOutput::parameters.json"]]
+                TemplateConfiguration: BuildOutput::parameters.json
                 OutputFileName: output-bucketpolicy.json
               RunOrder: 2
       Tags:
