@@ -59,15 +59,12 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: AllowCloudFront
+          - Sid: AllowCloudFrontOAC
             Effect: Allow
             Principal:
               Service: cloudfront.amazonaws.com
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${StaticFilesBucket}/*"
-            Condition:
-              StringEquals:
-                'AWS:SourceArn': !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
           - Sid: AllowAccountRead
             Effect: Allow
             Principal:

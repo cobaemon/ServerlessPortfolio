@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Update S3 bucket policy for CloudFront OAC"
+
+Parameters:
+  Env:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, prod]
+
+Resources:
+  StaticFilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Sub "cobaemon-serverless-portfolio-${Env}-static"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipalReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static/*"
+            Condition:
+              StringEquals:
+                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistributionId}"
+
+Parameters:
+  CloudFrontDistributionId:
+    Type: String
+    Default: !ImportValue cobaemon-portfolio-prod-distribution-id
+
+Outputs:
+  BucketPolicyId:
+    Description: "S3 Bucket Policy Logical ID"
+    Value: !Ref StaticFilesBucketPolicy

@@ -28,9 +28,17 @@ Parameters:
   DomainName:
     Type: String
     Default: serverless.portfolio.cobaemon.com
+  ExistingARecord:
+    Type: String
+    Description: "Whether an existing A record exists (true/false)"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
+  CreateARecord: !Equals [ !Ref ExistingARecord, "false" ]
 
 Mappings:
   EnvMapping:
@@ -155,6 +163,7 @@ Resources:
 
   ApiGatewayRecordSet:
     Type: AWS::Route53::RecordSet
+    Condition: CreateARecord
     Properties:
       HostedZoneId: !Ref HostedZoneId
       Name: !Sub "${DomainName}."
@@ -328,3 +337,8 @@ Outputs:
   ApiUrl:
     Description: "The URL of the API Gateway"
     Value: !Ref DjangoApi
+  CloudFrontDistributionId:
+    Description: "CloudFront Distribution ID for OAC bucket policy"
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub "cobaemon-portfolio-${Env}-distribution-id"

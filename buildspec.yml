@@ -36,6 +36,27 @@ phases:
   pre_build:
     commands:
       - echo "SAMビルドの準備を開始..."
+      
+      # 既存のRoute53 Aレコードを検出
+      - echo "既存のRoute53 Aレコードを検出中..."
+      - |
+        DOMAIN_NAME="serverless.portfolio.cobaemon.com"
+        HOSTED_ZONE_ID=$(aws ssm get-parameter --name "/portfolio/parameter/hostzoneid" --query "Parameter.Value" --output text)
+        
+        # 既存のAレコードを検索
+        EXISTING_RECORD=$(aws route53 list-resource-record-sets \
+          --hosted-zone-id $HOSTED_ZONE_ID \
+          --query "ResourceRecordSets[?Name=='$DOMAIN_NAME.' && Type=='A']" \
+          --output text)
+        
+        if [ -n "$EXISTING_RECORD" ]; then
+          echo "既存のAレコードを検出しました: $DOMAIN_NAME"
+          echo "EXISTING_ARECORD=true" >> env_vars.txt
+        else
+          echo "既存のAレコードが見つかりませんでした。新規作成します。"
+          echo "EXISTING_ARECORD=false" >> env_vars.txt
+        fi
+      
       # 多言語対応のための翻訳ファイル処理
       - echo "ロケールディレクトリの設定..."
       - mkdir -p locale
@@ -69,8 +90,28 @@ phases:
   post_build:
     commands:
       - echo "SAMパッケージングを実行中..."
+      # 環境変数を読み込み
+      - source env_vars.txt
+      - echo "EXISTING_ARECORD: $EXISTING_ARECORD"
       - sam package --output-template-file packaged.yaml --s3-bucket $S3Bucket
+      # パラメータファイルを作成
+      - |
+        cat > parameters.json << EOF
+        [
+          {
+            "ParameterKey": "Env",
+            "ParameterValue": "$ENV"
+          },
+          {
+            "ParameterKey": "ExistingARecord",
+            "ParameterValue": "$EXISTING_ARECORD"
+          }
+        ]
+        EOF
+      - echo "パラメータファイルを作成しました:"
+      - cat parameters.json
 
 artifacts:
   files:
     - packaged.yaml
+    - parameters.json

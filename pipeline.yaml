@@ -93,8 +93,26 @@ Resources:
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
                 TemplatePath: !Join ["", ["BuildOutput::", !Ref TemplatePath]]
+                ParameterOverrides: !Join ["", ["BuildOutput::parameters.json"]]
                 OutputFileName: output.json
               RunOrder: 1
+            - Name: BucketPolicyDeploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              InputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                RoleArn: !GetAtt CloudFormationServiceRole.Arn
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
+                StackName: !Sub "cobaemon-serverless-portfolio-bucketpolicy-${Env}"
+                TemplatePath: "BuildOutput::bucketpolicy.yaml"
+                ParameterOverrides: !Join ["", ["BuildOutput::parameters.json"]]
+                OutputFileName: output-bucketpolicy.json
+              RunOrder: 2
       Tags:
         - Key: env
           Value: !Ref Env
