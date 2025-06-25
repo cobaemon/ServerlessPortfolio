@@ -96,17 +96,13 @@ phases:
       - sam package --output-template-file packaged.yaml --s3-bucket $S3Bucket
       # パラメータファイルを作成
       - |
-        cat > parameters.json << EOF
-        [
-          {
-            "ParameterKey": "Env",
-            "ParameterValue": "$ENV"
-          },
-          {
-            "ParameterKey": "ExistingARecord",
-            "ParameterValue": "$EXISTING_ARECORD"
+        cat > parameters.json <<'EOF'
+        {
+          "Parameters": {
+            "Env": "$ENV",
+            "ExistingARecord": "$EXISTING_ARECORD"
           }
-        ]
+        }
         EOF
       - echo "パラメータファイルを作成しました:"
       - cat parameters.json

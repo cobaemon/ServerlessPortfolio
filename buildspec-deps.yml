@@ -22,11 +22,13 @@ phases:
           EXISTING_OAC_ID="";
         fi
       - |
-        cat > deps-parameters.json <<EOP
-        [
-          {"ParameterKey": "Env", "ParameterValue": "${ENV}"},
-          {"ParameterKey": "ExistingOACId", "ParameterValue": "${EXISTING_OAC_ID}"}
-        ]
+        cat > deps-parameters.json <<'EOP'
+        {
+          "Parameters": {
+            "Env": "${ENV}",
+            "ExistingOACId": "${EXISTING_OAC_ID}"
+          }
+        }
         EOP
 artifacts:
   files:

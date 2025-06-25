@@ -193,6 +193,13 @@ Resources:
         Type: CODEPIPELINE
       Artifacts:
         Type: CODEPIPELINE
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: !Sub "/aws/codebuild/${CodePipelineName}-Build"
+          Status: ENABLED
+        S3Logs:
+          Status: ENABLED
+          Location: !Sub "${S3Bucket}/build-logs"
       Tags:
         - Key: env
           Value: !Ref Env
@@ -218,6 +225,13 @@ Resources:
         BuildSpec: buildspec-deps.yml
       Artifacts:
         Type: CODEPIPELINE
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: !Sub "/aws/codebuild/${CodePipelineName}-Deps"
+          Status: ENABLED
+        S3Logs:
+          Status: ENABLED
+          Location: !Sub "${S3Bucket}/build-logs"
       Tags:
         - Key: env
           Value: !Ref Env
