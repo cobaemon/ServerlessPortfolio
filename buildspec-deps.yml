@@ -3,6 +3,7 @@ version: 0.2
 env:
   variables:
     ENV: "prod"
+    AWS_DEFAULT_REGION: "us-east-1"
 
 phases:
   install:
@@ -15,7 +16,7 @@ phases:
     commands:
       - echo "Detecting existing CloudFront Origin Access Control..."
       - OAC_NAME="OAC-for-cobaemon-serverless-portfolio-${ENV}-static"
-      - EXISTING_OAC_ID=$(aws cloudfront list-origin-access-controls \
+      - EXISTING_OAC_ID=$(aws --region $AWS_DEFAULT_REGION cloudfront list-origin-access-controls \
           --query "OriginAccessControlList.Items[?Name=='${OAC_NAME}'].Id | [0]" \
           --output text || true)
       - if [ "$EXISTING_OAC_ID" = "None" ] || [ -z "$EXISTING_OAC_ID" ]; then

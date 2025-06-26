@@ -306,6 +306,8 @@ aws logs tail /aws/lambda/CobaemonServerlessPortfolioFunction --profile aws_port
 - **CI/CDパイプラインを使用する場合**: パイプラインを一度デプロイすれば、依存リソースとメインアプリケーションの両方が自動的に展開・更新されます
 - **手動デプロイの場合**: 依存関係→メインアプリケーションの順序でデプロイしてください
 - **既存リソースの自動検出**: CodePipeline がCloudFront Origin Access ControlとS3バケットを検出し、既存のものがあれば再利用します。パイプラインを使わない場合は `deploy-deps.ps1` を実行してください
+- CloudFront への操作はグローバルリージョン(us-east-1)で実行する必要があるため、
+  ビルドプロジェクトでは `AWS_DEFAULT_REGION=us-east-1` を設定しています
 - 本番環境では `Env=prod` パラメータを使用してください
 - カスタムドメインを使用する場合は、Route53でホストゾーンが設定されていることを確認してください
 
