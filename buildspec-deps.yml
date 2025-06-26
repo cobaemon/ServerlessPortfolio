@@ -11,7 +11,8 @@ phases:
       python: 3.12
     commands:
       - pip install --upgrade pip
-      - pip install awscli
+      # Use pre-installed AWS CLI v2
+      - aws --version
   build:
     commands:
       - echo "Detecting existing CloudFront Origin Access Control..."
