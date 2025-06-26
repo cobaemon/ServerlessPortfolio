@@ -17,14 +17,10 @@ phases:
     commands:
       - echo "Detecting existing CloudFront Origin Access Control..."
       - OAC_NAME="OAC-for-cobaemon-serverless-portfolio-${ENV}-static"
-      - EXISTING_OAC_ID=$(aws --region $AWS_DEFAULT_REGION cloudfront list-origin-access-controls \
-          --query "OriginAccessControlList.Items[?Name=='${OAC_NAME}'].Id | [0]" \
-          --output text || true)
+      - EXISTING_OAC_ID=$(aws --region $AWS_DEFAULT_REGION cloudfront list-origin-access-controls --query "OriginAccessControlList.Items[?Name=='${OAC_NAME}'].Id | [0]" --output text || true)
       - if [ "$EXISTING_OAC_ID" = "None" ] || [ -z "$EXISTING_OAC_ID" ]; then
           echo "No existing OAC found. Creating new OAC ${OAC_NAME}...";
-          EXISTING_OAC_ID=$(aws --region $AWS_DEFAULT_REGION cloudfront create-origin-access-control \
-            --origin-access-control-config Name="${OAC_NAME}",OriginAccessControlOriginType=s3,SigningBehavior=always,SigningProtocol=sigv4 \
-            --query 'OriginAccessControl.Id' --output text);
+          EXISTING_OAC_ID=$(aws --region $AWS_DEFAULT_REGION cloudfront create-origin-access-control --origin-access-control-config Name="${OAC_NAME}",OriginAccessControlOriginType=s3,SigningBehavior=always,SigningProtocol=sigv4 --query 'OriginAccessControl.Id' --output text);
         fi
       - echo "Detecting existing static files bucket..."
       - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
