@@ -92,7 +92,7 @@ phases:
       - echo "SAMパッケージングを実行中..."
       # 環境変数を読み込み
       - source env_vars.txt
-      - echo "EXISTING_ARECORD: $EXISTING_ARECORD"
+      - 'echo "EXISTING_ARECORD: $EXISTING_ARECORD"'
       - sam package --output-template-file packaged.yaml --s3-bucket $S3Bucket
       # パラメータファイルを作成
       - |
