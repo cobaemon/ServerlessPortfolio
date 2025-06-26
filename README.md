@@ -138,6 +138,17 @@ sam deploy --template-file template.yaml --stack-name cobaemon-serverless-portfo
 sam deploy --guided
 ```
 
+#### (任意) PowerShell スクリプトによる依存関係デプロイ
+
+依存リソースは通常 CodePipeline から自動的にデプロイされるため、追加の作業は不要
+です。何らかの理由でパイプラインを使わずにデプロイしたい場合は、`deploy-deps.ps1`
+を実行すると既存のCloudFront Origin Access Control と S3 バケットを検出して
+`sam deploy` を実行できます。
+
+```powershell
+./deploy-deps.ps1 -Env prod -StackName cobaemon-portfolio-dependencies-prod -Profile aws_portfolio_profile
+```
+
 ### PowerShellでの実行について
 
 上記のコマンドは1行で記述していますが、PowerShellで複数行に分けて実行したい場合は、バッククォート（`）を使用してください：
@@ -156,7 +167,7 @@ sam deploy --template-file dependencies.yaml `
 - S3バケット（静的ファイル用）
 - CloudFront Origin Access Control（既存リソースの再利用可能）
 - S3バケットポリシー
-- **PowerShellスクリプトにより既存のCloudFront Origin Access Controlを自動検出し、存在する場合は新規作成をスキップ**
+- **CodePipeline が既存のCloudFront Origin Access Control と S3 バケットを自動検出し、存在する場合は再利用**
 
 ### メインアプリケーション（template.yaml）
 - AWS Lambda関数（Djangoアプリケーション）
@@ -245,6 +256,9 @@ aws s3 sync staticfiles/ s3://cobaemon-serverless-portfolio-prod-static/ --delet
    - AWS認証情報が正しく設定されているか確認
    - 必要なIAM権限があるか確認
    - 依存関係が先にデプロイされているか確認
+  - 既存のCloudFront Origin Access Control や静的ファイルバケットが残っている場合、
+    CodePipeline が自動で検出して再利用します。パイプラインを使わない場合は、
+    `deploy-deps.ps1` を実行して同じ動作を行えます。
 
 2. **静的ファイルが表示されない**
    - CloudFrontディストリビューションの設定を確認
@@ -291,7 +305,7 @@ aws logs tail /aws/lambda/CobaemonServerlessPortfolioFunction --profile aws_port
 - デプロイ前に必要なシークレットとパラメータがAWS Secrets ManagerとParameter Storeに設定されていることを確認してください
 - **CI/CDパイプラインを使用する場合**: パイプラインを一度デプロイすれば、依存リソースとメインアプリケーションの両方が自動的に展開・更新されます
 - **手動デプロイの場合**: 依存関係→メインアプリケーションの順序でデプロイしてください
-- **既存リソースの自動検出**: PowerShellスクリプトによりCloudFront Origin Access Controlが自動的に検出され、既存のものがあれば再利用されます
+- **既存リソースの自動検出**: CodePipeline がCloudFront Origin Access ControlとS3バケットを検出し、既存のものがあれば再利用します。パイプラインを使わない場合は `deploy-deps.ps1` を実行してください
 - 本番環境では `Env=prod` パラメータを使用してください
 - カスタムドメインを使用する場合は、Route53でホストゾーンが設定されていることを確認してください
 
