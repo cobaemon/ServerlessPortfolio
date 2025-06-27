@@ -163,7 +163,7 @@ Resources:
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Sub "cobaemon-serverless-portfolio-bucketpolicy-${Env}"
                 TemplatePath: "BuildOutput::bucketpolicy.yaml"
-                TemplateConfiguration: BuildOutput::parameters.json
+                TemplateConfiguration: BuildOutput::bucketpolicy-parameters.json
                 OutputFileName: output-bucketpolicy.json
               RunOrder: 2
       Tags:

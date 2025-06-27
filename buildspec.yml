@@ -108,9 +108,21 @@ phases:
         EOF
       - echo "パラメータファイルを作成しました:"
       - cat parameters.json
+      # バケットポリシー用のパラメータファイルを作成
+      - |
+        cat > bucketpolicy-parameters.json <<EOF
+        {
+          "Parameters": {
+            "Env": "$ENV"
+          }
+        }
+        EOF
+      - echo "バケットポリシーパラメータファイルを作成しました:"
+      - cat bucketpolicy-parameters.json
 
 artifacts:
   files:
     - packaged.yaml
     - parameters.json
     - bucketpolicy.yaml
+    - bucketpolicy-parameters.json
