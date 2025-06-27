@@ -22,8 +22,7 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /prod/portfolio/parameter/allowed_hosts
   HostedZoneId:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /portfolio/parameter/hostzoneid
+    Type: String
     Description: "Route53 Hosted Zone ID for custom domain"
   DomainName:
     Type: String
