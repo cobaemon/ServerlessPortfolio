@@ -100,7 +100,8 @@ aws configure --profile aws_portfolio_profile
 - `/prod/portfolio/parameter/default_to_mail`
 - `/prod/portfolio/parameter/email_host`
 - `/prod/portfolio/parameter/email_port`
-- `/portfolio/parameter/hostzoneid`
+
+ホストゾーンIDはデプロイ時にRoute53から自動検出されるため、Parameter Storeでの管理は不要になりました。
 
 ## デプロイ手順
 
@@ -127,7 +128,14 @@ sam deploy --template-file dependencies.yaml --stack-name cobaemon-portfolio-dep
 #### 2. メインアプリケーションの手動デプロイ
 
 ```bash
-sam deploy --template-file template.yaml --stack-name cobaemon-serverless-portfolio-stack --capabilities CAPABILITY_NAMED_IAM --parameter-overrides Env=prod --profile aws_portfolio_profile
+HOSTED_ZONE_ID=$(aws route53 list-hosted-zones-by-name \
+  --dns-name portfolio.cobaemon.com \
+  --query 'HostedZones[0].Id' --output text | awk -F/ '{print $3}')
+sam deploy --template-file template.yaml \
+  --stack-name cobaemon-serverless-portfolio-stack \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides Env=prod HostedZoneId=$HOSTED_ZONE_ID \
+  --profile aws_portfolio_profile
 ```
 
 ### 設定ファイルを使用したデプロイ
