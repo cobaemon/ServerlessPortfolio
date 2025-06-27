@@ -23,12 +23,12 @@ Resources:
             Resource: !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static/*"
             Condition:
               StringEquals:
-                "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistributionId}"
+                "AWS:SourceArn": !Sub
+                  - "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
+                  - DistributionId:
+                      Fn::ImportValue:
+                        Fn::Sub: "cobaemon-portfolio-${Env}-distribution-id"
 
-Parameters:
-  CloudFrontDistributionId:
-    Type: String
-    Default: !ImportValue cobaemon-portfolio-prod-distribution-id
 
 Outputs:
   BucketPolicyId:
