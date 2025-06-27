@@ -36,6 +36,8 @@ phases:
   pre_build:
     commands:
       - echo "SAMビルドの準備を開始..."
+      # env_vars.txt が存在しない場合に備えて初期化
+      - echo "EXISTING_ARECORD=false" > env_vars.txt
       
       # 既存のRoute53 Aレコードを検出
       - echo "既存のRoute53 Aレコードを検出中..."
@@ -91,7 +93,7 @@ phases:
     commands:
       - echo "SAMパッケージングを実行中..."
       # 環境変数を読み込み
-      - . env_vars.txt
+      - if [ -f env_vars.txt ]; then . env_vars.txt; fi
       - 'echo "EXISTING_ARECORD: $EXISTING_ARECORD"'
       - sam package --output-template-file packaged.yaml --s3-bucket $S3Bucket
       # パラメータファイルを作成
