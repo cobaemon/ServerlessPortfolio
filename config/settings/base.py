@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from csp import constants as csp_constants
 
 from django.contrib import messages
 from django.urls import reverse_lazy
@@ -180,45 +181,48 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CSP_DEFAULT_SRC = ("'self'", 'https:')
-CSP_SCRIPT_SRC = (
-    "'self'",
-    'https://use.fontawesome.com',
-    'https://cdn.jsdelivr.net',
-    'https://cdn.startbootstrap.com',
-)
-CSP_SCRIPT_SRC_ELEM = (
-    "'self'",
-    'https://use.fontawesome.com',
-    'https://cdn.jsdelivr.net',
-    'https://cdn.startbootstrap.com',
-)
-CSP_STYLE_SRC = (
-    "'self'",
-    'https://fonts.googleapis.com',
-    'https://use.fontawesome.com',
-    'https://cdn.jsdelivr.net',
-    'https://cdn.startbootstrap.com',
-)
-CSP_STYLE_SRC_ELEM = (
-    "'self'",
-    'https://fonts.googleapis.com',
-    'https://use.fontawesome.com',
-    'https://cdn.jsdelivr.net',
-    'https://cdn.startbootstrap.com',
-)
-CSP_FONT_SRC = ("'self'", 'https://fonts.gstatic.com')
-CSP_IMG_SRC = ("'self'", 'data:')
-CSP_OBJECT_SRC = ("'none'")
-CSP_BASE_URI = ("'self'")
-CSP_FRAME_SRC = ("'none'")
-CSP_FRAME_ANCESTORS = ("'none'")
-CSP_REPORT_URI = ('/csp-report-endpoint',)
-
-# nonceを有効化
-CSP_INCLUDE_NONCE_IN = ['script-src', 'script-src-elem', 'style-src', 'style-src-elem']
-CSP_STYLE_SRC_NONCE = True
-CSP_SCRIPT_SRC_NONCE = True
+CONTENT_SECURITY_POLICY = {
+    'DIRECTIVES': {
+        'default-src': ["'self'", 'https:'],
+        'script-src': [
+            "'self'",
+            'https://use.fontawesome.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdn.startbootstrap.com',
+            csp_constants.NONCE,
+        ],
+        'script-src-elem': [
+            "'self'",
+            'https://use.fontawesome.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdn.startbootstrap.com',
+            csp_constants.NONCE,
+        ],
+        'style-src': [
+            "'self'",
+            'https://fonts.googleapis.com',
+            'https://use.fontawesome.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdn.startbootstrap.com',
+            csp_constants.NONCE,
+        ],
+        'style-src-elem': [
+            "'self'",
+            'https://fonts.googleapis.com',
+            'https://use.fontawesome.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdn.startbootstrap.com',
+            csp_constants.NONCE,
+        ],
+        'font-src': ["'self'", 'https://fonts.gstatic.com'],
+        'img-src': ["'self'", 'data:'],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+        'frame-src': ["'none'"],
+        'frame-ancestors': ["'none'"],
+        'report-uri': ['/csp-report-endpoint'],
+    }
+}
 
 # Django Allauth設定
 # SITE_ID = 1
