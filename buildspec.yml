@@ -54,19 +54,30 @@ phases:
         fi
 
         echo "HOSTED_ZONE_ID=$HOSTED_ZONE_ID" >> env_vars.txt
-        
-        # 既存のAレコードを検索
-        EXISTING_RECORD=$(aws route53 list-resource-record-sets \
-          --hosted-zone-id $HOSTED_ZONE_ID \
-          --query "ResourceRecordSets[?Name=='$DOMAIN_NAME.' && Type=='A']" \
-          --output text)
-        
-        if [ -n "$EXISTING_RECORD" ]; then
-          echo "既存のAレコードを検出しました: $DOMAIN_NAME"
-          echo "EXISTING_ARECORD=true" >> env_vars.txt
-        else
-          echo "既存のAレコードが見つかりませんでした。新規作成します。"
+
+        STACK_NAME="cobaemon-serverless-portfolio-stack"
+        CFN_RECORD=$(aws cloudformation describe-stack-resource \
+          --stack-name $STACK_NAME \
+          --logical-resource-id ApiGatewayRecordSet \
+          --query 'StackResourceDetail.PhysicalResourceId' \
+          --output text 2>/dev/null || true)
+
+        if [ "$CFN_RECORD" != "None" ] && [ -n "$CFN_RECORD" ]; then
+          echo "Stack already manages A record: $CFN_RECORD"
           echo "EXISTING_ARECORD=false" >> env_vars.txt
+        else
+          EXISTING_RECORD=$(aws route53 list-resource-record-sets \
+            --hosted-zone-id $HOSTED_ZONE_ID \
+            --query "ResourceRecordSets[?Name=='$DOMAIN_NAME.' && Type=='A']" \
+            --output text)
+
+          if [ -n "$EXISTING_RECORD" ]; then
+            echo "A record exists outside CloudFormation: $DOMAIN_NAME"
+            echo "EXISTING_ARECORD=true" >> env_vars.txt
+          else
+            echo "No existing A record found. It will be created by the stack."
+            echo "EXISTING_ARECORD=false" >> env_vars.txt
+          fi
         fi
       
       # 多言語対応のための翻訳ファイル処理

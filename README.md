@@ -282,6 +282,12 @@ aws s3 sync staticfiles/ s3://cobaemon-serverless-portfolio-prod-static/ --delet
    - メールサーバーの設定を確認
    - ネットワーク設定を確認
 
+4. **ドメインが解決できない**
+   - `serverless.portfolio.cobaemon.com` が NXDOMAIN となる場合、Route53 に正しい A レコードが作成されているか確認
+   - ホストゾーン自体が存在しない場合は、`cobaemon.com` 用のホストゾーンを作成し、スタックを再デプロイ
+   - 再デプロイ後に A レコードが消える場合は、CodeBuild の環境変数 `EXISTING_ARECORD` を `false` に固定する
+   - DNS 反映まで最大 48 時間かかることがあるため、変更後しばらく待ってから再度アクセスする
+
 ### ログの確認
 
 ```bash
