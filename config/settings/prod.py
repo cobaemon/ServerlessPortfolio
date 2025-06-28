@@ -116,13 +116,15 @@ if AWS_S3_CUSTOM_DOMAIN:
     }
     # Include the CloudFront domain in CSP directives so static assets load
     _STATIC_DOMAIN = f"https://{AWS_S3_CUSTOM_DOMAIN}"
-    CSP_DEFAULT_SRC += (_STATIC_DOMAIN,)
-    CSP_SCRIPT_SRC += (_STATIC_DOMAIN,)
-    CSP_SCRIPT_SRC_ELEM += (_STATIC_DOMAIN,)
-    CSP_STYLE_SRC += (_STATIC_DOMAIN,)
-    CSP_STYLE_SRC_ELEM += (_STATIC_DOMAIN,)
-    CSP_FONT_SRC += (_STATIC_DOMAIN,)
-    CSP_IMG_SRC += (_STATIC_DOMAIN,)
+    # Append the CloudFront domain to CSP directives defined in base settings
+    _csp = CONTENT_SECURITY_POLICY.setdefault("DIRECTIVES", {})
+    _csp.setdefault("default-src", []).append(_STATIC_DOMAIN)
+    _csp.setdefault("script-src", []).append(_STATIC_DOMAIN)
+    _csp.setdefault("script-src-elem", []).append(_STATIC_DOMAIN)
+    _csp.setdefault("style-src", []).append(_STATIC_DOMAIN)
+    _csp.setdefault("style-src-elem", []).append(_STATIC_DOMAIN)
+    _csp.setdefault("font-src", []).append(_STATIC_DOMAIN)
+    _csp.setdefault("img-src", []).append(_STATIC_DOMAIN)
 else:
     # CloudFrontが設定されていない場合のフォールバック
     STATIC_URL = '/static/'
