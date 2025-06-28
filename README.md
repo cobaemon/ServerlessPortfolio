@@ -129,8 +129,12 @@ sam deploy --template-file dependencies.yaml --stack-name cobaemon-portfolio-dep
 
 ```bash
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones-by-name \
-  --dns-name portfolio.cobaemon.com \
+  --dns-name cobaemon.com \
   --query 'HostedZones[0].Id' --output text | awk -F/ '{print $3}')
+if [ -z "$HOSTED_ZONE_ID" ] || [ "$HOSTED_ZONE_ID" = "None" ]; then
+  echo "Hosted zone not found for cobaemon.com" >&2
+  exit 1
+fi
 sam deploy --template-file template.yaml \
   --stack-name cobaemon-serverless-portfolio-stack \
   --capabilities CAPABILITY_NAMED_IAM \
