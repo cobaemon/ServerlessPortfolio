@@ -17,8 +17,9 @@ class Top(FormView):
         フォームが有効な場合の処理
         お問い合わせ内容をメール送信し、成功メッセージを返す
         """
-        form.send_email()
-        return HttpResponse("Form submission successful")
+        if form.send_email():
+            return HttpResponse("Form submission successful")
+        return HttpResponse("Email sending failed", status=500)
         
     def get_context_data(self, **kwargs):
         """

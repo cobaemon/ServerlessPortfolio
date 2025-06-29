@@ -1,6 +1,9 @@
 from django import forms
 from django.conf import settings
 from django.core.mail import EmailMessage
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ContactForm(forms.Form):
@@ -75,6 +78,13 @@ class ContactForm(forms.Form):
             subject,
             body,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[settings.DEFAULT_TO_EMAIL]
+            to=[settings.DEFAULT_TO_EMAIL],
         )
-        email.send()
+
+        try:
+            email.send()
+            logger.info("Contact email sent to %s", settings.DEFAULT_TO_EMAIL)
+            return True
+        except Exception as exc:
+            logger.error("Failed to send contact email: %s", exc, exc_info=True)
+            return False
