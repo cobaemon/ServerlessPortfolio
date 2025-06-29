@@ -70,6 +70,8 @@ Resources:
           DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
           EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
           EMAIL_PORT: "{{resolve:ssm:/prod/portfolio/parameter/email_port}}"
+          EMAIL_USE_TLS: "{{resolve:ssm:/prod/portfolio/parameter/email_use_tls}}"
+          EMAIL_USE_SSL: "{{resolve:ssm:/prod/portfolio/parameter/email_use_ssl}}"
           STATIC_URL: !Sub "https://${CloudFrontDistribution.DomainName}/"
           CLOUDFRONT_DOMAIN_NAME: !GetAtt CloudFrontDistribution.DomainName
           ENV: !Ref Env

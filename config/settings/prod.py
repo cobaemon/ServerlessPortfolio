@@ -81,6 +81,10 @@ EMAIL_PORT = os.environ.get("EMAIL_PORT")
 if not EMAIL_PORT:
     raise ImproperlyConfigured("Set the EMAIL_PORT environment variable")
 
+# Optional TLS/SSL settings
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False") == "True"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
+
 # セキュリティ強化のための設定
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True

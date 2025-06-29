@@ -222,6 +222,8 @@ sam deploy --template-file dependencies.yaml `
 - `DEFAULT_TO_EMAIL`: デフォルト宛先メールアドレス
 - `EMAIL_HOST`: メールサーバーホスト
 - `EMAIL_PORT`: メールサーバーポート
+- `EMAIL_USE_TLS`: TLSを使用する場合は`True`
+- `EMAIL_USE_SSL`: SSLを使用する場合は`True`
 
 ## 開発
 
@@ -242,6 +244,17 @@ python manage.py makemessages -l en
 # 翻訳ファイルのコンパイル
 python manage.py compilemessages
 ```
+
+ローカルでSMTP送信をテストする場合は、`.env` に以下の環境変数を設定します。
+
+- `EMAIL_HOST`
+- `EMAIL_PORT`
+- `EMAIL_HOST_USER`
+- `EMAIL_HOST_PASSWORD`
+- `DEFAULT_FROM_EMAIL`
+- `DEFAULT_TO_EMAIL`
+
+設定がない場合は `django.core.mail.backends.console.EmailBackend` が使用されます。
 
 ### テスト
 

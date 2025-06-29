@@ -23,6 +23,8 @@ env:
     DEFAULT_TO_EMAIL: "/prod/portfolio/parameter/default_to_mail"
     EMAIL_HOST: "/prod/portfolio/parameter/email_host"
     EMAIL_PORT: "/prod/portfolio/parameter/email_port"
+    EMAIL_USE_TLS: "/prod/portfolio/parameter/email_use_tls"
+    EMAIL_USE_SSL: "/prod/portfolio/parameter/email_use_ssl"
 
 phases:
   install:
