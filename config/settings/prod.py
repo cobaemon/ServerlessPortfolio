@@ -84,6 +84,10 @@ if not EMAIL_PORT:
 # Optional TLS/SSL settings
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False") == "True"
 EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured(
+        "EMAIL_USE_TLS and EMAIL_USE_SSL are mutually exclusive. Set only one to True."
+    )
 
 # セキュリティ強化のための設定
 SECURE_SSL_REDIRECT = True
