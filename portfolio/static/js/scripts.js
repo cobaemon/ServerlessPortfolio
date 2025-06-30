@@ -93,12 +93,15 @@ window.addEventListener('DOMContentLoaded', event => {
         event.preventDefault();
 
         const formData = new FormData(contactForm);
+        // API Gatewayでは multipart/form-data の解析が正しく行われないため、
+        // URL エンコード形式で送信する
         const response = await fetch(contactForm.action, {
             method: 'POST',
-            body: formData,
+            body: new URLSearchParams(formData),
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',  // DjangoがAjaxリクエストとして認識するために必要です。
                 'X-CSRFToken': contactForm.querySelector('[name="csrfmiddlewaretoken"]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
         });
 
