@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 from .base import *
 
@@ -42,6 +43,11 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "webmaster@localhost")
 DEFAULT_TO_EMAIL = os.environ.get("DEFAULT_TO_EMAIL", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False") == "True"
 EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
+
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured(
+        "EMAIL_USE_TLS and EMAIL_USE_SSL are mutually exclusive. Set only one to True."
+    )
 
 if EMAIL_HOST:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

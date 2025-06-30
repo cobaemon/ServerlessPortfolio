@@ -225,6 +225,8 @@ sam deploy --template-file dependencies.yaml `
 - `EMAIL_PORT`: メールサーバーポート
 - `EMAIL_USE_TLS`: TLSを使用する場合は`True`
 - `EMAIL_USE_SSL`: SSLを使用する場合は`True`
+  - **注意:** `EMAIL_USE_TLS` と `EMAIL_USE_SSL` は同時に `True` に設定できません。
+    どちらか片方のみを有効にしてください。
 
 ### 環境変数
 - `LOG_LEVEL`: アプリケーションのログレベル (例: INFO)。Parameter Store `/prod/portfolio/parameter/log_level` で管理
@@ -258,6 +260,7 @@ python manage.py compilemessages
 - `DEFAULT_FROM_EMAIL`
 - `DEFAULT_TO_EMAIL`
 - `EMAIL_USE_TLS` または `EMAIL_USE_SSL`
+  - 両方を `True` にするとエラーになります。必ずどちらか一方のみ設定してください。
 
 Gmail 等の外部 SMTP サーバーを利用する場合は、`EMAIL_PORT=587` と
 `EMAIL_USE_TLS=True` を指定するのが一般的です。
