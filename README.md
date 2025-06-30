@@ -257,8 +257,13 @@ python manage.py compilemessages
 - `EMAIL_HOST_PASSWORD`
 - `DEFAULT_FROM_EMAIL`
 - `DEFAULT_TO_EMAIL`
+- `EMAIL_USE_TLS` または `EMAIL_USE_SSL`
+
+Gmail 等の外部 SMTP サーバーを利用する場合は、`EMAIL_PORT=587` と
+`EMAIL_USE_TLS=True` を指定するのが一般的です。
 
 設定がない場合は `django.core.mail.backends.console.EmailBackend` が使用されます。
+メールの内容はCloudWatch Logsに出力されますが、実際の送信は行われません。
 
 ### テスト
 
