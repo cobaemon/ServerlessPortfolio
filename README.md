@@ -100,6 +100,7 @@ aws configure --profile aws_portfolio_profile
 - `/prod/portfolio/parameter/default_to_mail`
 - `/prod/portfolio/parameter/email_host`
 - `/prod/portfolio/parameter/email_port`
+- `/prod/portfolio/parameter/log_level`
 
 ホストゾーンIDはデプロイ時にRoute53から自動検出されるため、Parameter Storeでの管理は不要になりました。
 
@@ -224,6 +225,9 @@ sam deploy --template-file dependencies.yaml `
 - `EMAIL_PORT`: メールサーバーポート
 - `EMAIL_USE_TLS`: TLSを使用する場合は`True`
 - `EMAIL_USE_SSL`: SSLを使用する場合は`True`
+
+### 環境変数
+- `LOG_LEVEL`: アプリケーションのログレベル (例: INFO)。Parameter Store `/prod/portfolio/parameter/log_level` で管理
 
 ## 開発
 
