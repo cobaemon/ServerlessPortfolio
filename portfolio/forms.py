@@ -81,6 +81,15 @@ class ContactForm(forms.Form):
             to=[settings.DEFAULT_TO_EMAIL],
         )
 
+        logger.info("Using email backend %s", settings.EMAIL_BACKEND)
+        logger.info(
+            "Using SMTP server %s:%s TLS=%s SSL=%s",
+            settings.EMAIL_HOST,
+            settings.EMAIL_PORT,
+            settings.EMAIL_USE_TLS,
+            settings.EMAIL_USE_SSL,
+        )
+
         try:
             email.send()
             logger.info("Contact email sent to %s", settings.DEFAULT_TO_EMAIL)

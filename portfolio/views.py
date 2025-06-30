@@ -1,7 +1,10 @@
 from django.http import HttpResponse
 from django.views.generic import FormView
+import logging
 
 from .forms import ContactForm
+
+logger = logging.getLogger(__name__)
 
 
 class Top(FormView):
@@ -20,6 +23,14 @@ class Top(FormView):
         if form.send_email():
             return HttpResponse("Form submission successful")
         return HttpResponse("Email sending failed", status=500)
+
+    def form_invalid(self, form):
+        """
+        フォームが無効な場合の処理
+        バリデーションエラーをログに出力
+        """
+        logger.warning("Invalid contact form submission: %s", form.errors)
+        return super().form_invalid(form)
         
     def get_context_data(self, **kwargs):
         """
