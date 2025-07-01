@@ -112,10 +112,10 @@ phases:
       # CSS minification
       - |
         python - <<'EOF'
-import pathlib, csscompressor
-src = pathlib.Path('portfolio/static/css/styles.css').read_text()
-pathlib.Path('portfolio/static/css/styles.min.css').write_text(csscompressor.compress(src))
-EOF
+        import pathlib, csscompressor
+        src = pathlib.Path('portfolio/static/css/styles.css').read_text()
+        pathlib.Path('portfolio/static/css/styles.min.css').write_text(csscompressor.compress(src))
+        EOF
 
       # 静的ファイルの収集とS3への同期
       - python manage.py collectstatic --noinput
