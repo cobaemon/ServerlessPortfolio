@@ -13,11 +13,10 @@
         {% endblock head_title %}
         <!-- Favicon-->
         <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}" />
-        <!-- Google fonts-->
-        <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css" />
-        <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css" />
+        <!-- Self-hosted fonts -->
+        <link href="{% static 'css/fonts.css' %}" rel="stylesheet" />
         <!-- Core theme CSS (includes Bootstrap)-->
-        <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+        <link href="{% static 'css/styles.min.css' %}" rel="stylesheet" />
         {% block extra_head %}
         {% endblock extra_head %}
     </head>
@@ -220,8 +219,7 @@
                 <!-- Contact Section Form-->
                 <div class="row justify-content-center">
                     <div class="col-lg-8 col-xl-7">
-                        <form id="contactForm" method="post" action="{% url 'portfolio:top' %}">
-                            {% csrf_token %}
+                        <form id="contactForm" method="post" action="/contact">
                             <!-- Name input-->
                             <div class="form-floating mb-3">
                                 {{ form.full_name }}
@@ -631,9 +629,9 @@
         {% endblock extra_body_modal %}
 
         <!-- Bootstrap core JS-->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" nonce="{{ request.csp_nonce }}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" nonce="{{ request.csp_nonce }}" defer></script>
         <!-- Core theme JS-->
-        <script src="{% static 'js/scripts.js' %}" nonce="{{ request.csp_nonce }}"></script>
+        <script src="{% static 'js/scripts.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
     </body>
     {% endblock body %}
 </html>

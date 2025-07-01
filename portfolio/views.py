@@ -1,5 +1,7 @@
 from django.http import HttpResponse
 from django.views.generic import FormView
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 import logging
 
 from .forms import ContactForm
@@ -40,3 +42,15 @@ class Top(FormView):
         context = super().get_context_data(**kwargs)
         context['form'] = self.form_class()
         return context
+
+
+@csrf_exempt
+@require_POST
+def contact(request):
+    form = ContactForm(request.POST)
+    if form.is_valid():
+        if form.send_email():
+            return HttpResponse("Form submission successful")
+        return HttpResponse("Email sending failed", status=500)
+    logger.warning("Invalid contact form submission: %s", form.errors)
+    return HttpResponse("Invalid", status=400)

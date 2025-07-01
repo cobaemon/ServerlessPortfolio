@@ -214,7 +214,7 @@ CONTENT_SECURITY_POLICY = {
             'https://cdn.startbootstrap.com',
             csp_constants.NONCE,
         ],
-        'font-src': ["'self'", 'https://fonts.gstatic.com'],
+        'font-src': ["'self'"],
         'img-src': ["'self'", 'data:'],
         'object-src': ["'none'"],
         'base-uri': ["'self'"],

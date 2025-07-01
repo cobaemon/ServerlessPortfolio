@@ -161,3 +161,7 @@ cython_debug/
 
 # custom
 env_dev.json
+
+# Fonts downloaded during build
+portfolio/static/assets/fonts/
+staticfiles/assets/fonts/
