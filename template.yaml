@@ -5,6 +5,9 @@ Description: CodePipeline for Serverless Portfolio using SAM
 Globals:
   Function:
     Timeout: 30
+    MemorySize: 512
+    Architectures:
+      - arm64
 
 Parameters:
   Env:
