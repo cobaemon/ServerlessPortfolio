@@ -7,7 +7,7 @@ Globals:
     Timeout: 30
     MemorySize: 512
     Architectures:
-      - arm64
+      - x86_64
 
 Parameters:
   Env:

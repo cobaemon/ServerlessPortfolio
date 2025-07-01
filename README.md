@@ -324,7 +324,7 @@ aws logs tail /aws/lambda/CobaemonServerlessPortfolioFunction --profile aws_port
 ## パフォーマンス最適化
 
 - CloudFrontによる静的ファイルのキャッシュ
-- Lambda関数のメモリ(512MB)とタイムアウト設定の最適化、arm64アーキテクチャの採用
+- Lambda関数のメモリ(512MB)とタイムアウト設定の最適化
 - 画像の最適化（Pillow AVIFプラグイン使用）
 - データベース接続の最適化
 
