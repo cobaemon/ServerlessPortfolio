@@ -308,6 +308,26 @@ Resources:
   #             StringEquals:
   #               "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
+  StaticFilesResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "StaticFilesCORS-${Env}"
+        Comment: "CORS policy for static files"
+        CorsConfig:
+          AccessControlAllowOrigins:
+            Items:
+              - "*"
+          AccessControlAllowMethods:
+            Items:
+              - GET
+              - HEAD
+              - OPTIONS
+          AccessControlAllowHeaders:
+            Items:
+              - "*"
+          OriginOverride: true
+
   # CloudFrontディストリビューション（静的ファイル配信用）
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -337,6 +357,7 @@ Resources:
             - OPTIONS
           Compress: true
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+          ResponseHeadersPolicyId: !Ref StaticFilesResponseHeadersPolicy
 
 Outputs:
   ApiUrl:
