@@ -323,6 +323,7 @@ Resources:
               - GET
               - HEAD
               - OPTIONS
+          AccessControlAllowCredentials: false
           AccessControlAllowHeaders:
             Items:
               - "*"
