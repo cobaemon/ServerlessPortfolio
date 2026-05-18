@@ -4,7 +4,7 @@
 
 ### 目的
 
-現在の `vA.B.C` 作業ブランチを完了処理する。未コミット変更がある場合のみ commit し、現在ブランチを `main` に merge し、`main` から次の作業ブランチ `vA.B.(C+1)` を作成して checkout する。
+現在の `vA.B.C` 作業ブランチを完了処理する。未コミット変更がある場合のみ commit し、現在ブランチを `dev` に merge し、`dev` から次の作業ブランチ `vA.B.(C+1)` を作成して checkout する。
 
 ### 実行コマンド
 
@@ -17,9 +17,10 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\branch-finalize-next.ps1
 - 現在ブランチは `vA.B.C` 形式でなければならない。
 - 次ブランチは `A` と `B` を維持し、`C` のみ 1 増やす。
 - 未コミット変更がない場合は commit を作成しない。
-- 未コミット変更がある場合は、スクリプトが staged diff から title / body / 主要対応の箇条書き / 検証を含む commit message を自動生成する。
+- 未コミット変更がある場合は、スクリプトが staged diff から title / 対応目的 / コミット内容の概要 / 対応範囲 / ブランチ処理 / 検証を含む commit message を自動生成する。
+- commit message はファイル単位の変更点列挙ではなく、変更カテゴリと差分統計に基づく概要を記録する。
 - 自動生成した commit message は `git rev-parse --git-path branch-finalize-next-commit-message.txt` で取得される Git 管理外パスに保存する。
-- `main` への merge は `git merge --no-ff` を使用する。
+- `dev` への merge は `git merge --no-ff` を使用する。
 
 ### 禁止
 
@@ -37,7 +38,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\branch-finalize-next.ps1
 
 ### 停止条件
 
-- 現在ブランチが `main`
+- 現在ブランチが `dev`
 - detached HEAD
 - 現在ブランチ名が `vA.B.C` 形式ではない
 - 次ブランチが既に存在する
@@ -52,7 +53,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\branch-finalize-next.ps1
 - 実行コマンド
 - 終了ステータス
 - source branch
-- main branch
+- integration branch
 - next branch
 - commit 作成有無
 - commit SHA

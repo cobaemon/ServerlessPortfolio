@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Finalizes the current vA.B.C work branch, merges it into main, and switches to vA.B.(C+1).
+Finalizes the current vA.B.C work branch, merges it into dev, and switches to vA.B.(C+1).
 
 .DESCRIPTION
 This script is a guarded Git workflow for Codex-assisted branch finalization.
@@ -11,9 +11,9 @@ It performs the following operations only after explicit confirmation:
 3. Stop if the next branch already exists.
 4. Stop if protected source-of-truth documents are changed.
 5. Commit uncommitted changes only when changes exist.
-6. Generate a commit message with title, body, bullet-pointed major changes, and verification notes.
-7. Switch to main and merge the source branch with --no-ff.
-8. Create and switch to the next work branch from main.
+6. Generate a commit message with title, purpose, summary, scope, branch processing, and verification notes.
+7. Switch to dev and merge the source branch with --no-ff.
+8. Create and switch to the next work branch from dev.
 
 This script intentionally does not push, force-push, rebase, reset --hard, clean, squash merge,
 use --no-verify, or overwrite existing branches.
@@ -21,8 +21,8 @@ use --no-verify, or overwrite existing branches.
 .PARAMETER ConfirmExecution
 Required explicit execution switch. The script stops unless this switch is provided.
 
-.PARAMETER MainBranch
-The integration branch. Defaults to main.
+.PARAMETER IntegrationBranch
+The integration branch. Defaults to dev.
 
 .EXAMPLE
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\branch-finalize-next.ps1 -ConfirmExecution
@@ -35,7 +35,8 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidatePattern('^[A-Za-z0-9._/-]+$')]
-    [string]$MainBranch = 'main'
+    [Alias('MainBranch')]
+    [string]$IntegrationBranch = 'dev'
 )
 
 Set-StrictMode -Version 2.0
@@ -241,10 +242,67 @@ function Get-NextBranchName {
     return "v$major.$minor.$($patch + 1)"
 }
 
-function Convert-NameStatusToBullet {
+function Convert-ToChangeStatusLabel {
     <#
     .SYNOPSIS
-    Converts one git diff --name-status line into a Japanese bullet line.
+    Converts a git name-status code into a Japanese status label.
+
+    .PARAMETER StatusCode
+    Status code returned by git diff --name-status.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$StatusCode
+    )
+
+    if ($StatusCode -like 'A*') { return '追加' }
+    if ($StatusCode -like 'M*') { return '更新' }
+    if ($StatusCode -like 'D*') { return '削除' }
+    if ($StatusCode -like 'R*') { return 'リネーム' }
+    if ($StatusCode -like 'C*') { return 'コピー' }
+    return '変更'
+}
+
+function Get-ChangeCategory {
+    <#
+    .SYNOPSIS
+    Classifies a repository path into a commit-message summary category.
+
+    .PARAMETER RepositoryPath
+    Slash-separated repository path.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    if ($RepositoryPath -eq 'README.md' -or $RepositoryPath -like 'docs/*') {
+        return 'ドキュメント'
+    }
+
+    if ($RepositoryPath -eq 'AGENTS.md') {
+        return 'ブランチ運用手順'
+    }
+
+    if ($RepositoryPath -like 'scripts/*' -or $RepositoryPath -like 'buildspec*' -or $RepositoryPath -eq 'samconfig.toml') {
+        return '運用スクリプト'
+    }
+
+    if ($RepositoryPath -like 'config/*' -or $RepositoryPath -like 'portfolio/*' -or $RepositoryPath -like 'templates/*') {
+        return 'Django アプリケーション'
+    }
+
+    if ($RepositoryPath -like '*.yaml' -or $RepositoryPath -like '*.yml') {
+        return 'AWS/SAM 定義'
+    }
+
+    return 'その他'
+}
+
+function Convert-NameStatusToChangeInfo {
+    <#
+    .SYNOPSIS
+    Converts one git diff --name-status line into structured change information.
 
     .PARAMETER NameStatusLine
     One line returned by git diff --cached --name-status.
@@ -256,40 +314,79 @@ function Convert-NameStatusToBullet {
 
     $columns = @($NameStatusLine -split "`t")
     $statusCode = $columns[0]
-    $statusLabel = '変更'
-
-    if ($statusCode -like 'A*') {
-        $statusLabel = '追加'
-    } elseif ($statusCode -like 'M*') {
-        $statusLabel = '更新'
-    } elseif ($statusCode -like 'D*') {
-        $statusLabel = '削除'
-    } elseif ($statusCode -like 'R*') {
-        $statusLabel = 'リネーム'
-    } elseif ($statusCode -like 'C*') {
-        $statusLabel = 'コピー'
-    }
+    $path = $NameStatusLine
 
     if ($columns.Count -ge 3) {
-        return "- $statusLabel`: $($columns[1]) -> $($columns[2])"
+        $path = [string]$columns[2]
+    } elseif ($columns.Count -ge 2) {
+        $path = [string]$columns[1]
     }
 
-    if ($columns.Count -ge 2) {
-        return "- $statusLabel`: $($columns[1])"
+    $repositoryPath = Convert-ToRepositoryPath -Path $path
+
+    return [pscustomobject]@{
+        Status = Convert-ToChangeStatusLabel -StatusCode $statusCode
+        Path = $repositoryPath
+        Category = Get-ChangeCategory -RepositoryPath $repositoryPath
+    }
+}
+
+function New-ChangeSummaryBullets {
+    <#
+    .SYNOPSIS
+    Builds purpose-oriented commit summary bullets from staged change information.
+
+    .PARAMETER Changes
+    Structured staged change information.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Changes
+    )
+
+    $categoryOrder = @(
+        'ブランチ運用手順',
+        '運用スクリプト',
+        'ドキュメント',
+        'Django アプリケーション',
+        'AWS/SAM 定義',
+        'その他'
+    )
+    $bullets = @()
+
+    foreach ($category in $categoryOrder) {
+        $categoryChanges = @($Changes | Where-Object { $_.Category -eq $category })
+
+        if ($categoryChanges.Count -eq 0) {
+            continue
+        }
+
+        $statusCounts = @{}
+
+        foreach ($change in $categoryChanges) {
+            if (-not $statusCounts.ContainsKey($change.Status)) {
+                $statusCounts[$change.Status] = 0
+            }
+
+            $statusCounts[$change.Status] += 1
+        }
+
+        $statusSummary = (($statusCounts.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Name) $($_.Value)件" }) -join '、')
+        $bullets += "- $category`: $statusSummary"
     }
 
-    return "- $statusLabel`: $NameStatusLine"
+    return $bullets
 }
 
 function New-AutoCommitMessageFile {
     <#
     .SYNOPSIS
-    Generates a commit message file under .git with title, body, major-change bullets, and verification notes.
+    Generates a commit message file under .git with purpose, summary, scope, branch processing, and verification notes.
 
     .PARAMETER SourceBranch
     Branch being finalized.
 
-    .PARAMETER MainBranchName
+    .PARAMETER IntegrationBranchName
     Branch receiving the merge.
 
     .PARAMETER NextBranch
@@ -300,7 +397,7 @@ function New-AutoCommitMessageFile {
         [string]$SourceBranch,
 
         [Parameter(Mandatory = $true)]
-        [string]$MainBranchName,
+        [string]$IntegrationBranchName,
 
         [Parameter(Mandatory = $true)]
         [string]$NextBranch
@@ -309,45 +406,58 @@ function New-AutoCommitMessageFile {
     $messagePath = Get-GitText -GitArguments @('rev-parse', '--git-path', 'branch-finalize-next-commit-message.txt')
     $nameStatusLines = Invoke-GitOutput -GitArguments @('diff', '--cached', '--name-status')
     $statText = Get-GitText -GitArguments @('diff', '--cached', '--stat')
-    $bullets = @()
+    $changes = @()
 
     foreach ($lineObject in $nameStatusLines) {
         $line = ([string]$lineObject).Trim()
 
         if (-not [string]::IsNullOrWhiteSpace($line)) {
-            $bullets += Convert-NameStatusToBullet -NameStatusLine $line
+            $changes += Convert-NameStatusToChangeInfo -NameStatusLine $line
         }
     }
 
-    if ($bullets.Count -eq 0) {
+    if ($changes.Count -eq 0) {
         throw 'STOP: staged changes exist, but no name-status lines were available for commit message generation.'
     }
+
+    $summaryBullets = New-ChangeSummaryBullets -Changes $changes
+    $changedFileCount = @($changes | Select-Object -ExpandProperty Path -Unique).Count
+    $changedCategories = (($changes | Select-Object -ExpandProperty Category -Unique | Sort-Object) -join '、')
 
     $commitMessage = @(
         "chore: finalize $SourceBranch",
         '',
-        "$SourceBranch の作業内容を $MainBranchName へ統合するため、ブランチ完了前の未コミット変更を確定する。",
+        '対応目的:',
+        "$SourceBranch の未コミット変更を $IntegrationBranchName へ統合し、次の作業ブランチ $NextBranch を作成できる状態にする。",
         '',
-        '主要対応:'
+        'コミット内容の概要:',
+        "$changedCategories を対象とする $changedFileCount 件の変更を、ブランチ完了処理に必要なまとまりとして確定する。",
+        '',
+        '対応範囲:'
     )
 
-    foreach ($bullet in $bullets) {
+    foreach ($bullet in $summaryBullets) {
         $commitMessage += $bullet
     }
 
     $commitMessage += @(
         '',
-        '変更概要:',
+        '差分統計:',
         $statText,
+        '',
+        '完了処理:',
+        "- commit: $SourceBranch の未コミット変更を確定",
+        "- merge: $SourceBranch を $IntegrationBranchName へ --no-ff で統合",
+        "- next branch: $IntegrationBranchName から $NextBranch を作成",
         '',
         'ブランチ処理:',
         "- source branch: $SourceBranch",
-        "- target branch: $MainBranchName",
+        "- target branch: $IntegrationBranchName",
         "- next branch: $NextBranch",
         '',
         '検証:',
         '- git status --porcelain=v1 による作業ツリー状態確認',
-        '- git diff --cached --name-status によるステージ済み変更確認',
+        '- git diff --cached --name-status によるステージ済み変更分類',
         '- 保護対象ドキュメント変更チェック',
         '- branch-finalize-next.ps1 の停止条件に基づく Git 操作制御'
     )
@@ -364,7 +474,7 @@ function New-MergeMessage {
     .PARAMETER SourceBranch
     Branch being merged.
 
-    .PARAMETER MainBranchName
+    .PARAMETER IntegrationBranchName
     Target integration branch.
 
     .PARAMETER NextBranch
@@ -375,20 +485,20 @@ function New-MergeMessage {
         [string]$SourceBranch,
 
         [Parameter(Mandatory = $true)]
-        [string]$MainBranchName,
+        [string]$IntegrationBranchName,
 
         [Parameter(Mandatory = $true)]
         [string]$NextBranch
     )
 
     return @(
-        "merge: $SourceBranch into $MainBranchName",
+        "merge: $SourceBranch into $IntegrationBranchName",
         '',
-        "$SourceBranch の完了済み作業を $MainBranchName へ統合する。",
+        "$SourceBranch の完了済み作業を $IntegrationBranchName へ統合する。",
         '',
         'ブランチ処理:',
         "- source branch: $SourceBranch",
-        "- target branch: $MainBranchName",
+        "- target branch: $IntegrationBranchName",
         "- next branch: $NextBranch"
     ) -join "`n"
 }
@@ -404,8 +514,8 @@ if (-not (Test-GitOk -GitArguments @('rev-parse', '--is-inside-work-tree'))) {
 $repositoryRoot = Get-GitText -GitArguments @('rev-parse', '--show-toplevel')
 Set-Location -LiteralPath $repositoryRoot
 
-if (-not (Test-GitOk -GitArguments @('show-ref', '--verify', '--quiet', "refs/heads/$MainBranch"))) {
-    throw "STOP: main branch does not exist locally: $MainBranch"
+if (-not (Test-GitOk -GitArguments @('show-ref', '--verify', '--quiet', "refs/heads/$IntegrationBranch"))) {
+    throw "STOP: integration branch does not exist locally: $IntegrationBranch"
 }
 
 $currentBranch = Get-GitText -GitArguments @('branch', '--show-current')
@@ -414,8 +524,8 @@ if ([string]::IsNullOrWhiteSpace($currentBranch)) {
     throw 'STOP: detached HEAD is not allowed.'
 }
 
-if ($currentBranch -eq $MainBranch) {
-    throw "STOP: current branch is $MainBranch. Run this from a vA.B.C work branch."
+if ($currentBranch -eq $IntegrationBranch) {
+    throw "STOP: current branch is $IntegrationBranch. Run this from a vA.B.C work branch."
 }
 
 $nextBranch = Get-NextBranchName -BranchName $currentBranch
@@ -441,7 +551,7 @@ if (-not [string]::IsNullOrWhiteSpace($statusBeforeCommit)) {
         throw 'STOP: git add -A completed, but no staged changes were found. Empty commits are forbidden.'
     }
 
-    $commitMessagePath = New-AutoCommitMessageFile -SourceBranch $currentBranch -MainBranchName $MainBranch -NextBranch $nextBranch
+    $commitMessagePath = New-AutoCommitMessageFile -SourceBranch $currentBranch -IntegrationBranchName $IntegrationBranch -NextBranch $nextBranch
     Invoke-GitCommand -GitArguments @('commit', '-F', $commitMessagePath)
 
     $commitCreated = $true
@@ -452,10 +562,10 @@ if (-not [string]::IsNullOrWhiteSpace($statusBeforeCommit)) {
 
 Assert-CleanWorkingTree -Context 'commit handling'
 
-Invoke-GitCommand -GitArguments @('switch', $MainBranch)
+Invoke-GitCommand -GitArguments @('switch', $IntegrationBranch)
 
 try {
-    $mergeMessage = New-MergeMessage -SourceBranch $currentBranch -MainBranchName $MainBranch -NextBranch $nextBranch
+    $mergeMessage = New-MergeMessage -SourceBranch $currentBranch -IntegrationBranchName $IntegrationBranch -NextBranch $nextBranch
     Invoke-GitCommand -GitArguments @('merge', '--no-ff', $currentBranch, '-m', $mergeMessage)
 } catch {
     $mergeFailure = $_.Exception.Message
@@ -474,7 +584,7 @@ try {
 
 Assert-CleanWorkingTree -Context 'merge handling'
 
-Invoke-GitCommand -GitArguments @('switch', '-c', $nextBranch, $MainBranch)
+Invoke-GitCommand -GitArguments @('switch', '-c', $nextBranch, $IntegrationBranch)
 
 $finalBranch = Get-GitText -GitArguments @('branch', '--show-current')
 
@@ -486,7 +596,7 @@ Assert-CleanWorkingTree -Context 'final branch creation'
 
 Write-Output 'DONE: branch-finalize-next completed.'
 Write-Output "source_branch=$currentBranch"
-Write-Output "main_branch=$MainBranch"
+Write-Output "integration_branch=$IntegrationBranch"
 Write-Output "next_branch=$nextBranch"
 Write-Output "commit_created=$commitCreated"
 Write-Output "commit_sha=$commitSha"
