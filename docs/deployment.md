@@ -61,6 +61,12 @@ API Gateway の StageName は `Env` パラメータと同じ値です。
 
 staging のデプロイ、確認、ロールバック、影響範囲は [`staging-deployment-runbook.md`](staging-deployment-runbook.md) に記載しています。
 
+## IAM 権限最適化
+
+IAM 権限縮小は、初回 staging デプロイを完了してから staging で段階的に検証します。
+
+具体的な手順は [`iam-permission-optimization.md`](iam-permission-optimization.md) に記載しています。
+
 ## 手動補助スクリプト
 
 `deploy-deps.ps1` は既存の CloudFront OAC と S3 バケットを検出し、`dependencies.yaml` を `sam deploy` するための PowerShell スクリプトです。既定の `Env` は `prod`、既定の `StackName` は `cobaemon-portfolio-dependencies-prod`、既定の `Profile` は `aws_portfolio_profile` です。
