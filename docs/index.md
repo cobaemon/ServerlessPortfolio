@@ -10,6 +10,7 @@
 - [開発環境](development.md): ローカル実行、依存関係、テスト、AGENTS Hook、静的ファイル生成。
 - [デプロイと CI/CD](deployment.md): SAM、CodePipeline、CodeBuild、CloudFormation の流れ。
 - [Staging デプロイ Runbook](staging-deployment-runbook.md): staging デプロイ、確認、ロールバック、影響範囲。
+- [IAM 権限最適化手順](iam-permission-optimization.md): staging で IAM 権限縮小を検証してから prod へ反映する手順。
 - [静的ファイル配信](static-assets.md): collectstatic、S3 同期、CloudFront、Manifest Storage。
 - [運用確認](operations.md): 非破壊の疎通確認、ログ確認、既存の AWS CLI 設定。
 - [Staging 実値方針](staging-values-policy.md): staging 用ドメイン、Secrets Manager、Parameter Store の投入方針。
