@@ -12,10 +12,10 @@ Globals:
 Parameters:
   Env:
     Type: String
-    Description: "Deployment environment (dev or prod)"
+    Description: "Deployment environment (staging or prod)"
     Default: prod
     AllowedValues:
-      - dev
+      - staging
       - prod
   AllowedOrigin:
     Type: AWS::SSM::Parameter::Value<String>
@@ -44,8 +44,8 @@ Conditions:
 
 Mappings:
   EnvMapping:
-    dev:
-      SettingsModule: "config.settings.dev"
+    staging:
+      SettingsModule: "config.settings.staging"
     prod:
       SettingsModule: "config.settings.prod"
 
@@ -60,21 +60,21 @@ Resources:
       Environment:
         Variables:
           DJANGO_SETTINGS_MODULE: !FindInMap [EnvMapping, !Ref Env, SettingsModule]
-          DJANGO_SECRET_KEY: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:DJANGO_SECRET_KEY}}"
-          EMAIL_HOST_USER: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:EMAIL_HOST_USER}}"
-          EMAIL_HOST_PASSWORD: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:EMAIL_HOST_PASSWORD}}"
-          GOOGLE_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GOOGLE_CLIENT_ID}}"
-          GOOGLE_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
-          GITHUB_CLIENT_ID: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
-          GITHUB_CLIENT_SECRET: "{{resolve:secretsmanager:prod/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
-          ALLOWED_HOSTS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/allowed_hosts}}"
-          CSRF_TRUSTED_ORIGINS: !Sub "'${AllowedOrigin}'"
-          DEFAULT_FROM_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_from_email}}"
-          DEFAULT_TO_EMAIL: "{{resolve:ssm:/prod/portfolio/parameter/default_to_mail}}"
-          EMAIL_HOST: "{{resolve:ssm:/prod/portfolio/parameter/email_host}}"
-          EMAIL_PORT: "{{resolve:ssm:/prod/portfolio/parameter/email_port}}"
-          EMAIL_USE_TLS: "{{resolve:ssm:/prod/portfolio/parameter/email_use_tls}}"
-          EMAIL_USE_SSL: "{{resolve:ssm:/prod/portfolio/parameter/email_use_ssl}}"
+          DJANGO_SECRET_KEY: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:DJANGO_SECRET_KEY}}"
+          EMAIL_HOST_USER: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:EMAIL_HOST_USER}}"
+          EMAIL_HOST_PASSWORD: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:EMAIL_HOST_PASSWORD}}"
+          GOOGLE_CLIENT_ID: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GOOGLE_CLIENT_ID}}"
+          GOOGLE_CLIENT_SECRET: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
+          GITHUB_CLIENT_ID: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
+          GITHUB_CLIENT_SECRET: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
+          ALLOWED_HOSTS: !Ref AllowedHosts
+          CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
+          DEFAULT_FROM_EMAIL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/default_from_email}}"
+          DEFAULT_TO_EMAIL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/default_to_mail}}"
+          EMAIL_HOST: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_host}}"
+          EMAIL_PORT: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_port}}"
+          EMAIL_USE_TLS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_use_tls}}"
+          EMAIL_USE_SSL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_use_ssl}}"
           STATIC_URL: !Sub "https://${CloudFrontDistribution.DomainName}/"
           CLOUDFRONT_DOMAIN_NAME: !GetAtt CloudFrontDistribution.DomainName
           LOG_LEVEL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/log_level}}"
@@ -132,7 +132,7 @@ Resources:
   DjangoApi:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: !If [IsProd, prod, dev]
+      StageName: !Ref Env
       Name: CobaemonServerlessPortfolioApi
       Cors:
         AllowOrigin: !Sub "'${AllowedOrigin}'"
@@ -163,7 +163,7 @@ Resources:
     Properties:
       DomainName: !Ref ApiGatewayCustomDomain
       RestApiId: !Ref DjangoApi
-      Stage: !If [IsProd, prod, dev]
+      Stage: !Ref Env
       BasePath: ""
 
   ApiGatewayRecordSet:

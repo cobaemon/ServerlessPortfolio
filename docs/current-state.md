@@ -13,9 +13,11 @@
 
 ## staging 関連
 
-`.kiro/specs/staging-environment/requirements.md` には staging 環境追加の要件文書があります。
+staging 環境は `Env=staging` として実装されています。
 
-現在の実装ファイルでは、SAM テンプレートの `Env` `AllowedValues` は `dev` と `prod` です。`config/settings/staging.py` は存在しません。
+staging 用の値方針は [`staging-values-policy.md`](staging-values-policy.md) に記載しています。
+
+staging のデプロイ、確認、ロールバック、影響範囲は [`staging-deployment-runbook.md`](staging-deployment-runbook.md) に記載しています。
 
 ## テスト
 

@@ -2,7 +2,7 @@
 
 ## Django 設定ファイル
 
-`config/settings/base.py` は共通設定です。`config/settings/dev.py` と `config/settings/prod.py` は `base.py` を import して環境別設定を上書きします。
+`config/settings/base.py` は共通設定です。`config/settings/dev.py`、`config/settings/staging.py`、`config/settings/prod.py` は `base.py` または `prod.py` を import して環境別設定を上書きします。
 
 ## 共通設定
 
@@ -65,13 +65,17 @@
 
 `EMAIL_USE_TLS` と `EMAIL_USE_SSL` が同時に `True` の場合は `ImproperlyConfigured` を送出します。
 
+## Staging 設定
+
+`config/settings/staging.py` は `config/settings/prod.py` を import し、`ENV = "staging"` を設定します。
+
 ## AWS から注入される値
 
 `template.yaml` は Lambda 環境変数として Secrets Manager と Parameter Store の動的参照を使用します。
 
 ### Secrets Manager
 
-`template.yaml` は `prod/portfolio/secret` から次の値を参照します。
+`template.yaml` は `${Env}/portfolio/secret` から次の値を参照します。
 
 - `DJANGO_SECRET_KEY`
 - `EMAIL_HOST_USER`
@@ -86,12 +90,12 @@
 `template.yaml` は次の Parameter Store パスを参照します。
 
 - `/${Env}/portfolio/parameter/allowed_hosts`
-- `/prod/portfolio/parameter/default_from_email`
-- `/prod/portfolio/parameter/default_to_mail`
-- `/prod/portfolio/parameter/email_host`
-- `/prod/portfolio/parameter/email_port`
-- `/prod/portfolio/parameter/email_use_tls`
-- `/prod/portfolio/parameter/email_use_ssl`
+- `/${Env}/portfolio/parameter/default_from_email`
+- `/${Env}/portfolio/parameter/default_to_mail`
+- `/${Env}/portfolio/parameter/email_host`
+- `/${Env}/portfolio/parameter/email_port`
+- `/${Env}/portfolio/parameter/email_use_tls`
+- `/${Env}/portfolio/parameter/email_use_ssl`
 - `/${Env}/portfolio/parameter/log_level`
 
 `AllowedOrigin` と `AllowedHosts` パラメータは `AWS::SSM::Parameter::Value<String>` 型です。
@@ -106,6 +110,7 @@
 
 - [`config/settings/base.py`](../config/settings/base.py)
 - [`config/settings/dev.py`](../config/settings/dev.py)
+- [`config/settings/staging.py`](../config/settings/staging.py)
 - [`config/settings/prod.py`](../config/settings/prod.py)
 - [`template.yaml`](../template.yaml)
 - [`samconfig.toml`](../samconfig.toml)

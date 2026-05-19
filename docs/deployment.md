@@ -15,11 +15,11 @@
 
 ## アプリケーションテンプレート
 
-`template.yaml` は `Env` パラメータとして `dev` と `prod` を許容します。既定値は `prod` です。
+`template.yaml` は `Env` パラメータとして `staging` と `prod` を許容します。既定値は `prod` です。
 
 `DjangoFunction` は Python 3.12 Runtime、`x86_64` Architecture、Timeout 30 秒、MemorySize 512 MB で定義されています。
 
-API Gateway の StageName は `prod` 環境では `prod`、それ以外では `dev` です。
+API Gateway の StageName は `Env` パラメータと同じ値です。
 
 ## パイプライン
 
@@ -56,6 +56,10 @@ API Gateway の StageName は `prod` 環境では `prod`、それ以外では `d
 - `parameters.json` と `bucketpolicy-parameters.json` の生成。
 
 `buildspec-deps.yml` は CloudFront OAC と静的ファイルバケットの存在を検出し、`deps-parameters.json` を生成します。
+
+## Staging デプロイ
+
+staging のデプロイ、確認、ロールバック、影響範囲は [`staging-deployment-runbook.md`](staging-deployment-runbook.md) に記載しています。
 
 ## 手動補助スクリプト
 
