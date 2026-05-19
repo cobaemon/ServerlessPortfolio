@@ -4,10 +4,10 @@ Description: CI/CD Pipeline for the Serverless Portfolio Application
 Parameters:
   Env:
     Type: String
-    Description: "Deployment environment (dev or prod)"
+    Description: "Deployment environment (staging or prod)"
     Default: prod
     AllowedValues:
-      - dev
+      - staging
       - prod
   S3Bucket:
     Type: String
@@ -78,6 +78,16 @@ Resources:
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref AWS::StackName
                 TemplatePath: SourceOutput::pipeline.yaml
+                ParameterOverrides: !Sub |
+                  {
+                    "Env": "${Env}",
+                    "S3Bucket": "${S3Bucket}",
+                    "CodePipelineName": "${CodePipelineName}",
+                    "FullRepositoryId": "${FullRepositoryId}",
+                    "BranchName": "${BranchName}",
+                    "StackName": "${StackName}",
+                    "TemplatePath": "${TemplatePath}"
+                  }
                 OutputFileName: output-pipeline.json
               RunOrder: 1
         - Name: BuildDependencies
@@ -298,7 +308,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
-                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:prod/portfolio/secret-*"
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Env}/portfolio/secret-*"
         - PolicyName: CodeBuildS3StaticFilesAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -310,10 +320,8 @@ Resources:
                   - "s3:ListBucket"
                   - "s3:DeleteObject"
                 Resource:
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-prod"
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-prod/*"
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-dev"
-                  - "arn:aws:s3:::cobaemon-serverless-portfolio-dev/*"
+                  - !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static"
+                  - !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static/*"
         - PolicyName: CodeBuildSSMParameterAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -322,7 +330,7 @@ Resources:
                 Action:
                   - ssm:GetParameters
                   - ssm:GetParameter
-                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/prod/portfolio/parameter/*"
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Env}/portfolio/parameter/*"
       Tags:
         - Key: env
           Value: !Ref Env

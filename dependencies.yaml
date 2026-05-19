@@ -6,8 +6,8 @@ Parameters:
   Env:
     Type: String
     Default: prod
-    AllowedValues: [dev, prod]
-    Description: "デプロイ環境（dev または prod）"
+    AllowedValues: [staging, prod]
+    Description: "デプロイ環境（staging または prod）"
   
   # 既存のCloudFront Origin Access Control ID（新規作成しない場合に指定）
   ExistingOACId:

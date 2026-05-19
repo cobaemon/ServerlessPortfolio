@@ -2,7 +2,7 @@
 
 ## 全体構成
 
-ServerlessPortfolio は Django アプリケーションを AWS Lambda 上で実行します。Lambda の公開入口は API Gateway REST API です。本番用のカスタムドメイン `serverless.portfolio.cobaemon.com` は API Gateway の Regional カスタムドメインとして定義されています。
+ServerlessPortfolio は Django アプリケーションを AWS Lambda 上で実行します。Lambda の公開入口は API Gateway REST API です。本番用のカスタムドメイン `serverless.portfolio.cobaemon.com` と staging 用のカスタムドメイン `staging.serverless.portfolio.cobaemon.com` は API Gateway の Regional カスタムドメインとして定義されます。
 
 静的ファイルは Django アプリケーションから直接配信せず、S3 バケットと CloudFront ディストリビューションで配信する構成です。
 
@@ -61,9 +61,7 @@ flowchart LR
 
 ## 環境
 
-SAM テンプレートの `Env` パラメータは `dev` と `prod` を許容します。`EnvMapping` は `dev` を `config.settings.dev`、`prod` を `config.settings.prod` に対応させています。
-
-`.kiro/specs/staging-environment/requirements.md` には staging 追加要件が存在しますが、現在の `template.yaml`、`dependencies.yaml`、`pipeline.yaml`、`bucketpolicy.yaml` の `AllowedValues` は `dev` と `prod` です。
+SAM テンプレートの `Env` パラメータは `staging` と `prod` を許容します。`EnvMapping` は `staging` を `config.settings.staging`、`prod` を `config.settings.prod` に対応させています。
 
 ## 関連ファイル
 
@@ -73,4 +71,5 @@ SAM テンプレートの `Env` パラメータは `dev` と `prod` を許容し
 - [`asgi_lambda.py`](../asgi_lambda.py)
 - [`config/asgi.py`](../config/asgi.py)
 - [`config/settings/prod.py`](../config/settings/prod.py)
+- [`config/settings/staging.py`](../config/settings/staging.py)
 - [`config/settings/dev.py`](../config/settings/dev.py)

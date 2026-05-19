@@ -5,7 +5,7 @@ Parameters:
   Env:
     Type: String
     Default: prod
-    AllowedValues: [dev, prod]
+    AllowedValues: [staging, prod]
 
 Resources:
   StaticFilesBucketPolicy:

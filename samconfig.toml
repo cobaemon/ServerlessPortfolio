@@ -10,3 +10,15 @@ parameter_overrides = "Env=\"prod\" S3Bucket=\"cobaemon-serverless-portfolio-pro
 image_repositories = []
 profile = "aws_portfolio_profile"
 confirm_changeset = true
+
+[staging.deploy.parameters]
+stack_name = "cobaemon-serverless-portfolio-staging-pipeline"
+resolve_s3 = true
+s3_prefix = "cobaemon-serverless-portfolio-staging-pipeline"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_NAMED_IAM"
+disable_rollback = true
+parameter_overrides = "Env=\"staging\" S3Bucket=\"cobaemon-serverless-portfolio-staging-artifacts\" CodePipelineName=\"cobaemon-serverless-portfolio-staging-pipeline\" FullRepositoryId=\"cobaemon/ServerlessPortfolio\" BranchName=\"dev\" StackName=\"cobaemon-serverless-portfolio-staging-stack\" TemplatePath=\"packaged.yaml\""
+image_repositories = []
+profile = "aws_portfolio_profile"
+confirm_changeset = true

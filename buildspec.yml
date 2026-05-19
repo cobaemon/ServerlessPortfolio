@@ -4,27 +4,6 @@ env:
   variables:
     DJANGO_SETTINGS_MODULE: "config.settings.prod"
     ENV: "prod"
-    
-  # AWS Secrets Managerから取得する機密情報の定義
-  secrets-manager:
-    DJANGO_SECRET_KEY: "prod/portfolio/secret:DJANGO_SECRET_KEY"
-    EMAIL_HOST_USER: "prod/portfolio/secret:EMAIL_HOST_USER"
-    EMAIL_HOST_PASSWORD: "prod/portfolio/secret:EMAIL_HOST_PASSWORD"
-    GOOGLE_CLIENT_ID: "prod/portfolio/secret:GOOGLE_CLIENT_ID"
-    GOOGLE_CLIENT_SECRET: "prod/portfolio/secret:GOOGLE_CLIENT_SECRET"
-    GITHUB_CLIENT_ID: "prod/portfolio/secret:GITHUB_CLIENT_ID"
-    GITHUB_CLIENT_SECRET: "prod/portfolio/secret:GITHUB_CLIENT_SECRET"
-
-  # AWS Systems Manager Parameter Storeから取得する設定値の定義
-  parameter-store:
-    ALLOWED_HOSTS: "/prod/portfolio/parameter/allowed_hosts"
-    CSRF_TRUSTED_ORIGINS: "/prod/portfolio/parameter/csrf_trusted_origins"
-    DEFAULT_FROM_EMAIL: "/prod/portfolio/parameter/default_from_email"
-    DEFAULT_TO_EMAIL: "/prod/portfolio/parameter/default_to_mail"
-    EMAIL_HOST: "/prod/portfolio/parameter/email_host"
-    EMAIL_PORT: "/prod/portfolio/parameter/email_port"
-    EMAIL_USE_TLS: "/prod/portfolio/parameter/email_use_tls"
-    EMAIL_USE_SSL: "/prod/portfolio/parameter/email_use_ssl"
 
 phases:
   install:
@@ -39,13 +18,69 @@ phases:
   pre_build:
     commands:
       - echo "SAMビルドの準備を開始..."
+      - |
+        case "$ENV" in
+          prod)
+            DOMAIN_NAME="serverless.portfolio.cobaemon.com"
+            DJANGO_SETTINGS_MODULE="config.settings.prod"
+            ;;
+          staging)
+            DOMAIN_NAME="staging.serverless.portfolio.cobaemon.com"
+            DJANGO_SETTINGS_MODULE="config.settings.staging"
+            ;;
+          *)
+            echo "Unsupported ENV: $ENV" >&2
+            exit 1
+            ;;
+        esac
+        export DOMAIN_NAME
+        export DJANGO_SETTINGS_MODULE
+      - |
+        set +x
+        SECRET_ID="${ENV}/portfolio/secret"
+        PARAMETER_PREFIX="/${ENV}/portfolio/parameter"
+        SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ID" --query SecretString --output text)
+        export SECRET_JSON
+        eval "$(
+          python - <<'EOF'
+        import json
+        import os
+        import shlex
+
+        required_keys = [
+            "DJANGO_SECRET_KEY",
+            "EMAIL_HOST_USER",
+            "EMAIL_HOST_PASSWORD",
+            "GOOGLE_CLIENT_ID",
+            "GOOGLE_CLIENT_SECRET",
+            "GITHUB_CLIENT_ID",
+            "GITHUB_CLIENT_SECRET",
+        ]
+        secret = json.loads(os.environ["SECRET_JSON"])
+        missing = [key for key in required_keys if not secret.get(key)]
+        if missing:
+            raise SystemExit(f"Missing secret values: {', '.join(missing)}")
+        for key in required_keys:
+            print(f"export {key}={shlex.quote(str(secret[key]))}")
+        EOF
+        )"
+        unset SECRET_JSON
+        export ALLOWED_HOSTS="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/allowed_hosts" --query Parameter.Value --output text)"
+        export CSRF_TRUSTED_ORIGINS="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/csrf_trusted_origins" --query Parameter.Value --output text)"
+        export DEFAULT_FROM_EMAIL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/default_from_email" --query Parameter.Value --output text)"
+        export DEFAULT_TO_EMAIL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/default_to_mail" --query Parameter.Value --output text)"
+        export EMAIL_HOST="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_host" --query Parameter.Value --output text)"
+        export EMAIL_PORT="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_port" --query Parameter.Value --output text)"
+        export EMAIL_USE_TLS="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_tls" --query Parameter.Value --output text)"
+        export EMAIL_USE_SSL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_ssl" --query Parameter.Value --output text)"
+        export LOG_LEVEL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/log_level" --query Parameter.Value --output text)"
+        echo "Loaded build configuration for $ENV without printing secret values."
       # env_vars.txt が存在しない場合に備えて初期化
       - echo "EXISTING_ARECORD=false" > env_vars.txt
       
       # 既存のRoute53 Aレコードを検出
       - echo "既存のRoute53 Aレコードを検出中..."
       - |
-        DOMAIN_NAME="serverless.portfolio.cobaemon.com"
         ROOT_DOMAIN=$(echo $DOMAIN_NAME | awk -F'.' '{print $(NF-1)"."$NF}')
         HOSTED_ZONE_ID=$(aws route53 list-hosted-zones-by-name \
           --dns-name "$ROOT_DOMAIN" \
@@ -58,7 +93,10 @@ phases:
 
         echo "HOSTED_ZONE_ID=$HOSTED_ZONE_ID" >> env_vars.txt
 
-        STACK_NAME="cobaemon-serverless-portfolio-stack"
+        STACK_NAME="cobaemon-serverless-portfolio-${ENV}-stack"
+        if [ "$ENV" = "prod" ]; then
+          STACK_NAME="cobaemon-serverless-portfolio-stack"
+        fi
         CFN_RECORD=$(aws cloudformation describe-stack-resource \
           --stack-name $STACK_NAME \
           --logical-resource-id ApiGatewayRecordSet \
@@ -141,7 +179,10 @@ phases:
           "Parameters": {
             "Env": "$ENV",
             "ExistingARecord": "$EXISTING_ARECORD",
-            "HostedZoneId": "$HOSTED_ZONE_ID"
+            "HostedZoneId": "$HOSTED_ZONE_ID",
+            "DomainName": "$DOMAIN_NAME",
+            "AllowedOrigin": "/${ENV}/portfolio/parameter/csrf_trusted_origins",
+            "AllowedHosts": "/${ENV}/portfolio/parameter/allowed_hosts"
           }
         }
         EOF
