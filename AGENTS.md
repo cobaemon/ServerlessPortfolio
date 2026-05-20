@@ -56,6 +56,8 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 
 - `AGENTS.md` に必須原則マーカーが存在しない場合は停止する。
 - 成果物ドキュメントである `README.md` または `docs/` 配下に `エビデンス:`、`エビデンス：`、`Evidence:`、`Evidence：` のラベルが含まれる場合は停止する。
+- `docs/incidents/` 配下のインシデント記録ファイル名が `{yyyyMMdd}_{HHmmss}_Incident.md` 形式でない場合は停止する。
+- `docs/incidents/` 配下のインシデント記録に `対応策としてのフック修正：` と `対応策としての関連ドキュメント修正：` が含まれない場合は停止する。
 
 ### commit-msg
 
@@ -73,6 +75,7 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 
 - `dev` または `main` への push は、`AGENTS_ALLOW_PROTECTED_PUSH=1` が設定されていない場合は停止する。
 - `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に push を許可した場合のみ設定する。
+- `dev` push による検証を完了扱いにするには、push した commit と pipeline source revision の一致、および pipeline 実行状態の確認を必須とする。
 
 ### 有効化
 

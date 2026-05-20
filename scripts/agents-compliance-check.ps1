@@ -47,6 +47,8 @@ $DeliverableDocumentPatterns = @(
     '^docs/'
 )
 
+$IncidentRecordPattern = '^docs/incidents/[0-9]{8}_[0-9]{6}_Incident\.md$'
+
 $ProtectedBranches = @(
     'dev',
     'main'
@@ -174,6 +176,53 @@ function Assert-DeliverableDocumentsHaveNoEvidenceLabels {
 
         if ($matchedLines.Count -gt 0) {
             throw "AGENTS HOOK STOP: deliverable document contains an evidence label: $normalizedPath"
+        }
+    }
+}
+
+function Assert-IncidentRecordCycleDocuments {
+    <#
+    .SYNOPSIS
+    Stops staged incident records that do not include corrective hook and document scope.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    foreach ($path in $paths) {
+        $normalizedPath = $path.Replace('\', '/')
+
+        if ($normalizedPath -notlike 'docs/incidents/*') {
+            continue
+        }
+
+        if ($normalizedPath -eq 'docs/incidents/README.md') {
+            continue
+        }
+
+        if ($normalizedPath -notmatch $IncidentRecordPattern) {
+            throw "AGENTS HOOK STOP: incident record filename must match yyyyMMdd_HHmmss_Incident.md: $normalizedPath"
+        }
+
+        $stagedContent = Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")
+        $text = ($stagedContent -join "`n")
+
+        if ($text -notmatch '(?m)^INC-[0-9]{8}-[0-9]{3}-(致命的|侵害|重大|違反)\s*$') {
+            throw "AGENTS HOOK STOP: incident record must start with INC-yyyyMMdd-NNN-level: $normalizedPath"
+        }
+
+        if (-not $text.Contains('対応策としてのフック修正：')) {
+            throw "AGENTS HOOK STOP: incident record must include hook corrective action scope: $normalizedPath"
+        }
+
+        if (-not $text.Contains('対応策としての関連ドキュメント修正：')) {
+            throw "AGENTS HOOK STOP: incident record must include related document corrective action scope: $normalizedPath"
         }
     }
 }
@@ -389,6 +438,7 @@ if ($Mode -eq 'pre-commit') {
     Assert-DirectCommitBranchAllowed
     $stagedPaths = Get-StagedPaths
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
+    Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
     exit 0
 }

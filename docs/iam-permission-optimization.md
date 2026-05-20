@@ -39,6 +39,25 @@ git log --oneline origin/dev..dev
 
 `sam deploy --template-file pipeline.yaml --config-env default` による prod 反映は行いません。
 
+## 作業責任範囲と完了条件
+
+各 Phase の作業は、ローカル commit だけでは完了扱いにしません。
+
+staging pipeline 検証を含む Phase では、次を責任範囲に含めます。
+
+- `vA.B.C` 作業ブランチで変更する。
+- ローカル検証を実行する。
+- 作業ブランチで commit する。
+- ユーザーが明示的に `branch-finalize-next` の実行を指示した場合、`branch-finalize-next` を実行する。
+- `branch-finalize-next` 完了後、push 対象差分、対象ブランチ、`origin/dev..dev` の内容を確認する。
+- ユーザーが明示的に `dev` push を許可した場合、`git push origin dev` を実行する。
+- staging pipeline が push した `dev` commit を source revision として取得していることを確認する。
+- staging pipeline の対象ステージが成功したこと、または権限不足の失敗内容を確認する。
+
+完了報告では、commit SHA、`branch-finalize-next` 実行有無、push した commit、pipeline execution id、pipeline source revision、pipeline status を報告します。
+
+`branch-finalize-next`、`dev` push、pipeline 検証が必要な Phase で未実施項目がある場合は、完了ではなく未完了として報告します。
+
 ## Phase 1: 低リスク修正
 
 `template.yaml` から Lambda の `SecretsManagerReadWrite` を削除します。
@@ -126,6 +145,8 @@ aws logs describe-log-streams `
 
 `AdministratorAccess` は戻しません。
 
+Phase 2 の完了条件は、`git push origin dev` によって起動した staging pipeline の source revision が push した `dev` commit と一致し、対象 pipeline 実行状態を確認済みであることです。
+
 ## Phase 3: CloudFormation Role 縮小
 
 `staging-portfolio-cfn-role` から `AdministratorAccess` を外します。
@@ -166,6 +187,10 @@ aws codepipeline list-pipeline-executions `
 - `Deploy`
 - `BucketPolicyDeploy`
 
+Phase 3 の完了条件は、`branch-finalize-next` による `dev` 統合、明示許可後の `git push origin dev`、push した `dev` commit と staging pipeline source revision の一致、`DeployDependencies`、`Deploy`、`BucketPolicyDeploy` の成功確認です。
+
+ローカル commit のみで Phase 3 を完了扱いにしてはいけません。
+
 ## Phase 4: CodePipeline Role 縮小
 
 `staging-portfolio-pipeline-role` から `AdministratorAccess` を外します。
@@ -193,6 +218,8 @@ aws codepipeline get-pipeline-state `
 ```
 
 全ステージ成功を確認します。
+
+Phase 4 の完了条件は、`branch-finalize-next` による `dev` 統合、明示許可後の `git push origin dev`、push した `dev` commit と staging pipeline source revision の一致、全ステージ成功の確認です。
 
 ## Phase 5: prod 反映
 
