@@ -543,6 +543,13 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static"
                   - !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static/*"
+              - Sid: ReadDeploymentArtifacts
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource:
+                  - !Sub "arn:aws:s3:::${S3Bucket}/*"
               - Sid: ManagePortfolioPipeline
                 Effect: Allow
                 Action:
