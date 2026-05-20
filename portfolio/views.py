@@ -1,6 +1,5 @@
 from django.http import HttpResponse
 from django.views.generic import FormView
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import logging
 
@@ -44,7 +43,6 @@ class Top(FormView):
         return context
 
 
-@csrf_exempt
 @require_POST
 def contact(request):
     form = ContactForm(request.POST)

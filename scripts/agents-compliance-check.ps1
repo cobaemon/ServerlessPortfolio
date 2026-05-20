@@ -194,6 +194,7 @@ function Assert-IncidentRecordCycleDocuments {
     )
 
     $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $hasIncidentRecord = $false
 
     foreach ($path in $paths) {
         $normalizedPath = $path.Replace('\', '/')
@@ -210,6 +211,7 @@ function Assert-IncidentRecordCycleDocuments {
             throw "AGENTS HOOK STOP: incident record filename must match yyyyMMdd_HHmmss_Incident.md: $normalizedPath"
         }
 
+        $hasIncidentRecord = $true
         $stagedContent = Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")
         $text = ($stagedContent -join "`n")
 
@@ -217,13 +219,91 @@ function Assert-IncidentRecordCycleDocuments {
             throw "AGENTS HOOK STOP: incident record must start with INC-yyyyMMdd-NNN-level: $normalizedPath"
         }
 
-        if (-not $text.Contains('対応策としてのフック修正：')) {
-            throw "AGENTS HOOK STOP: incident record must include hook corrective action scope: $normalizedPath"
-        }
+        Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としてのフック修正：' -RepositoryPath $normalizedPath
+        Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としての関連ドキュメント修正：' -RepositoryPath $normalizedPath
+    }
 
-        if (-not $text.Contains('対応策としての関連ドキュメント修正：')) {
-            throw "AGENTS HOOK STOP: incident record must include related document corrective action scope: $normalizedPath"
-        }
+    if (-not $hasIncidentRecord) {
+        return
+    }
+
+    $normalizedStagedPaths = @($paths | ForEach-Object { $_.Replace('\', '/') })
+
+    if ($normalizedStagedPaths -notcontains 'scripts/agents-compliance-check.ps1') {
+        throw 'AGENTS HOOK STOP: incident records must be committed with hook corrective changes in scripts/agents-compliance-check.ps1.'
+    }
+
+    if ($normalizedStagedPaths -notcontains 'AGENTS.md') {
+        throw 'AGENTS HOOK STOP: incident records must be committed with related procedure documentation changes in AGENTS.md.'
+    }
+}
+
+function Get-MarkdownSectionBody {
+    <#
+    .SYNOPSIS
+    Returns the body of a level-2 Markdown section.
+
+    .PARAMETER Text
+    Markdown text to inspect.
+
+    .PARAMETER Heading
+    Level-2 heading text without the leading hashes.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Heading
+    )
+
+    $escapedHeading = [regex]::Escape($Heading)
+    $match = [regex]::Match($Text, "(?ms)^##\s+$escapedHeading\s*\r?\n(?<body>.*?)(?=^##\s+|\z)")
+
+    if (-not $match.Success) {
+        return $null
+    }
+
+    return $match.Groups['body'].Value.Trim()
+}
+
+function Assert-IncidentCorrectiveSectionDocumented {
+    <#
+    .SYNOPSIS
+    Stops incident records whose corrective section is empty or marked unimplemented.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER Heading
+    Required level-2 heading text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Heading,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $sectionBody = Get-MarkdownSectionBody -Text $Text -Heading $Heading
+
+    if ($null -eq $sectionBody) {
+        throw "AGENTS HOOK STOP: incident record must include corrective action section '$Heading': $RepositoryPath"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($sectionBody)) {
+        throw "AGENTS HOOK STOP: incident record corrective action section must not be empty '$Heading': $RepositoryPath"
+    }
+
+    if ($sectionBody -match '(?m)^\s*未実施') {
+        throw "AGENTS HOOK STOP: incident record corrective action section must not be marked unimplemented '$Heading': $RepositoryPath"
     }
 }
 
