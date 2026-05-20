@@ -615,6 +615,13 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CodePipelineName}"
                   - !Sub "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CodePipelineName}/*"
+              - Sid: PassSourceConnectionToPipeline
+                Effect: Allow
+                Action:
+                  - codeconnections:PassConnection
+                  - codestar-connections:PassConnection
+                Resource:
+                  - arn:aws:codeconnections:ap-northeast-1:864454139429:connection/fcbb3ce3-d1c2-4b93-89e5-ac0f45ae943f
               - Sid: ManagePortfolioCodeBuild
                 Effect: Allow
                 Action:
