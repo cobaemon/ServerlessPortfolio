@@ -589,6 +589,12 @@ Resources:
                   - cloudformation:GetTemplate
                   - cloudformation:ListStackResources
                 Resource: "*"
+              - Sid: UseServerlessTransform
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                Resource:
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31"
       Tags:
         - Key: env
           Value: !Ref Env
