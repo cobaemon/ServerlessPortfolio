@@ -112,7 +112,6 @@ Resources:
             Method: OPTIONS
     Policies:
       - AWSLambdaBasicExecutionRole
-      - SecretsManagerReadWrite
       - Statement:
         Effect: Allow
         Action:
