@@ -566,6 +566,8 @@ Invoke-GitCommand -GitArguments @('switch', $IntegrationBranch)
 
 try {
     $mergeMessage = New-MergeMessage -SourceBranch $currentBranch -IntegrationBranchName $IntegrationBranch -NextBranch $nextBranch
+    $previousBranchFinalizeMarker = $env:AGENTS_BRANCH_FINALIZE_NEXT
+    $env:AGENTS_BRANCH_FINALIZE_NEXT = '1'
     Invoke-GitCommand -GitArguments @('merge', '--no-ff', $currentBranch, '-m', $mergeMessage)
 } catch {
     $mergeFailure = $_.Exception.Message
@@ -580,6 +582,12 @@ try {
     }
 
     throw "STOP: merge failed. Conflict or merge error was not auto-resolved. Original error: $mergeFailure"
+} finally {
+    if ($null -eq $previousBranchFinalizeMarker) {
+        Remove-Item Env:\AGENTS_BRANCH_FINALIZE_NEXT -ErrorAction SilentlyContinue
+    } else {
+        $env:AGENTS_BRANCH_FINALIZE_NEXT = $previousBranchFinalizeMarker
+    }
 }
 
 Assert-CleanWorkingTree -Context 'merge handling'
