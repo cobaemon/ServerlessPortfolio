@@ -62,6 +62,17 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - commit message にタイトルと本文の両方が存在しない場合は停止する。
 - 本文がタイトルのみの重複である場合は停止する。
 - 本文に目的、概要、理由、対応、統合、検証のいずれの説明も含まれない場合は停止する。
+- `dev` または `main` 上の commit message は、`branch-finalize-next` が明示した merge commit 以外の場合は停止する。
+
+### protected branch
+
+- `dev` または `main` で直接 commit しようとした場合は停止する。
+- `branch-finalize-next` が実行する `dev` への merge commit は例外として許可する。
+
+### pre-push
+
+- `dev` または `main` への push は、`AGENTS_ALLOW_PROTECTED_PUSH=1` が設定されていない場合は停止する。
+- `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に push を許可した場合のみ設定する。
 
 ### 有効化
 

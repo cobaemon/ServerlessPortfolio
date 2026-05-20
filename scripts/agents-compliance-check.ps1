@@ -11,7 +11,7 @@ body.
 
 .PARAMETER Mode
 Git hook mode. Use pre-commit for staged-content checks and commit-msg for
-commit-message checks.
+commit-message checks. Use pre-push to guard protected branch pushes.
 
 .PARAMETER CommitMessagePath
 Path to the commit message file passed by Git commit-msg.
@@ -20,7 +20,7 @@ Path to the commit message file passed by Git commit-msg.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('pre-commit', 'commit-msg')]
+    [ValidateSet('pre-commit', 'commit-msg', 'pre-push')]
     [string]$Mode,
 
     [Parameter(Mandatory = $false)]
@@ -45,6 +45,11 @@ $RequiredAgentsMarkers = @(
 $DeliverableDocumentPatterns = @(
     '^README\.md$',
     '^docs/'
+)
+
+$ProtectedBranches = @(
+    'dev',
+    'main'
 )
 
 function Invoke-GitOutput {
@@ -228,14 +233,169 @@ function Assert-CommitMessageHasTitleAndBody {
     }
 }
 
+function Get-CurrentBranch {
+    <#
+    .SYNOPSIS
+    Returns the current Git branch name.
+    #>
+    $branch = (Invoke-GitOutput -GitArguments @('branch', '--show-current') | Select-Object -First 1).Trim()
+
+    if ([string]::IsNullOrWhiteSpace($branch)) {
+        throw 'AGENTS HOOK STOP: detached HEAD is not allowed for protected operations.'
+    }
+
+    return $branch
+}
+
+function Test-IsProtectedBranch {
+    <#
+    .SYNOPSIS
+    Returns true when a branch is protected by repository workflow rules.
+
+    .PARAMETER BranchName
+    Branch name without refs/heads/.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BranchName
+    )
+
+    return ($ProtectedBranches -contains $BranchName)
+}
+
+function Test-IsBranchFinalizeContext {
+    <#
+    .SYNOPSIS
+    Returns true when branch-finalize-next has explicitly marked this Git operation.
+    #>
+    return ($env:AGENTS_BRANCH_FINALIZE_NEXT -eq '1')
+}
+
+function Assert-DirectCommitBranchAllowed {
+    <#
+    .SYNOPSIS
+    Stops direct commits on protected branches unless branch-finalize-next marked the operation.
+    #>
+    $branch = Get-CurrentBranch
+
+    if ((Test-IsProtectedBranch -BranchName $branch) -and -not (Test-IsBranchFinalizeContext)) {
+        throw "AGENTS HOOK STOP: direct commits on protected branch '$branch' are forbidden. Use a vA.B.C work branch and branch-finalize-next."
+    }
+}
+
+function Assert-ProtectedBranchCommitMessageAllowed {
+    <#
+    .SYNOPSIS
+    Stops protected branch commit messages unless created by branch-finalize-next.
+
+    .PARAMETER MessagePath
+    Commit message file path passed by Git.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$MessagePath
+    )
+
+    $branch = Get-CurrentBranch
+
+    if (-not (Test-IsProtectedBranch -BranchName $branch)) {
+        return
+    }
+
+    if (-not (Test-IsBranchFinalizeContext)) {
+        throw "AGENTS HOOK STOP: commit-msg on protected branch '$branch' is forbidden outside branch-finalize-next."
+    }
+
+    $message = Get-Content -LiteralPath $MessagePath -Raw -Encoding utf8
+
+    if ($message -notmatch '(?m)^merge: v[0-9]+\.[0-9]+\.[0-9]+ into dev$') {
+        throw "AGENTS HOOK STOP: protected branch '$branch' accepts only branch-finalize-next merge messages."
+    }
+}
+
+function Convert-RefToBranchName {
+    <#
+    .SYNOPSIS
+    Converts a Git ref path to a branch name when possible.
+
+    .PARAMETER RefName
+    Git ref such as refs/heads/dev.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RefName
+    )
+
+    if ($RefName -like 'refs/heads/*') {
+        return $RefName.Substring('refs/heads/'.Length)
+    }
+
+    return $RefName
+}
+
+function Assert-ProtectedPushAllowed {
+    <#
+    .SYNOPSIS
+    Stops pushes to protected branches unless explicitly enabled for this shell.
+    #>
+    $stdinText = [Console]::In.ReadToEnd()
+
+    if ([string]::IsNullOrWhiteSpace($stdinText)) {
+        return
+    }
+
+    $blockedBranches = @()
+
+    foreach ($line in ($stdinText -split "`n")) {
+        $trimmed = $line.Trim()
+
+        if ([string]::IsNullOrWhiteSpace($trimmed)) {
+            continue
+        }
+
+        $columns = @($trimmed -split '\s+')
+
+        if ($columns.Count -lt 4) {
+            continue
+        }
+
+        $remoteRef = [string]$columns[2]
+        $remoteBranch = Convert-RefToBranchName -RefName $remoteRef
+
+        if (Test-IsProtectedBranch -BranchName $remoteBranch) {
+            $blockedBranches += $remoteBranch
+        }
+    }
+
+    $uniqueBlockedBranches = @($blockedBranches | Sort-Object -Unique)
+
+    if ($uniqueBlockedBranches.Count -eq 0) {
+        return
+    }
+
+    if ($env:AGENTS_ALLOW_PROTECTED_PUSH -eq '1') {
+        Write-Output "AGENTS HOOK PASS: protected branch push explicitly allowed for: $($uniqueBlockedBranches -join ', ')"
+        return
+    }
+
+    throw "AGENTS HOOK STOP: push to protected branch is forbidden without AGENTS_ALLOW_PROTECTED_PUSH=1: $($uniqueBlockedBranches -join ', ')"
+}
+
 $repositoryRoot = Get-RepositoryRoot
 Set-Location -LiteralPath $repositoryRoot
 Assert-AgentsRulesPresent -RepositoryRoot $repositoryRoot
 
 if ($Mode -eq 'pre-commit') {
+    Assert-DirectCommitBranchAllowed
     $stagedPaths = Get-StagedPaths
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
+    exit 0
+}
+
+if ($Mode -eq 'pre-push') {
+    Assert-ProtectedPushAllowed
+    Write-Output 'AGENTS HOOK PASS: pre-push checks completed.'
     exit 0
 }
 
@@ -244,5 +404,6 @@ if ([string]::IsNullOrWhiteSpace($CommitMessagePath)) {
 }
 
 Assert-CommitMessageHasTitleAndBody -MessagePath $CommitMessagePath
+Assert-ProtectedBranchCommitMessageAllowed -MessagePath $CommitMessagePath
 Write-Output 'AGENTS HOOK PASS: commit-msg checks completed.'
 exit 0
