@@ -219,7 +219,8 @@
                 <!-- Contact Section Form-->
                 <div class="row justify-content-center">
                     <div class="col-lg-8 col-xl-7">
-                        <form id="contactForm" method="post" action="/contact">
+                        <form id="contactForm" method="post" action="{% url 'portfolio:contact' %}">
+                            {% csrf_token %}
                             <!-- Name input-->
                             <div class="form-floating mb-3">
                                 {{ form.full_name }}

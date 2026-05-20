@@ -58,6 +58,8 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - 成果物ドキュメントである `README.md` または `docs/` 配下に `エビデンス:`、`エビデンス：`、`Evidence:`、`Evidence：` のラベルが含まれる場合は停止する。
 - `docs/incidents/` 配下のインシデント記録ファイル名が `{yyyyMMdd}_{HHmmss}_Incident.md` 形式でない場合は停止する。
 - `docs/incidents/` 配下のインシデント記録に `対応策としてのフック修正：` と `対応策としての関連ドキュメント修正：` が含まれない場合は停止する。
+- `docs/incidents/` 配下のインシデント記録に含まれる `対応策としてのフック修正：` または `対応策としての関連ドキュメント修正：` が空、または `未実施` の場合は停止する。
+- `docs/incidents/` 配下のインシデント記録を staged に含める場合、`scripts/agents-compliance-check.ps1` と `AGENTS.md` の修正も同じ staged に含まれない場合は停止する。
 
 ### commit-msg
 
