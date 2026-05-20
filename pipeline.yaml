@@ -429,6 +429,7 @@ Resources:
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/${Env}-portfolio-*"
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/*portfolio-${Env}*"
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/*serverless-portfolio-${Env}*"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/cobaemon-serverless-portfolio-*"
               - Sid: PassPortfolioRoles
                 Effect: Allow
                 Action:
@@ -437,6 +438,7 @@ Resources:
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/${Env}-portfolio-*"
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/*portfolio-${Env}*"
                   - !Sub "arn:aws:iam::${AWS::AccountId}:role/*serverless-portfolio-${Env}*"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/cobaemon-serverless-portfolio-*"
                 Condition:
                   StringEquals:
                     iam:PassedToService:
