@@ -614,6 +614,7 @@ Resources:
                   - codepipeline:UpdatePipeline
                 Resource:
                   - !Sub "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CodePipelineName}"
+                  - !Sub "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CodePipelineName}/*"
               - Sid: ManagePortfolioCodeBuild
                 Effect: Allow
                 Action:
