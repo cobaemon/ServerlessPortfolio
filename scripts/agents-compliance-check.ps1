@@ -7,7 +7,8 @@ This hook runner performs only deterministic checks that can be verified from
 the repository state or the commit message supplied by Git. It stops the Git
 operation when required AGENTS.md markers are missing, when deliverable
 documents include evidence labels, or when a commit message lacks a title and
-body.
+body. Protected branch push blocking is opt-in for AI-controlled shells so a
+human operator is not blocked by the repository hook.
 
 .PARAMETER Mode
 Git hook mode. Use pre-commit for staged-content checks and commit-msg for
@@ -465,7 +466,7 @@ function Convert-RefToBranchName {
 function Assert-ProtectedPushAllowed {
     <#
     .SYNOPSIS
-    Stops pushes to protected branches unless explicitly enabled for this shell.
+    Stops AI-controlled pushes to protected branches unless explicitly enabled.
     #>
     $stdinText = [Console]::In.ReadToEnd()
 
@@ -502,12 +503,17 @@ function Assert-ProtectedPushAllowed {
         return
     }
 
-    if ($env:AGENTS_ALLOW_PROTECTED_PUSH -eq '1') {
-        Write-Output "AGENTS HOOK PASS: protected branch push explicitly allowed for: $($uniqueBlockedBranches -join ', ')"
+    if ($env:AGENTS_AI_PROTECTED_PUSH_GUARD -ne '1') {
+        Write-Output "AGENTS HOOK WARN: protected branch push detected but not blocked for human-operated shell: $($uniqueBlockedBranches -join ', ')"
         return
     }
 
-    throw "AGENTS HOOK STOP: push to protected branch is forbidden without AGENTS_ALLOW_PROTECTED_PUSH=1: $($uniqueBlockedBranches -join ', ')"
+    if ($env:AGENTS_ALLOW_PROTECTED_PUSH -eq '1') {
+        Write-Output "AGENTS HOOK PASS: AI protected branch push explicitly allowed for: $($uniqueBlockedBranches -join ', ')"
+        return
+    }
+
+    throw "AGENTS HOOK STOP: AI protected branch push is forbidden without AGENTS_ALLOW_PROTECTED_PUSH=1: $($uniqueBlockedBranches -join ', ')"
 }
 
 $repositoryRoot = Get-RepositoryRoot

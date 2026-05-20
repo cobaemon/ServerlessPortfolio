@@ -75,8 +75,10 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 
 ### pre-push
 
-- `dev` または `main` への push は、`AGENTS_ALLOW_PROTECTED_PUSH=1` が設定されていない場合は停止する。
-- `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に push を許可した場合のみ設定する。
+- `dev` または `main` への push は、人間の手動操作を hook で停止してはならない。
+- AI/Codex が `dev` または `main` へ push する場合のみ、`AGENTS_AI_PROTECTED_PUSH_GUARD=1` を設定して pre-push hook の protected branch 制御を有効化する。
+- AI/Codex による `dev` または `main` への push は、`AGENTS_AI_PROTECTED_PUSH_GUARD=1` と `AGENTS_ALLOW_PROTECTED_PUSH=1` が設定されていない場合は停止する。
+- `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に AI/Codex に push を許可した場合のみ設定する。
 - `dev` push による検証を完了扱いにするには、push した commit と pipeline source revision の一致、および pipeline 実行状態の確認を必須とする。
 
 ### 有効化
