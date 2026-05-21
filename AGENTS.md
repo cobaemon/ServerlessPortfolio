@@ -84,6 +84,7 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - `dev` push による検証を完了扱いにするには、push した commit と pipeline source revision の一致、および pipeline 実行状態の確認を必須とする。
 - 未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと。
 - `sam deploy --template-file pipeline.yaml --config-env staging` は staging pipeline stack の初期作成または明示された復旧操作に限定し、未コミット変更の検証完了根拠として使用してはならない。
+- 検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること。
 
 ### 有効化
 
@@ -94,6 +95,8 @@ git config core.hooksPath .githooks
 ## branch-finalize-next
 
 ユーザーが明示的に `branch-finalize-next` の実行を指示した場合のみ実行する。
+
+ただし、ユーザーが検証サイトでの検証、正規手順での作業再開、staging pipeline 検証、または `dev` 反映後の検証を依頼している場合、その依頼は `branch-finalize-next` 実行を責任範囲に含む明示指示として扱う。ローカル commit 後に `branch-finalize-next` 実行前で停止してはならない。
 
 ### 目的
 
