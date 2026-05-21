@@ -59,7 +59,9 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - `docs/incidents/` 配下のインシデント記録ファイル名が `{yyyyMMdd}_{HHmmss}_Incident.md` 形式でない場合は停止する。
 - `docs/incidents/` 配下のインシデント記録に `対応策としてのフック修正：` と `対応策としての関連ドキュメント修正：` が含まれない場合は停止する。
 - `docs/incidents/` 配下のインシデント記録に含まれる `対応策としてのフック修正：` または `対応策としての関連ドキュメント修正：` が空、または `未実施` の場合は停止する。
+- `docs/incidents/` 配下のインシデント記録で、実環境への実害が発生したインシデントは侵害以上に分類すること。実害が記録されているにもかかわらず `重大` または `違反` と分類されている場合は停止する。
 - `docs/incidents/` 配下のインシデント記録を staged に含める場合、`scripts/agents-compliance-check.ps1` と `AGENTS.md` の修正も同じ staged に含まれない場合は停止する。
+- `docs/ai-progress/` 配下で staging pipeline の成功、stack の `UPDATE_COMPLETE`、または staging site の `200 OK` を検証完了として記録する場合、pipeline source revision の確認結果を含まない場合は停止する。
 
 ### commit-msg
 
@@ -80,6 +82,9 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - AI/Codex による `dev` または `main` への push は、`AGENTS_AI_PROTECTED_PUSH_GUARD=1` と `AGENTS_ALLOW_PROTECTED_PUSH=1` が設定されていない場合は停止する。
 - `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に AI/Codex に push を許可した場合のみ設定する。
 - `dev` push による検証を完了扱いにするには、push した commit と pipeline source revision の一致、および pipeline 実行状態の確認を必須とする。
+- 未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと。
+- `sam deploy --template-file pipeline.yaml --config-env staging` は staging pipeline stack の初期作成または明示された復旧操作に限定し、未コミット変更の検証完了根拠として使用してはならない。
+- 検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること。
 
 ### 有効化
 
@@ -90,6 +95,8 @@ git config core.hooksPath .githooks
 ## branch-finalize-next
 
 ユーザーが明示的に `branch-finalize-next` の実行を指示した場合のみ実行する。
+
+ただし、ユーザーが検証サイトでの検証、正規手順での作業再開、staging pipeline 検証、または `dev` 反映後の検証を依頼している場合、その依頼は `branch-finalize-next` 実行を責任範囲に含む明示指示として扱う。ローカル commit 後に `branch-finalize-next` 実行前で停止してはならない。
 
 ### 目的
 

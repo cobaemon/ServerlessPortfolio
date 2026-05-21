@@ -321,6 +321,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - cloudformation:ValidateTemplate
+                # ValidateTemplate does not support resource-level permissions.
                 Resource: "*"
               - Sid: PassCloudFormationServiceRole
                 Effect: Allow
@@ -398,11 +399,17 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Effect: Allow
+              - Sid: DiscoverHostedZoneByName
+                Effect: Allow
                 Action:
                   - route53:ListHostedZonesByName
-                  - route53:ListResourceRecordSets
+                # ListHostedZonesByName does not support resource-level permissions.
                 Resource: "*"
+              - Sid: ReadHostedZoneRecords
+                Effect: Allow
+                Action:
+                  - route53:ListResourceRecordSets
+                Resource: "arn:aws:route53:::hostedzone/*"
         - PolicyName: CodeBuildCloudFormationReadAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -416,10 +423,12 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Effect: Allow
+              - Sid: DiscoverAndCreateOriginAccessControl
+                Effect: Allow
                 Action:
                   - cloudfront:ListOriginAccessControls
                   - cloudfront:CreateOriginAccessControl
+                # These CloudFront OAC actions do not support resource-level permissions.
                 Resource: "*"
         - PolicyName: CodeBuildCloudWatchLogsWriteAccess
           PolicyDocument:
@@ -524,6 +533,12 @@ Resources:
                   - apigateway:PUT
                 Resource:
                   - !Sub "arn:aws:apigateway:${AWS::Region}::*"
+              - Sid: RequestPortfolioCertificate
+                Effect: Allow
+                Action:
+                  - acm:RequestCertificate
+                # RequestCertificate does not support resource-level permissions.
+                Resource: "*"
               - Sid: ManagePortfolioCertificate
                 Effect: Allow
                 Action:
@@ -532,8 +547,7 @@ Resources:
                   - acm:DescribeCertificate
                   - acm:ListTagsForCertificate
                   - acm:RemoveTagsFromCertificate
-                  - acm:RequestCertificate
-                Resource: "*"
+                Resource: !Sub "arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/*"
               - Sid: ReadPortfolioConfigurationValues
                 Effect: Allow
                 Action:
@@ -543,39 +557,61 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Env}/portfolio/secret-*"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Env}/portfolio/parameter/*"
-              - Sid: ManagePortfolioRoute53
+              - Sid: DiscoverPortfolioHostedZone
+                Effect: Allow
+                Action:
+                  - route53:ListHostedZonesByName
+                # ListHostedZonesByName does not support resource-level permissions.
+                Resource: "*"
+              - Sid: ManagePortfolioHostedZoneRecords
                 Effect: Allow
                 Action:
                   - route53:ChangeResourceRecordSets
-                  - route53:GetChange
                   - route53:GetHostedZone
-                  - route53:ListHostedZonesByName
                   - route53:ListResourceRecordSets
-                Resource: "*"
+                Resource: "arn:aws:route53:::hostedzone/*"
+              - Sid: ReadPortfolioRoute53Changes
+                Effect: Allow
+                Action:
+                  - route53:GetChange
+                Resource: "arn:aws:route53:::change/*"
               - Sid: ManagePortfolioCloudFront
                 Effect: Allow
                 Action:
                   - cloudfront:CreateDistribution
                   - cloudfront:CreateOriginAccessControl
                   - cloudfront:CreateResponseHeadersPolicy
-                  - cloudfront:DeleteDistribution
-                  - cloudfront:DeleteOriginAccessControl
-                  - cloudfront:DeleteResponseHeadersPolicy
-                  - cloudfront:GetDistribution
-                  - cloudfront:GetDistributionConfig
-                  - cloudfront:GetOriginAccessControl
-                  - cloudfront:GetOriginAccessControlConfig
-                  - cloudfront:GetResponseHeadersPolicy
-                  - cloudfront:GetResponseHeadersPolicyConfig
                   - cloudfront:ListOriginAccessControls
                   - cloudfront:ListResponseHeadersPolicies
+                # These CloudFront create and list actions do not support resource-level permissions.
+                Resource: "*"
+              - Sid: ManagePortfolioCloudFrontDistributions
+                Effect: Allow
+                Action:
+                  - cloudfront:DeleteDistribution
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetDistributionConfig
                   - cloudfront:ListTagsForResource
                   - cloudfront:TagResource
                   - cloudfront:UntagResource
                   - cloudfront:UpdateDistribution
+                Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
+              - Sid: ManagePortfolioOriginAccessControls
+                Effect: Allow
+                Action:
+                  - cloudfront:DeleteOriginAccessControl
+                  - cloudfront:GetOriginAccessControl
+                  - cloudfront:GetOriginAccessControlConfig
                   - cloudfront:UpdateOriginAccessControl
+                Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:origin-access-control/*"
+              - Sid: ManagePortfolioResponseHeadersPolicies
+                Effect: Allow
+                Action:
+                  - cloudfront:DeleteResponseHeadersPolicy
+                  - cloudfront:GetResponseHeadersPolicy
+                  - cloudfront:GetResponseHeadersPolicyConfig
                   - cloudfront:UpdateResponseHeadersPolicy
-                Resource: "*"
+                Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:response-headers-policy/*"
               - Sid: ManagePortfolioS3
                 Effect: Allow
                 Action:
@@ -657,7 +693,10 @@ Resources:
                   - cloudformation:DescribeStacks
                   - cloudformation:GetTemplate
                   - cloudformation:ListStackResources
-                Resource: "*"
+                Resource:
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/cobaemon-portfolio-dependencies-${Env}/*"
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackName}/*"
+                  - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/cobaemon-serverless-portfolio-bucketpolicy-${Env}/*"
               - Sid: UseServerlessTransform
                 Effect: Allow
                 Action:
