@@ -48,12 +48,11 @@ flowchart LR
 
 - `StaticFilesBucket`: `cobaemon-serverless-portfolio-${Env}-static` の S3 バケット。
 - `CloudFrontOriginAccessControl`: CloudFront から S3 へ署名付きでアクセスする OAC。
-- `StaticFilesBucketPolicy`: CloudFront サービスプリンシパルと AWS アカウント root に読み取りを許可する S3 バケットポリシー。
 - `OACId` と `StaticFilesBucketName` の CloudFormation Export。
 
 ### `bucketpolicy.yaml`
 
-`template.yaml` の `CloudFrontDistributionId` Export を参照し、静的ファイルバケットに CloudFront Distribution からの `s3:GetObject` を許可します。
+`template.yaml` の `CloudFrontDistributionId` Export を参照し、静的ファイルバケットに対象 CloudFront Distribution からの `s3:GetObject` だけを許可します。
 
 ## Lambda と Django
 

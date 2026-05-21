@@ -87,9 +87,16 @@ TODO:
 
 TODO:
 
-- [ ] 初回作成時点から CloudFront distribution に限定できる構成へ変更する。
-- [ ] `dependencies.yaml` と `bucketpolicy.yaml` の責務重複を整理する。
+- [x] 初回依存リソース作成時点で CloudFront distribution 未限定の bucket policy を作成しない構成へ変更する。
+- [x] `dependencies.yaml` と `bucketpolicy.yaml` の責務重複を整理する。
 - [ ] staging で bucket policy の実体を確認する。
+
+対応状況:
+
+- 2026-05-21 に `dependencies.yaml` から `AWS::S3::BucketPolicy` を削除し、bucket policy の責務を `bucketpolicy.yaml` に集約。
+- 2026-05-21 に `StaticFilesBucket` へ `PublicAccessBlockConfiguration` を追加。
+- 2026-05-21 に `docs/architecture.md` の依存リソース説明を更新。
+- `dependencies.yaml` と `bucketpolicy.yaml` は CloudFormation validate 済み。
 
 ### P2: IAM 権限最適化後も `Resource: "*"` が複数残存
 
