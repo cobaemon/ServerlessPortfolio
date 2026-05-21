@@ -40,7 +40,9 @@ $RequiredAgentsMarkers = @(
     '明示的に許可がない限り、作業を行わないこと',
     '指示を曲解しないこと',
     'エビデンスがない内容を、事実として扱わないこと',
-    'Hook制御'
+    'Hook制御',
+    '未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと',
+    '実環境への実害が発生したインシデントは侵害以上に分類すること'
 )
 
 $DeliverableDocumentPatterns = @(
@@ -220,6 +222,7 @@ function Assert-IncidentRecordCycleDocuments {
             throw "AGENTS HOOK STOP: incident record must start with INC-yyyyMMdd-NNN-level: $normalizedPath"
         }
 
+        Assert-IncidentLevelMatchesImpact -Text $text -RepositoryPath $normalizedPath
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としてのフック修正：' -RepositoryPath $normalizedPath
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としての関連ドキュメント修正：' -RepositoryPath $normalizedPath
     }
@@ -236,6 +239,49 @@ function Assert-IncidentRecordCycleDocuments {
 
     if ($normalizedStagedPaths -notcontains 'AGENTS.md') {
         throw 'AGENTS HOOK STOP: incident records must be committed with related procedure documentation changes in AGENTS.md.'
+    }
+}
+
+function Assert-StagingVerificationClaimsIncludeSourceRevision {
+    <#
+    .SYNOPSIS
+    Stops AI progress docs from claiming staging verification without source revision evidence.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    foreach ($path in $paths) {
+        $normalizedPath = $path.Replace('\', '/')
+
+        if ($normalizedPath -notlike 'docs/ai-progress/*.md') {
+            continue
+        }
+
+        $stagedContent = Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")
+        $text = ($stagedContent -join "`n")
+        $claimsStagingVerification = (
+            $text -match 'staging pipeline' -and
+            (
+                $text -match 'Succeeded' -or
+                $text -match 'UPDATE_COMPLETE' -or
+                $text -match '200 OK'
+            )
+        )
+
+        if (-not $claimsStagingVerification) {
+            continue
+        }
+
+        if ($text -notmatch 'source revision') {
+            throw "AGENTS HOOK STOP: staging verification claims must include source revision evidence: $normalizedPath"
+        }
     }
 }
 
@@ -305,6 +351,45 @@ function Assert-IncidentCorrectiveSectionDocumented {
 
     if ($sectionBody -match '(?m)^\s*未実施') {
         throw "AGENTS HOOK STOP: incident record corrective action section must not be marked unimplemented '$Heading': $RepositoryPath"
+    }
+}
+
+function Assert-IncidentLevelMatchesImpact {
+    <#
+    .SYNOPSIS
+    Stops incident records that classify actual environment impact below intrusion level.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $levelMatch = [regex]::Match($Text, '(?m)^INC-[0-9]{8}-[0-9]{3}-(?<level>致命的|侵害|重大|違反)\s*$')
+
+    if (-not $levelMatch.Success) {
+        return
+    }
+
+    $level = $levelMatch.Groups['level'].Value
+    $hasActualEnvironmentImpact = (
+        $Text.Contains('実害') -or
+        ($Text -match 'staging pipeline stack.*UPDATE_COMPLETE') -or
+        ($Text -match 'staging IAM inline policy.*更新') -or
+        ($Text -match '未コミット.*staging.*直接適用') -or
+        ($Text -match '実環境.*変更')
+    )
+
+    if ($hasActualEnvironmentImpact -and $level -notin @('致命的', '侵害')) {
+        throw "AGENTS HOOK STOP: incident records with actual environment impact must be classified as 致命的 or 侵害: $RepositoryPath"
     }
 }
 
@@ -524,6 +609,7 @@ if ($Mode -eq 'pre-commit') {
     Assert-DirectCommitBranchAllowed
     $stagedPaths = Get-StagedPaths
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
+    Assert-StagingVerificationClaimsIncludeSourceRevision -StagedPaths $stagedPaths
     Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
     exit 0

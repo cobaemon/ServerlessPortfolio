@@ -98,6 +98,8 @@ git diff --check
 
 staging pipeline stack を作成または更新する。
 
+この手順は初回作成または明示された復旧操作に限定する。未コミットの `pipeline.yaml` を staging に直接適用して、通常の変更検証を完了扱いしてはならない。通常の変更検証は作業ブランチの commit、`dev` への反映、pipeline source revision と commit SHA の一致確認、pipeline 実行状態確認を完了条件とする。
+
 ```powershell
 sam deploy --template-file pipeline.yaml --config-env staging
 ```

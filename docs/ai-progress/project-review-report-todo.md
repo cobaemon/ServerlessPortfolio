@@ -89,7 +89,7 @@ TODO:
 
 - [x] 初回依存リソース作成時点で CloudFront distribution 未限定の bucket policy を作成しない構成へ変更する。
 - [x] `dependencies.yaml` と `bucketpolicy.yaml` の責務重複を整理する。
-- [ ] staging で bucket policy の実体を確認する。
+- [x] staging で bucket policy の実体を確認する。
 
 対応状況:
 
@@ -97,24 +97,37 @@ TODO:
 - 2026-05-21 に `StaticFilesBucket` へ `PublicAccessBlockConfiguration` を追加。
 - 2026-05-21 に `docs/architecture.md` の依存リソース説明を更新。
 - `dependencies.yaml` と `bucketpolicy.yaml` は CloudFormation validate 済み。
+- 2026-05-21 に staging pipeline revision `a1f6a4ae0e505ead4a0606dd50607431b730a467` の成功を確認。
+- 2026-05-21 に staging bucket policy が CloudFront distribution `E18LO9XBUTT6Y9` の `AWS:SourceArn` に限定されていることを確認。
+- 2026-05-21 に CloudFront 経由の静的ファイル取得 `200` と S3 直アクセス `403 AccessDenied` を確認。
 
 ### P2: IAM 権限最適化後も `Resource: "*"` が複数残存
 
-`pipeline.yaml` に `Resource: "*"` が複数残っている。AWS サービス仕様上必要な可能性があるものと、限定可能なものを分離して確認する必要がある。
+`pipeline.yaml` に `Resource: "*"` が複数残っていた。AWS サービス仕様上必要な action と ARN 制限可能な action を statement 分割して整理した。
 
 根拠:
 
-- `pipeline.yaml`: `cloudformation:ValidateTemplate` の `Resource: "*"`。
-- `pipeline.yaml`: Route53 read 系の `Resource: "*"`。
-- `pipeline.yaml`: CloudFront OAC 系の `Resource: "*"`。
-- `pipeline.yaml`: ACM、Route53、CloudFront 管理系の `Resource: "*"`。
+- `pipeline.yaml`: `cloudformation:ValidateTemplate` は AWS 公式 Service Authorization Reference で resource type が示されていない。
+- `pipeline.yaml`: `route53:ListHostedZonesByName` は AWS 公式 Service Authorization Reference で resource type が示されていない。
+- `pipeline.yaml`: `cloudfront:CreateDistribution`、`cloudfront:CreateOriginAccessControl`、`cloudfront:CreateResponseHeadersPolicy`、CloudFront list 系は AWS 公式 Service Authorization Reference で resource type が示されていない。
+- `pipeline.yaml`: ACM、Route53、CloudFront、CloudFormation の resource type が示されている action は ARN へ分離済み。
 
 TODO:
 
-- [ ] 各 `Resource: "*"` の必要性を AWS 公式仕様で確認する。
-- [ ] 限定可能な権限は ARN、条件、タグ条件で縮小する。
-- [ ] 限定不能な権限は理由をドキュメント化する。
+- [x] 各 `Resource: "*"` の必要性を AWS 公式仕様で確認する。
+- [x] 限定可能な権限は ARN、条件、タグ条件で縮小する。
+- [x] 限定不能な権限は理由をドキュメント化する。
 - [ ] staging pipeline で不足権限の有無を確認する。
+
+対応状況:
+
+- 2026-05-21 に `pipeline.yaml` の `CodeBuildRoute53ReadAccess`、`CodeBuildCloudFrontOACAccess`、`CloudFormationDeploymentAccess` を statement 分割。
+- 2026-05-21 に `Resource: "*"` の残存を `cloudformation:ValidateTemplate`、`route53:ListHostedZonesByName`、CloudFront create/list 系、`acm:RequestCertificate` に限定。
+- 2026-05-21 に ARN 制限可能な ACM certificate、Route53 hostedzone/change、CloudFront distribution/OAC/response headers policy、CloudFormation stack action を ARN へ縮小。
+- 2026-05-21 に `aws cloudformation validate-template --template-body file://pipeline.yaml --profile aws_portfolio_profile` が成功。
+- 2026-05-21 に未コミットの `pipeline.yaml` を `sam deploy --template-file pipeline.yaml --config-env staging --no-confirm-changeset` で staging pipeline stack へ直接適用したが、正規の source revision 検証ではないため完了根拠から除外。
+- 2026-05-21 に上記の直接適用を rollback し、staging pipeline stack `cobaemon-serverless-portfolio-staging-pipeline` は `origin/dev` revision `a1f6a4ae0e505ead4a0606dd50607431b730a467` の `pipeline.yaml` 相当へ戻した。
+- staging pipeline での不足権限確認は、作業ブランチ commit 後に `dev` へ反映し、pipeline source revision と commit SHA の一致を確認してから完了扱いにする。
 
 ### P2: buildspec が翻訳生成とコンパイル失敗を継続する
 
@@ -159,10 +172,17 @@ TODO:
 
 TODO:
 
-- [ ] 問い合わせフォームの validation test を追加する。
-- [ ] CSRF 有効時の POST test を追加する。
-- [ ] URL routing test を追加する。
+- [x] 問い合わせフォームの validation test を追加する。
+- [x] CSRF 有効時の POST test を追加する。
+- [x] URL routing test を追加する。
 - [ ] settings check を CI に追加する。
+
+対応状況:
+
+- 2026-05-21 に `portfolio.tests.ContactFormSecurityTests` を追加。
+- 2026-05-21 に CSRF token 付き invalid payload が view まで到達し `400` になることをテストで確認。
+- 2026-05-21 に CSRF token なし POST が `403` になることをテストで確認。
+- 2026-05-21 に旧 `/contact` が `404` で、問い合わせフォーム action が `/portfolio/contact` になることをテストで確認。
 
 ### P3: `STATICFILES_DIRS` が存在しない `static` ディレクトリを参照
 
