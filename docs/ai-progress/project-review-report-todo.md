@@ -117,7 +117,7 @@ TODO:
 - [x] 各 `Resource: "*"` の必要性を AWS 公式仕様で確認する。
 - [x] 限定可能な権限は ARN、条件、タグ条件で縮小する。
 - [x] 限定不能な権限は理由をドキュメント化する。
-- [ ] staging pipeline で不足権限の有無を確認する。
+- [x] staging pipeline で不足権限の有無を確認する。
 
 対応状況:
 
@@ -127,7 +127,10 @@ TODO:
 - 2026-05-21 に `aws cloudformation validate-template --template-body file://pipeline.yaml --profile aws_portfolio_profile` が成功。
 - 2026-05-21 に未コミットの `pipeline.yaml` を `sam deploy --template-file pipeline.yaml --config-env staging --no-confirm-changeset` で staging pipeline stack へ直接適用したが、正規の source revision 検証ではないため完了根拠から除外。
 - 2026-05-21 に上記の直接適用を rollback し、staging pipeline stack `cobaemon-serverless-portfolio-staging-pipeline` は `origin/dev` revision `a1f6a4ae0e505ead4a0606dd50607431b730a467` の `pipeline.yaml` 相当へ戻した。
-- staging pipeline での不足権限確認は、作業ブランチ commit 後に `dev` へ反映し、pipeline source revision と commit SHA の一致を確認してから完了扱いにする。
+- 2026-05-21 に `branch-finalize-next` で `dev` へ統合し、`git push origin dev` で staging pipeline execution `0bfa1ee6-b65c-4a8b-bb3e-a1cfe1d80ce9` を起動した。
+- 2026-05-21 に staging pipeline source revision が push した `dev` commit `053190bb09a94a363c8e62181bb174c7eb0831cc` と一致し、全 stage が `Succeeded` であることを確認。
+- 2026-05-21 に staging IAM inline policy の `Resource: "*"` が 6 statement に限定され、ARN 制限可能 action が分離されていることを確認。
+- 2026-05-21 に staging site `/` が `301` 後 `/portfolio/top/` で `200 OK` になることを確認。
 
 ### P2: buildspec が翻訳生成とコンパイル失敗を継続する
 
