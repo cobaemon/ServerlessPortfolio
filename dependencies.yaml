@@ -29,12 +29,17 @@ Conditions:
 
 Resources:
   # 静的ファイル配信用S3バケット
-  # CSS、JavaScript、画像などの静的ファイルを格納
+  # CSS、JavaScript、画像などの静的ファイルを格納し、公開アクセスをブロックする
   StaticFilesBucket:
     Type: AWS::S3::Bucket
     Condition: CreateBucket
     Properties:
       BucketName: !Sub "cobaemon-serverless-portfolio-${Env}-static"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders:
@@ -58,39 +63,6 @@ Resources:
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
-
-  # S3バケットポリシー
-  # CloudFrontからのアクセスのみを許可し、セキュリティを確保
-  StaticFilesBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName]
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: AllowCloudFrontOAC
-            Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
-            Action: s3:GetObject
-            Resource:
-              !Sub
-                - "arn:aws:s3:::${BucketName}/*"
-                - { BucketName: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName] }
-          - Sid: AllowAccountRead
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action:
-              - s3:GetObject
-              - s3:ListBucket
-            Resource:
-              - !Sub
-                  - "arn:aws:s3:::${BucketName}"
-                  - { BucketName: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName] }
-              - !Sub
-                  - "arn:aws:s3:::${BucketName}/*"
-                  - { BucketName: !If [CreateBucket, !Ref StaticFilesBucket, !Ref ExistingStaticBucketName] }
 
 Outputs:
   # Origin Access Control IDをエクスポート
