@@ -11,6 +11,7 @@ phases:
       python: 3.12
     commands:
       - echo "依存関係のインストールを開始..."
+      - if ! command -v msgfmt >/dev/null 2>&1; then apt-get update && apt-get install -y gettext; fi
       - pip install --upgrade pip
       - pip install -r requirements.txt
       - pip install aws-sam-cli
@@ -121,26 +122,26 @@ phases:
           fi
         fi
       
-      # 多言語対応のための翻訳ファイル処理
-      - echo "ロケールディレクトリの設定..."
-      - mkdir -p locale
-      
-      # テンプレートファイルの存在確認後に翻訳ファイルを生成・コンパイル
-      - echo "翻訳ファイルの生成とコンパイルを開始..."
+      # 多言語対応のため、翻訳カタログの更新漏れを検出してからコンパイルする
+      - echo "翻訳カタログの更新漏れ確認とコンパイルを開始..."
       - |
-        if [ -f "templates/portfolio_base.html" ]; then
-          echo "テンプレートファイルを発見、翻訳ファイルを生成中..."
-          python manage.py makemessages -l ja --ignore=venv --ignore=.venv --ignore=node_modules || echo "日本語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py makemessages -l en --ignore=venv --ignore=.venv --ignore=node_modules || echo "英語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py makemessages -l fr --ignore=venv --ignore=.venv --ignore=node_modules || echo "フランス語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py makemessages -l es --ignore=venv --ignore=.venv --ignore=node_modules || echo "スペイン語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py makemessages -l ru --ignore=venv --ignore=.venv --ignore=node_modules || echo "ロシア語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py makemessages -l zh-hans --ignore=venv --ignore=.venv --ignore=node_modules || echo "中国語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py makemessages -l ar --ignore=venv --ignore=.venv --ignore=node_modules || echo "アラビア語翻訳ファイルの生成に失敗しましたが、処理を継続します..."
-          python manage.py compilemessages || echo "翻訳ファイルのコンパイルに失敗しましたが、処理を継続します..."
-        else
-          echo "テンプレートファイルが見つからないため、翻訳ファイルの生成をスキップします"
+        if [ ! -d "locale" ]; then
+          echo "locale directory is missing." >&2
+          exit 1
         fi
+
+        LOCALE_BEFORE_DIR="$(mktemp -d)"
+        cp -R locale "$LOCALE_BEFORE_DIR/locale"
+
+        python manage.py makemessages -a --ignore=venv --ignore=.venv --ignore=node_modules
+
+        if ! diff -qr "$LOCALE_BEFORE_DIR/locale" locale; then
+          echo "Translation catalog files are not up to date. Run makemessages locally and commit the updated .po files." >&2
+          exit 1
+        fi
+
+        rm -rf "$LOCALE_BEFORE_DIR"
+        python manage.py compilemessages
         
       # フォントをダウンロードして配置
       - mkdir -p portfolio/static/assets/fonts
