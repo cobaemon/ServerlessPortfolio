@@ -11,7 +11,6 @@ phases:
       python: 3.12
     commands:
       - echo "依存関係のインストールを開始..."
-      - if ! command -v msgfmt >/dev/null 2>&1; then apt-get update && apt-get install -y gettext; fi
       - pip install --upgrade pip
       - pip install -r requirements.txt
       - pip install aws-sam-cli
