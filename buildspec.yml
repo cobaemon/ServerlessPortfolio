@@ -131,16 +131,57 @@ phases:
         fi
 
         LOCALE_BEFORE_DIR="$(mktemp -d)"
+        trap 'rm -rf "$LOCALE_BEFORE_DIR"' EXIT
         cp -R locale "$LOCALE_BEFORE_DIR/locale"
 
         python manage.py makemessages -a --ignore=venv --ignore=.venv --ignore=node_modules
 
-        if ! diff -qr "$LOCALE_BEFORE_DIR/locale" locale; then
-          echo "Translation catalog files are not up to date. Run makemessages locally and commit the updated .po files." >&2
-          exit 1
-        fi
+        python - "$LOCALE_BEFORE_DIR/locale" locale <<'EOF'
+        from pathlib import Path
+        import sys
 
-        rm -rf "$LOCALE_BEFORE_DIR"
+        IGNORED_PREFIXES = (
+            "#:",
+            '"POT-Creation-Date:',
+        )
+
+        def normalized_po_text(path):
+            """Return PO text without generated source locations or timestamps."""
+            return "\n".join(
+                line
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if not line.startswith(IGNORED_PREFIXES)
+            )
+
+        before_root = Path(sys.argv[1])
+        after_root = Path(sys.argv[2])
+        before_files = {
+            path.relative_to(before_root): normalized_po_text(path)
+            for path in before_root.rglob("*.po")
+        }
+        after_files = {
+            path.relative_to(after_root): normalized_po_text(path)
+            for path in after_root.rglob("*.po")
+        }
+
+        changed_paths = sorted(
+            set(before_files).symmetric_difference(after_files)
+            | {
+                path
+                for path in set(before_files).intersection(after_files)
+                if before_files[path] != after_files[path]
+            }
+        )
+
+        if changed_paths:
+            print("Translation catalog files are not up to date.", file=sys.stderr)
+            for path in changed_paths:
+                print(f"- {path}", file=sys.stderr)
+            raise SystemExit(1)
+        EOF
+
+        rm -rf locale
+        cp -R "$LOCALE_BEFORE_DIR/locale" locale
         python manage.py compilemessages
         
       # フォントをダウンロードして配置
