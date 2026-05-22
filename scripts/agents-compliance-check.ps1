@@ -38,8 +38,35 @@ $RequiredAgentsMarkers = @(
     'すべての報告にエビデンスを追記すること',
     '不明点や曖昧な点があれば、作業前に必ず確認すること',
     '明示的に許可がない限り、作業を行わないこと',
+    '忠実であること',
+    '誠実であること',
+    '策定済みの要件および設計を厳守すること',
+    'ゼロトラストセキュリティを厳守すること',
+    'SOLID原則を厳守すること',
+    'GDPRを厳守すること',
+    'クリーンアーキテクチャを厳守すること',
+    '外部モジュール、パッケージ、ツールその他の資産を使用する際は、事前にライセンスを確認し、通告し、厳守すること',
+    'プロジェクト全体で一貫性を保つこと',
+    'プロジェクト全体で整合性を保つこと',
+    'フォールバックを行わないこと',
+    '未使用コードを残さないこと',
+    'ファイルドキュメントを実装すること',
+    '関数ドキュメントを実装すること',
+    '行コメントを実装すること',
+    'プロンプトインジェクション対策として、信頼性のあるサイトのみを参照・アクセスすること',
+    '指示に従うこと',
     '指示を曲解しないこと',
+    '決めつけを行わないこと',
+    '指示文中の語句を、確認なしに一般化、短縮、言い換え、補完しないこと',
+    '指示対象を、確認なしに別対象へ拡張しないこと',
+    '確認が必要な状態で、確認なしに作業を続行しないこと',
+    '要件を1つでも満たしていない状態で、完了、成功、対応済み、問題なしと扱わないこと',
     'エビデンスがない内容を、事実として扱わないこと',
+    '自分に都合のよい解釈、作業量を減らす解釈、確認を省略できる解釈を採用しないこと',
+    '実行前制御',
+    '報告制御',
+    '実装制御',
+    'スコープ変更禁止',
     'Hook制御',
     '未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと',
     '実環境への実害が発生したインシデントは侵害以上に分類すること',
@@ -48,7 +75,22 @@ $RequiredAgentsMarkers = @(
     '侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合',
     '侵害以上のインシデント復旧を反映した場合',
     '事実根拠に基づかない作業判断',
-    'hook 不備または原則不遵守'
+    'hook 不備または原則不遵守',
+    'AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH=1'
+)
+
+$PrincipleCommitMessageMarkers = @(
+    '原則確認:',
+    '第一原則:',
+    '第二原則:',
+    '第三原則:',
+    '第四原則:',
+    '共通解釈規則:',
+    '実行前制御:',
+    '報告制御:',
+    '実装制御:',
+    'スコープ変更なし:',
+    '外部資産:'
 )
 
 $DeliverableDocumentPatterns = @(
@@ -65,6 +107,8 @@ $ProtectedBranches = @(
 
 $ExternalAssetChangeApprovalVariable = 'AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE'
 $ExternalAssetCommandPattern = '(?i)\b(apt(-get)?\s+install|yum\s+install|dnf\s+install|apk\s+add|brew\s+install|choco\s+install|winget\s+install|python\s+-m\s+pip\s+install|pip\s+install|npm\s+(install|i)\b|yarn\s+add|pnpm\s+add|curl\s+.*https?://|wget\s+.*https?://)'
+$NonDeploymentPipelinePushApprovalVariable = 'AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH'
+$FallbackContinuationPattern = '(?i)(\|\|\s*(echo|true)\b|except\s+[^:]+:\s*pass\b)'
 
 function Invoke-GitOutput {
     <#
@@ -270,6 +314,53 @@ function Assert-ExternalAssetChangesApproved {
     throw "AGENTS HOOK STOP: staged changes add external asset acquisition commands without $ExternalAssetChangeApprovalVariable=1. Matches: $($matches -join '; ')"
 }
 
+function Assert-NoFallbackContinuationAdded {
+    <#
+    .SYNOPSIS
+    Stops staged executable/config changes that add continuation fallback patterns.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $matches = @()
+
+    foreach ($path in $paths) {
+        $normalizedPath = $path.Replace('\', '/')
+
+        if (-not (Test-IsExternalAssetSensitivePath -RepositoryPath $normalizedPath)) {
+            continue
+        }
+
+        $diffLines = Invoke-GitOutput -GitArguments @('diff', '--cached', '--unified=0', '--no-ext-diff', '--', $normalizedPath)
+
+        foreach ($line in $diffLines) {
+            if (-not $line.StartsWith('+') -or $line.StartsWith('+++')) {
+                continue
+            }
+
+            $addedLine = $line.Substring(1).Trim()
+
+            if ($normalizedPath -eq 'scripts/agents-compliance-check.ps1' -and $addedLine.StartsWith('$FallbackContinuationPattern')) {
+                continue
+            }
+
+            if ($addedLine -match $FallbackContinuationPattern) {
+                $matches += "${normalizedPath}: $addedLine"
+            }
+        }
+    }
+
+    if ($matches.Count -gt 0) {
+        throw "AGENTS HOOK STOP: staged changes add fallback continuation patterns. Matches: $($matches -join '; ')"
+    }
+}
+
 function Assert-IncidentRecordCycleDocuments {
     <#
     .SYNOPSIS
@@ -312,6 +403,7 @@ function Assert-IncidentRecordCycleDocuments {
         Assert-IncidentLevelMatchesImpact -Text $text -RepositoryPath $normalizedPath
         Assert-IncidentFactControlDocumented -Text $text -RepositoryPath $normalizedPath
         Assert-IncidentHookDefectHasControl -Text $text -RepositoryPath $normalizedPath -StagedPaths $paths
+        Assert-IncidentScopeChangeDocumented -Text $text -RepositoryPath $normalizedPath
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としてのフック修正：' -RepositoryPath $normalizedPath
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としての関連ドキュメント修正：' -RepositoryPath $normalizedPath
     }
@@ -417,6 +509,45 @@ function Assert-IncidentHookDefectHasControl {
 
     if (-not $hasHookChange -and -not $documentsImpossibility) {
         throw "AGENTS HOOK STOP: hook-defect incident record must include hook remediation or document impossibility: $RepositoryPath"
+    }
+}
+
+function Assert-IncidentScopeChangeDocumented {
+    <#
+    .SYNOPSIS
+    Stops scope-change incident records that omit the original scope and narrowed scope.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $mentionsScopeChange = (
+        ($Text.Contains('スコープ') -and ($Text.Contains('狭め') -or $Text.Contains('限定'))) -or
+        $Text.Contains('指示範囲の不当な限定')
+    )
+
+    if (-not $mentionsScopeChange) {
+        return
+    }
+
+    $hasRequiredScopeControl = (
+        $Text.Contains('元の指示範囲') -and
+        $Text.Contains('不適切に狭めた範囲') -and
+        $Text.Contains('再発防止')
+    )
+
+    if (-not $hasRequiredScopeControl) {
+        throw "AGENTS HOOK STOP: scope-change incident record must document original scope, narrowed scope, and recurrence prevention: $RepositoryPath"
     }
 }
 
@@ -626,6 +757,39 @@ function Assert-CommitMessageHasTitleAndBody {
     }
 }
 
+function Assert-CommitMessageIncludesPrincipleGate {
+    <#
+    .SYNOPSIS
+    Stops commit messages that do not include the full principle confirmation gate.
+
+    .PARAMETER MessagePath
+    Commit message file path passed by Git.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$MessagePath
+    )
+
+    $branch = Get-CurrentBranch
+
+    if ((Test-IsProtectedBranch -BranchName $branch) -and (Test-IsBranchFinalizeContext)) {
+        return
+    }
+
+    $message = Get-Content -LiteralPath $MessagePath -Raw -Encoding utf8
+    $missingMarkers = @()
+
+    foreach ($marker in $PrincipleCommitMessageMarkers) {
+        if (-not $message.Contains($marker)) {
+            $missingMarkers += $marker
+        }
+    }
+
+    if ($missingMarkers.Count -gt 0) {
+        throw "AGENTS HOOK STOP: commit message must include full principle confirmation markers. Missing: $($missingMarkers -join ', ')"
+    }
+}
+
 function Get-CurrentBranch {
     <#
     .SYNOPSIS
@@ -726,6 +890,133 @@ function Convert-RefToBranchName {
     return $RefName
 }
 
+function Test-IsZeroSha {
+    <#
+    .SYNOPSIS
+    Returns true when a Git SHA field represents the all-zero null object.
+
+    .PARAMETER Sha
+    SHA text from pre-push stdin.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Sha
+    )
+
+    return ($Sha -match '^0{40}$')
+}
+
+function Test-IsNonDeploymentPipelinePath {
+    <#
+    .SYNOPSIS
+    Returns true for repository paths that do not require a deployment pipeline run by themselves.
+
+    .PARAMETER RepositoryPath
+    Slash-separated repository-relative path.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    return (
+        $RepositoryPath -eq 'AGENTS.md' -or
+        $RepositoryPath -like 'docs/*' -or
+        $RepositoryPath -like '.githooks/*' -or
+        $RepositoryPath -eq 'scripts/agents-compliance-check.ps1'
+    )
+}
+
+function Get-PushedChangePaths {
+    <#
+    .SYNOPSIS
+    Returns changed paths for a pre-push ref update.
+
+    .PARAMETER LocalSha
+    Local SHA being pushed.
+
+    .PARAMETER RemoteSha
+    Remote SHA before the push.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LocalSha,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RemoteSha
+    )
+
+    if (Test-IsZeroSha -Sha $LocalSha) {
+        return @()
+    }
+
+    if (Test-IsZeroSha -Sha $RemoteSha) {
+        return @(Invoke-GitOutput -GitArguments @('diff-tree', '--no-commit-id', '--name-only', '-r', $LocalSha))
+    }
+
+    return @(Invoke-GitOutput -GitArguments @('diff', '--name-only', $RemoteSha, $LocalSha))
+}
+
+function Assert-AiProtectedPushChangesAreDeployableOrApproved {
+    <#
+    .SYNOPSIS
+    Stops AI protected branch pushes that only contain documentation or development-environment changes.
+
+    .PARAMETER RefUpdates
+    Parsed pre-push ref update objects.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [object[]]$RefUpdates = @()
+    )
+
+    $protectedUpdates = @($RefUpdates | Where-Object { Test-IsProtectedBranch -BranchName $_.RemoteBranch })
+
+    if ($protectedUpdates.Count -eq 0) {
+        return
+    }
+
+    $changedPathMap = @{}
+
+    foreach ($update in $protectedUpdates) {
+        $paths = Get-PushedChangePaths -LocalSha $update.LocalSha -RemoteSha $update.RemoteSha
+
+        foreach ($path in $paths) {
+            $normalizedPath = ([string]$path).Replace('\', '/').Trim()
+
+            if (-not [string]::IsNullOrWhiteSpace($normalizedPath)) {
+                $changedPathMap[$normalizedPath] = $true
+            }
+        }
+    }
+
+    $changedPaths = @($changedPathMap.Keys | Sort-Object)
+
+    if ($changedPaths.Count -eq 0) {
+        return
+    }
+
+    $nonDeploymentOnly = $true
+
+    foreach ($path in $changedPaths) {
+        if (-not (Test-IsNonDeploymentPipelinePath -RepositoryPath $path)) {
+            $nonDeploymentOnly = $false
+            break
+        }
+    }
+
+    if (-not $nonDeploymentOnly) {
+        return
+    }
+
+    if ((Get-Item -Path "Env:$NonDeploymentPipelinePushApprovalVariable" -ErrorAction SilentlyContinue).Value -eq '1') {
+        Write-Output "AGENTS HOOK PASS: non-deployment protected branch push explicitly approved by $NonDeploymentPipelinePushApprovalVariable."
+        return
+    }
+
+    throw "AGENTS HOOK STOP: AI protected branch push contains only non-deployment changes and would trigger an unauthorized pipeline run without $NonDeploymentPipelinePushApprovalVariable=1. Paths: $($changedPaths -join ', ')"
+}
+
 function Assert-ProtectedPushAllowed {
     <#
     .SYNOPSIS
@@ -737,6 +1028,7 @@ function Assert-ProtectedPushAllowed {
         return
     }
 
+    $refUpdates = @()
     $blockedBranches = @()
 
     foreach ($line in ($stdinText -split "`n")) {
@@ -752,11 +1044,18 @@ function Assert-ProtectedPushAllowed {
             continue
         }
 
+        $localSha = [string]$columns[1]
         $remoteRef = [string]$columns[2]
+        $remoteSha = [string]$columns[3]
         $remoteBranch = Convert-RefToBranchName -RefName $remoteRef
 
         if (Test-IsProtectedBranch -BranchName $remoteBranch) {
             $blockedBranches += $remoteBranch
+            $refUpdates += [pscustomobject]@{
+                LocalSha = $localSha
+                RemoteSha = $remoteSha
+                RemoteBranch = $remoteBranch
+            }
         }
     }
 
@@ -772,6 +1071,7 @@ function Assert-ProtectedPushAllowed {
     }
 
     if ($env:AGENTS_ALLOW_PROTECTED_PUSH -eq '1') {
+        Assert-AiProtectedPushChangesAreDeployableOrApproved -RefUpdates $refUpdates
         Write-Output "AGENTS HOOK PASS: AI protected branch push explicitly allowed for: $($uniqueBlockedBranches -join ', ')"
         return
     }
@@ -788,6 +1088,7 @@ if ($Mode -eq 'pre-commit') {
     $stagedPaths = Get-StagedPaths
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
     Assert-ExternalAssetChangesApproved -StagedPaths $stagedPaths
+    Assert-NoFallbackContinuationAdded -StagedPaths $stagedPaths
     Assert-StagingVerificationClaimsIncludeSourceRevision -StagedPaths $stagedPaths
     Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
@@ -805,6 +1106,7 @@ if ([string]::IsNullOrWhiteSpace($CommitMessagePath)) {
 }
 
 Assert-CommitMessageHasTitleAndBody -MessagePath $CommitMessagePath
+Assert-CommitMessageIncludesPrincipleGate -MessagePath $CommitMessagePath
 Assert-ProtectedBranchCommitMessageAllowed -MessagePath $CommitMessagePath
 Write-Output 'AGENTS HOOK PASS: commit-msg checks completed.'
 exit 0
