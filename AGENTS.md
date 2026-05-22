@@ -84,6 +84,7 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に AI/Codex に push を許可した場合のみ設定する。
 - `dev` push による検証を完了扱いにするには、push した commit と pipeline source revision の一致、および pipeline 実行状態の確認を必須とする。
 - 侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合、復旧作業はローカル修正で停止してはならず、復旧 commit、`branch-finalize-next`、明示許可後の `dev` push、pipeline source revision 確認、pipeline 状態確認、検証サイト確認までを責任範囲に含める。
+- 侵害以上のインシデント復旧を反映した場合、復旧 commit、push した source revision、pipeline execution id、pipeline status、検証サイト確認結果をインシデント記録に追記する。
 - 未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと。
 - `sam deploy --template-file pipeline.yaml --config-env staging` は staging pipeline stack の初期作成または明示された復旧操作に限定し、未コミット変更の検証完了根拠として使用してはならない。
 - 検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること。

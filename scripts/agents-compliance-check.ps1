@@ -45,7 +45,8 @@ $RequiredAgentsMarkers = @(
     '実環境への実害が発生したインシデントは侵害以上に分類すること',
     '検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること',
     'AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE=1',
-    '侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合'
+    '侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合',
+    '侵害以上のインシデント復旧を反映した場合'
 )
 
 $DeliverableDocumentPatterns = @(

@@ -158,6 +158,7 @@ TODO:
 - 2026-05-22 に staging pipeline execution `ea6b7ffe-3bb0-42d6-8abe-68d2981280fa` が source revision `003c26f797e1896cf085f4f45dcb450f096f3457` で `Succeeded` となることを確認。
 - 2026-05-22 に Build action `cobaemon-serverless-portfolio-staging-pipeline-Build:43a688b5-4890-43a1-96c6-13e7d80fe8fc` の `PRE_BUILD`、`BUILD`、`POST_BUILD` が `SUCCEEDED` になることを確認。
 - 2026-05-22 に staging site `/` が `301` 後 `/portfolio/top/` で `200 OK`、`/portfolio/top/` が `200 OK` になることを確認。
+- 2026-05-22 に未承認外部ツール追加の復旧として GNU gettext 導入行を削除し、staging pipeline execution `35c428d5-4f6d-467c-a059-b3e2a447f932` が source revision `9d6f3dca8622de5bff0451c2bb897c9c97995617` で `Succeeded`、staging site `/` が `/portfolio/top/` への redirect 後 `200`、`/portfolio/top/` が `200` になることを確認。
 
 ### P2: 静的ファイル配信設計と `public-read` ACL 設定が不整合
 
