@@ -92,6 +92,14 @@
 - 原則厳守の hook 設計は、第一原則、第二原則、第三原則、第四原則、共通解釈規則、実行前制御、報告制御、実装制御を原則のままの優先順位で対象にする。
 - 機械的に停止できる事項は hook で停止し、機械的に停止できない事項は commit message とインシデント記録で確認対象を明示する。
 
+## Hook 誤判定防止
+
+- Hook はローカル Git 状態、staged diff、commit message、pre-push stdin だけで判定できる決定的検査に限定する。
+- Hook は AWS、外部ネットワーク、テストスイート、ビルド、デプロイ、ブラウザ検証を実行してはならない。
+- Hook が停止する場合は、停止理由と対象パスを一度の出力で示し、同じ条件で再試行を誘発しないこと。
+- 誤判定によりプロジェクト遅延、トークン、クレジット、pipeline 実行、または追加コストを発生させる制御を追加してはならない。
+- Codex/AI 制御は opt-in 環境変数でのみ強制し、人間ユーザーの手動操作は warning に限定して停止してはならない。
+
 ## Hook制御
 
 Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compliance-check.ps1` とする。
@@ -119,6 +127,8 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - 本文がタイトルのみの重複である場合は停止する。
 - 本文に目的、概要、理由、対応、統合、検証のいずれの説明も含まれない場合は停止する。
 - branch-finalize-next の protected branch merge commit を除き、commit message 本文に `原則確認:`、`第一原則:`、`第二原則:`、`第三原則:`、`第四原則:`、`共通解釈規則:`、`実行前制御:`、`報告制御:`、`実装制御:`、`スコープ変更なし:`、`外部資産:` を含まない場合は停止する。
+- branch-finalize-next の protected branch merge commit を除き、commit message の原則確認項目で、`第一原則:`、`第二原則:`、`第三原則:`、`第四原則:`、`共通解釈規則:`、`実行前制御:`、`報告制御:`、`実装制御:`、`スコープ変更なし:`、`外部資産:` の本文が空、または `未確認`、`未実施`、`不明` の場合は停止する。
+- 外部資産取得コマンドを staged で追加する場合、commit message に `外部資産承認:`、`ライセンス:`、`通告:`、`ユーザー明示許可:`、`対象差分:` を含み、それぞれの本文が空、または `未確認`、`未実施`、`不明` の場合は停止する。
 - `dev` または `main` 上の commit message は、`branch-finalize-next` が明示した merge commit 以外の場合は停止する。
 
 ### protected branch
@@ -132,7 +142,7 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - AI/Codex が `dev` または `main` へ push する場合のみ、`AGENTS_AI_PROTECTED_PUSH_GUARD=1` を設定して pre-push hook の protected branch 制御を有効化する。
 - AI/Codex による `dev` または `main` への push は、`AGENTS_AI_PROTECTED_PUSH_GUARD=1` と `AGENTS_ALLOW_PROTECTED_PUSH=1` が設定されていない場合は停止する。
 - `AGENTS_ALLOW_PROTECTED_PUSH=1` は、push 対象差分、対象ブランチ、pipeline source revision 確認手順を確認したうえで、ユーザーが明示的に AI/Codex に push を許可した場合のみ設定する。
-- AI/Codex による `dev` または `main` への push で、変更対象が `docs/`、`AGENTS.md`、`.githooks/`、`scripts/agents-compliance-check.ps1` のみである場合、デプロイ変更またはポートフォリオ変更ではないため、`AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH=1` とユーザーの明示許可がない限り停止する。
+- AI/Codex による `dev` または `main` への push で、変更対象が `docs/`、`AGENTS.md`、`.githooks/`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1` のみである場合、デプロイ変更またはポートフォリオ変更ではないため、`AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH=1` とユーザーの明示許可がない限り停止する。
 - `dev` push による検証を完了扱いにするには、push した commit と pipeline source revision の一致、および pipeline 実行状態の確認を必須とする。
 - 侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合、復旧作業はローカル修正で停止してはならず、復旧 commit、`branch-finalize-next`、明示許可後の `dev` push、pipeline source revision 確認、pipeline 状態確認、検証サイト確認までを責任範囲に含める。
 - 侵害以上のインシデント復旧を反映した場合、復旧 commit、push した source revision、pipeline execution id、pipeline status、検証サイト確認結果をインシデント記録に追記する。

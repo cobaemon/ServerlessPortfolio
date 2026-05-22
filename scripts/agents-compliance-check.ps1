@@ -67,6 +67,9 @@ $RequiredAgentsMarkers = @(
     '報告制御',
     '実装制御',
     'スコープ変更禁止',
+    'Hook 誤判定防止',
+    '誤判定によりプロジェクト遅延、トークン、クレジット、pipeline 実行、または追加コストを発生させる制御を追加してはならない',
+    'Codex/AI 制御は opt-in 環境変数でのみ強制し、人間ユーザーの手動操作は warning に限定して停止してはならない',
     'Hook制御',
     '未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと',
     '実環境への実害が発生したインシデントは侵害以上に分類すること',
@@ -91,6 +94,27 @@ $PrincipleCommitMessageMarkers = @(
     '実装制御:',
     'スコープ変更なし:',
     '外部資産:'
+)
+
+$PrincipleCommitMessageDetailMarkers = @(
+    '第一原則:',
+    '第二原則:',
+    '第三原則:',
+    '第四原則:',
+    '共通解釈規則:',
+    '実行前制御:',
+    '報告制御:',
+    '実装制御:',
+    'スコープ変更なし:',
+    '外部資産:'
+)
+
+$ExternalAssetCommitMessageMarkers = @(
+    '外部資産承認:',
+    'ライセンス:',
+    '通告:',
+    'ユーザー明示許可:',
+    '対象差分:'
 )
 
 $DeliverableDocumentPatterns = @(
@@ -140,6 +164,28 @@ function Get-RepositoryRoot {
     Returns the absolute repository root path.
     #>
     return (Invoke-GitOutput -GitArguments @('rev-parse', '--show-toplevel') | Select-Object -First 1)
+}
+
+function Test-EnvironmentFlagSet {
+    <#
+    .SYNOPSIS
+    Returns true only when an environment variable is set to 1.
+
+    .PARAMETER Name
+    Environment variable name.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $item = Get-Item -Path "Env:$Name" -ErrorAction SilentlyContinue
+
+    if ($null -eq $item) {
+        return $false
+    }
+
+    return ($item.Value -eq '1')
 }
 
 function Assert-AgentsRulesPresent {
@@ -260,10 +306,10 @@ function Test-IsExternalAssetSensitivePath {
     )
 }
 
-function Assert-ExternalAssetChangesApproved {
+function Get-StagedExternalAssetAcquisitionMatches {
     <#
     .SYNOPSIS
-    Stops staged executable/config changes that add external asset acquisition commands without approval.
+    Returns staged lines that add external asset acquisition commands.
 
     .PARAMETER StagedPaths
     Staged repository paths.
@@ -302,11 +348,29 @@ function Assert-ExternalAssetChangesApproved {
         }
     }
 
+    return @($matches)
+}
+
+function Assert-ExternalAssetChangesApproved {
+    <#
+    .SYNOPSIS
+    Stops staged executable/config changes that add external asset acquisition commands without approval.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $matches = @(Get-StagedExternalAssetAcquisitionMatches -StagedPaths $StagedPaths)
+
     if ($matches.Count -eq 0) {
         return
     }
 
-    if ((Get-Item -Path "Env:$ExternalAssetChangeApprovalVariable" -ErrorAction SilentlyContinue).Value -eq '1') {
+    if (Test-EnvironmentFlagSet -Name $ExternalAssetChangeApprovalVariable) {
         Write-Output "AGENTS HOOK PASS: external asset acquisition changes explicitly approved by $ExternalAssetChangeApprovalVariable."
         return
     }
@@ -691,7 +755,14 @@ function Assert-IncidentLevelMatchesImpact {
     $level = $levelMatch.Groups['level'].Value
     $hasActualEnvironmentImpact = (
         $Text.Contains('実害') -or
+        $Text.Contains('追加コスト') -or
+        $Text.Contains('上限超過') -or
+        $Text.Contains('クレジット') -or
+        $Text.Contains('課金') -or
+        $Text.Contains('費用') -or
         ($Text -match 'staging pipeline stack.*UPDATE_COMPLETE') -or
+        ($Text -match 'pipeline.*上限') -or
+        ($Text -match 'pipeline.*コスト') -or
         ($Text -match 'staging IAM inline policy.*更新') -or
         ($Text -match '未コミット.*staging.*直接適用') -or
         ($Text -match '実環境.*変更')
@@ -757,6 +828,75 @@ function Assert-CommitMessageHasTitleAndBody {
     }
 }
 
+function Get-CommitMessageMarkerBody {
+    <#
+    .SYNOPSIS
+    Returns the same-line body for a commit message marker.
+
+    .PARAMETER Message
+    Commit message text.
+
+    .PARAMETER Marker
+    Marker text ending with a colon.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Marker
+    )
+
+    $escapedMarker = [regex]::Escape($Marker)
+    $match = [regex]::Match($Message, "(?m)^\s*[-*]?\s*$escapedMarker\s*(?<body>.*\S)\s*$")
+
+    if (-not $match.Success) {
+        return $null
+    }
+
+    return $match.Groups['body'].Value.Trim()
+}
+
+function Assert-CommitMessageMarkerBodiesDocumented {
+    <#
+    .SYNOPSIS
+    Stops commit messages whose required marker bodies are empty or explicitly unverified.
+
+    .PARAMETER Message
+    Commit message text.
+
+    .PARAMETER Markers
+    Detail markers whose same-line body must be documented.
+
+    .PARAMETER Context
+    Human-readable context for error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Markers,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Context
+    )
+
+    $invalidMarkers = @()
+
+    foreach ($marker in $Markers) {
+        $body = Get-CommitMessageMarkerBody -Message $Message -Marker $marker
+
+        if ($null -eq $body -or [string]::IsNullOrWhiteSpace($body) -or $body -match '^(未確認|未実施|不明)\s*$') {
+            $invalidMarkers += $marker
+        }
+    }
+
+    if ($invalidMarkers.Count -gt 0) {
+        throw "AGENTS HOOK STOP: commit message $Context marker bodies must be documented. Invalid: $($invalidMarkers -join ', ')"
+    }
+}
+
 function Assert-CommitMessageIncludesPrincipleGate {
     <#
     .SYNOPSIS
@@ -788,6 +928,44 @@ function Assert-CommitMessageIncludesPrincipleGate {
     if ($missingMarkers.Count -gt 0) {
         throw "AGENTS HOOK STOP: commit message must include full principle confirmation markers. Missing: $($missingMarkers -join ', ')"
     }
+
+    Assert-CommitMessageMarkerBodiesDocumented -Message $message -Markers $PrincipleCommitMessageDetailMarkers -Context 'principle gate'
+}
+
+function Assert-ExternalAssetCommitMessageApproved {
+    <#
+    .SYNOPSIS
+    Stops external asset acquisition changes unless commit message documents approval evidence.
+
+    .PARAMETER MessagePath
+    Commit message file path passed by Git.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$MessagePath
+    )
+
+    $stagedPaths = Get-StagedPaths
+    $matches = @(Get-StagedExternalAssetAcquisitionMatches -StagedPaths $stagedPaths)
+
+    if ($matches.Count -eq 0) {
+        return
+    }
+
+    $message = Get-Content -LiteralPath $MessagePath -Raw -Encoding utf8
+    $missingMarkers = @()
+
+    foreach ($marker in $ExternalAssetCommitMessageMarkers) {
+        if (-not $message.Contains($marker)) {
+            $missingMarkers += $marker
+        }
+    }
+
+    if ($missingMarkers.Count -gt 0) {
+        throw "AGENTS HOOK STOP: external asset acquisition changes require commit message approval markers. Missing: $($missingMarkers -join ', ') Matches: $($matches -join '; ')"
+    }
+
+    Assert-CommitMessageMarkerBodiesDocumented -Message $message -Markers $ExternalAssetCommitMessageMarkers -Context 'external asset approval'
 }
 
 function Get-CurrentBranch {
@@ -923,7 +1101,8 @@ function Test-IsNonDeploymentPipelinePath {
         $RepositoryPath -eq 'AGENTS.md' -or
         $RepositoryPath -like 'docs/*' -or
         $RepositoryPath -like '.githooks/*' -or
-        $RepositoryPath -eq 'scripts/agents-compliance-check.ps1'
+        $RepositoryPath -eq 'scripts/agents-compliance-check.ps1' -or
+        $RepositoryPath -eq 'scripts/branch-finalize-next.ps1'
     )
 }
 
@@ -1009,7 +1188,7 @@ function Assert-AiProtectedPushChangesAreDeployableOrApproved {
         return
     }
 
-    if ((Get-Item -Path "Env:$NonDeploymentPipelinePushApprovalVariable" -ErrorAction SilentlyContinue).Value -eq '1') {
+    if (Test-EnvironmentFlagSet -Name $NonDeploymentPipelinePushApprovalVariable) {
         Write-Output "AGENTS HOOK PASS: non-deployment protected branch push explicitly approved by $NonDeploymentPipelinePushApprovalVariable."
         return
     }
@@ -1107,6 +1286,7 @@ if ([string]::IsNullOrWhiteSpace($CommitMessagePath)) {
 
 Assert-CommitMessageHasTitleAndBody -MessagePath $CommitMessagePath
 Assert-CommitMessageIncludesPrincipleGate -MessagePath $CommitMessagePath
+Assert-ExternalAssetCommitMessageApproved -MessagePath $CommitMessagePath
 Assert-ProtectedBranchCommitMessageAllowed -MessagePath $CommitMessagePath
 Write-Output 'AGENTS HOOK PASS: commit-msg checks completed.'
 exit 0
