@@ -63,6 +63,8 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - `docs/incidents/` 配下のインシデント記録を staged に含める場合、`scripts/agents-compliance-check.ps1` と `AGENTS.md` の修正も同じ staged に含まれない場合は停止する。
 - `docs/ai-progress/` 配下で staging pipeline の成功、stack の `UPDATE_COMPLETE`、または staging site の `200 OK` を検証完了として記録する場合、pipeline source revision の確認結果を含まない場合は停止する。
 - buildspec、scripts、workflow、依存定義、Dockerfile に外部資産取得コマンドを staged で追加する場合、事前のライセンス確認、通告、ユーザー明示許可を完了し、AI/Codex は `AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE=1` を設定している場合のみ許可する。
+- `docs/incidents/` 配下のインシデント記録で「推測」「憶測」「判断ミス」など、事実根拠に基づかない作業判断を示す語句が含まれる場合、事実確認不足の原因、確認すべきだった事実、再発防止策が同じ記録に含まれない場合は停止する。
+- `docs/incidents/` 配下のインシデント記録で hook 不備または原則不遵守を記録する場合、機械的に停止できる再発防止策を `scripts/agents-compliance-check.ps1` に追加しない限り停止する。機械的停止が不可能な場合は、その理由を同じ記録に明記する。
 
 ### commit-msg
 

@@ -46,7 +46,9 @@ $RequiredAgentsMarkers = @(
     '検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること',
     'AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE=1',
     '侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合',
-    '侵害以上のインシデント復旧を反映した場合'
+    '侵害以上のインシデント復旧を反映した場合',
+    '事実根拠に基づかない作業判断',
+    'hook 不備または原則不遵守'
 )
 
 $DeliverableDocumentPatterns = @(
@@ -308,6 +310,8 @@ function Assert-IncidentRecordCycleDocuments {
         }
 
         Assert-IncidentLevelMatchesImpact -Text $text -RepositoryPath $normalizedPath
+        Assert-IncidentFactControlDocumented -Text $text -RepositoryPath $normalizedPath
+        Assert-IncidentHookDefectHasControl -Text $text -RepositoryPath $normalizedPath -StagedPaths $paths
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としてのフック修正：' -RepositoryPath $normalizedPath
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としての関連ドキュメント修正：' -RepositoryPath $normalizedPath
     }
@@ -324,6 +328,95 @@ function Assert-IncidentRecordCycleDocuments {
 
     if ($normalizedStagedPaths -notcontains 'AGENTS.md') {
         throw 'AGENTS HOOK STOP: incident records must be committed with related procedure documentation changes in AGENTS.md.'
+    }
+}
+
+function Assert-IncidentFactControlDocumented {
+    <#
+    .SYNOPSIS
+    Stops incident records that mention inference-based failures without documenting fact-control remediation.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $mentionsInferenceFailure = (
+        $Text.Contains('推測') -or
+        $Text.Contains('憶測') -or
+        $Text.Contains('判断ミス')
+    )
+
+    if (-not $mentionsInferenceFailure) {
+        return
+    }
+
+    $hasRequiredFactControl = (
+        $Text.Contains('事実確認不足') -and
+        $Text.Contains('確認すべきだった事実') -and
+        $Text.Contains('再発防止')
+    )
+
+    if (-not $hasRequiredFactControl) {
+        throw "AGENTS HOOK STOP: incident record with inference-based failure must document fact-control remediation: $RepositoryPath"
+    }
+}
+
+function Assert-IncidentHookDefectHasControl {
+    <#
+    .SYNOPSIS
+    Stops hook-defect incident records unless hook remediation or impossibility is documented.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $mentionsHookDefect = (
+        $Text.Contains('hook 不備') -or
+        $Text.Contains('HOOKの設計') -or
+        $Text.Contains('原則不遵守') -or
+        $Text.Contains('厳守されていない')
+    )
+
+    if (-not $mentionsHookDefect) {
+        return
+    }
+
+    $normalizedStagedPaths = @($StagedPaths | ForEach-Object { $_.Replace('\', '/') })
+    $hasHookChange = ($normalizedStagedPaths -contains 'scripts/agents-compliance-check.ps1')
+    $documentsImpossibility = (
+        $Text.Contains('機械的停止が不可能') -or
+        $Text.Contains('hook 修正不要') -or
+        $Text.Contains('実装不能')
+    )
+
+    if (-not $hasHookChange -and -not $documentsImpossibility) {
+        throw "AGENTS HOOK STOP: hook-defect incident record must include hook remediation or document impossibility: $RepositoryPath"
     }
 }
 
