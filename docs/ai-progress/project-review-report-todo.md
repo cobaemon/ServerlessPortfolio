@@ -144,9 +144,20 @@ TODO:
 
 TODO:
 
-- [ ] 翻訳生成を必須工程にするか、生成工程をデプロイから分離するかを決定する。
-- [ ] 失敗時に build を停止する。
-- [ ] 翻訳ファイル更新を CI で検出する。
+- [x] 翻訳生成を必須工程にするか、生成工程をデプロイから分離するかを決定する。
+- [x] 失敗時に build を停止する。
+- [x] 翻訳ファイル更新を CI で検出する。
+
+対応状況:
+
+- 2026-05-22 に `buildspec.yml` の翻訳工程から失敗継続用の `|| echo "...処理を継続します..."` を削除。
+- 2026-05-22 に CodeBuild install phase で GNU gettext の `msgfmt` を利用可能にする処理を追加。
+- 2026-05-22 に `makemessages -a` を翻訳カタログ更新漏れ検出として実行し、`PO` の source location と `POT-Creation-Date` を除外して意味内容を比較する処理を追加。
+- 2026-05-22 に比較後の `locale` を元に戻してから `compilemessages` を必須実行する処理へ変更。
+- 2026-05-22 に staging pipeline execution `4702f9c7-cdd0-4d49-ab97-4aac44ff5756` が source revision `395533f3a4d0a1af4066cce28328addaee9183fa` で `PRE_BUILD` 失敗となり、翻訳カタログ更新漏れ検出が build 停止として機能することを確認。
+- 2026-05-22 に staging pipeline execution `ea6b7ffe-3bb0-42d6-8abe-68d2981280fa` が source revision `003c26f797e1896cf085f4f45dcb450f096f3457` で `Succeeded` となることを確認。
+- 2026-05-22 に Build action `cobaemon-serverless-portfolio-staging-pipeline-Build:43a688b5-4890-43a1-96c6-13e7d80fe8fc` の `PRE_BUILD`、`BUILD`、`POST_BUILD` が `SUCCEEDED` になることを確認。
+- 2026-05-22 に staging site `/` が `301` 後 `/portfolio/top/` で `200 OK`、`/portfolio/top/` が `200 OK` になることを確認。
 
 ### P2: 静的ファイル配信設計と `public-read` ACL 設定が不整合
 
