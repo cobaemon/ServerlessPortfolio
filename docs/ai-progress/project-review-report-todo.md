@@ -151,7 +151,7 @@ TODO:
 対応状況:
 
 - 2026-05-22 に `buildspec.yml` の翻訳工程から失敗継続用の `|| echo "...処理を継続します..."` を削除。
-- 2026-05-22 に CodeBuild install phase で GNU gettext の `msgfmt` を利用可能にする処理を追加。
+- 2026-05-22 に CodeBuild install phase で GNU gettext の `msgfmt` を利用可能にする処理を追加したが、外部ツール追加の明示許可がなかったため同日に削除。
 - 2026-05-22 に `makemessages -a` を翻訳カタログ更新漏れ検出として実行し、`PO` の source location と `POT-Creation-Date` を除外して意味内容を比較する処理を追加。
 - 2026-05-22 に比較後の `locale` を元に戻してから `compilemessages` を必須実行する処理へ変更。
 - 2026-05-22 に staging pipeline execution `4702f9c7-cdd0-4d49-ab97-4aac44ff5756` が source revision `395533f3a4d0a1af4066cce28328addaee9183fa` で `PRE_BUILD` 失敗となり、翻訳カタログ更新漏れ検出が build 停止として機能することを確認。

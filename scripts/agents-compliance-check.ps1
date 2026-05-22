@@ -43,7 +43,9 @@ $RequiredAgentsMarkers = @(
     'Hook制御',
     '未コミットテンプレートを staging に直接適用して検証完了扱いにしないこと',
     '実環境への実害が発生したインシデントは侵害以上に分類すること',
-    '検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること'
+    '検証サイトでの検証または正規手順での作業再開を依頼された場合はbranch-finalize-nextを責任範囲に含めること',
+    'AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE=1',
+    '侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合'
 )
 
 $DeliverableDocumentPatterns = @(
@@ -57,6 +59,9 @@ $ProtectedBranches = @(
     'dev',
     'main'
 )
+
+$ExternalAssetChangeApprovalVariable = 'AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE'
+$ExternalAssetCommandPattern = '(?i)\b(apt(-get)?\s+install|yum\s+install|dnf\s+install|apk\s+add|brew\s+install|choco\s+install|winget\s+install|python\s+-m\s+pip\s+install|pip\s+install|npm\s+(install|i)\b|yarn\s+add|pnpm\s+add|curl\s+.*https?://|wget\s+.*https?://)'
 
 function Invoke-GitOutput {
     <#
@@ -182,6 +187,84 @@ function Assert-DeliverableDocumentsHaveNoEvidenceLabels {
             throw "AGENTS HOOK STOP: deliverable document contains an evidence label: $normalizedPath"
         }
     }
+}
+
+function Test-IsExternalAssetSensitivePath {
+    <#
+    .SYNOPSIS
+    Returns true when a repository path can execute or define external asset acquisition.
+
+    .PARAMETER RepositoryPath
+    Slash-separated repository-relative path.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    return (
+        $RepositoryPath -match '(^|/)buildspec[^/]*\.ya?ml$' -or
+        $RepositoryPath -match '(^|/)\.github/workflows/[^/]+\.ya?ml$' -or
+        $RepositoryPath -match '(^|/)scripts/.+\.(ps1|sh|py)$' -or
+        $RepositoryPath -match '(^|/)Dockerfile$' -or
+        $RepositoryPath -match '(^|/)requirements[^/]*\.txt$' -or
+        $RepositoryPath -match '(^|/)package(-lock)?\.json$' -or
+        $RepositoryPath -match '(^|/)(pnpm-lock\.yaml|yarn\.lock)$'
+    )
+}
+
+function Assert-ExternalAssetChangesApproved {
+    <#
+    .SYNOPSIS
+    Stops staged executable/config changes that add external asset acquisition commands without approval.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $matches = @()
+
+    foreach ($path in $paths) {
+        $normalizedPath = $path.Replace('\', '/')
+
+        if (-not (Test-IsExternalAssetSensitivePath -RepositoryPath $normalizedPath)) {
+            continue
+        }
+
+        $diffLines = Invoke-GitOutput -GitArguments @('diff', '--cached', '--unified=0', '--no-ext-diff', '--', $normalizedPath)
+
+        foreach ($line in $diffLines) {
+            if (-not $line.StartsWith('+') -or $line.StartsWith('+++')) {
+                continue
+            }
+
+            $addedLine = $line.Substring(1).Trim()
+
+            if ($normalizedPath -eq 'scripts/agents-compliance-check.ps1' -and $addedLine.StartsWith('$ExternalAssetCommandPattern')) {
+                continue
+            }
+
+            if ($addedLine -match $ExternalAssetCommandPattern) {
+                $matches += "${normalizedPath}: $addedLine"
+            }
+        }
+    }
+
+    if ($matches.Count -eq 0) {
+        return
+    }
+
+    if ((Get-Item -Path "Env:$ExternalAssetChangeApprovalVariable" -ErrorAction SilentlyContinue).Value -eq '1') {
+        Write-Output "AGENTS HOOK PASS: external asset acquisition changes explicitly approved by $ExternalAssetChangeApprovalVariable."
+        return
+    }
+
+    throw "AGENTS HOOK STOP: staged changes add external asset acquisition commands without $ExternalAssetChangeApprovalVariable=1. Matches: $($matches -join '; ')"
 }
 
 function Assert-IncidentRecordCycleDocuments {
@@ -610,6 +693,7 @@ if ($Mode -eq 'pre-commit') {
     Assert-DirectCommitBranchAllowed
     $stagedPaths = Get-StagedPaths
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
+    Assert-ExternalAssetChangesApproved -StagedPaths $stagedPaths
     Assert-StagingVerificationClaimsIncludeSourceRevision -StagedPaths $stagedPaths
     Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
