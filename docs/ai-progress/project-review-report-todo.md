@@ -162,18 +162,26 @@ TODO:
 
 ### P2: 静的ファイル配信設計と `public-read` ACL 設定が不整合
 
-ドキュメントは静的ファイルを CloudFront と S3 で配信すると説明しているが、本番設定に `AWS_DEFAULT_ACL = 'public-read'` が残っている。
+記録時点では、ドキュメントが静的ファイルを CloudFront と S3 で配信すると説明している一方で、本番設定に `AWS_DEFAULT_ACL = 'public-read'` が残っていた。
 
 根拠:
 
 - `docs/architecture.md`: 静的ファイルは Django から直接配信せず、S3 と CloudFront で配信すると記載。
-- `config/settings/prod.py`: `AWS_DEFAULT_ACL = 'public-read'`。
+- 変更前の `config/settings/prod.py`: `AWS_DEFAULT_ACL = 'public-read'`。
 
 TODO:
 
-- [ ] `AWS_DEFAULT_ACL` の必要性を確認する。
-- [ ] 不要であれば private 前提の設定に変更する。
+- [x] `AWS_DEFAULT_ACL` の必要性を確認する。
+- [x] 不要であれば private 前提の設定に変更する。
 - [ ] S3 bucket policy と OAC 前提の配信確認を staging で行う。
+
+対応状況:
+
+- 2026-05-23 に django-storages 公式ドキュメントで `AWS_DEFAULT_ACL` の default が `None` であり、未設定時は S3 の default により private になることを確認。
+- 2026-05-23 に AWS CloudFront 公式ドキュメントで、OAC では CloudFront distribution に S3 bucket policy で権限を付与する構成であることを確認。
+- 2026-05-23 に `config/settings/prod.py` の `AWS_DEFAULT_ACL` を `None` に変更。
+- 2026-05-23 に `portfolio.tests.ProductionStaticStorageSettingsTests` を追加し、production settings が public ACL を設定しないことを確認対象に追加。
+- staging pipeline による S3 bucket policy と OAC 前提の配信確認は未実施。
 
 ### P3: 自動テストが実質存在しない
 

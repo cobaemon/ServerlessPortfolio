@@ -1,8 +1,11 @@
 """
-Regression tests for portfolio contact form routing and CSRF handling.
+Regression tests for portfolio routing, CSRF handling, and production settings.
 """
 
+import importlib
+import os
 import re
+from unittest.mock import patch
 
 from django.test import Client, SimpleTestCase, override_settings
 from django.urls import reverse
@@ -92,3 +95,36 @@ class ContactFormSecurityTests(SimpleTestCase):
         match = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', form_html)
         self.assertIsNotNone(match)
         return match.group(1)
+
+
+class ProductionStaticStorageSettingsTests(SimpleTestCase):
+    """
+    Verify that production static storage does not grant public S3 object ACLs.
+    """
+
+    def test_prod_settings_disable_public_read_acl(self):
+        """
+        Production uploads must rely on CloudFront OAC and bucket policy, not ACLs.
+        """
+        required_env = {
+            "DJANGO_SECRET_KEY": "test-secret-key",
+            "ALLOWED_HOSTS": "portfolio.example.com",
+            "EMAIL_HOST_USER": "mailer@example.com",
+            "EMAIL_HOST_PASSWORD": "password",
+            "GOOGLE_CLIENT_ID": "google-client",
+            "GOOGLE_CLIENT_SECRET": "google-secret",
+            "GITHUB_CLIENT_ID": "github-client",
+            "GITHUB_CLIENT_SECRET": "github-secret",
+            "CSRF_TRUSTED_ORIGINS": "https://portfolio.example.com",
+            "DEFAULT_FROM_EMAIL": "from@example.com",
+            "DEFAULT_TO_EMAIL": "to@example.com",
+            "EMAIL_HOST": "smtp.example.com",
+            "EMAIL_PORT": "587",
+            "CLOUDFRONT_DOMAIN_NAME": "static.example.com",
+        }
+
+        with patch.dict(os.environ, required_env, clear=False):
+            prod_settings = importlib.import_module("config.settings.prod")
+            prod_settings = importlib.reload(prod_settings)
+
+        self.assertIsNone(prod_settings.AWS_DEFAULT_ACL)

@@ -137,8 +137,8 @@ else:
     # CloudFrontが設定されていない場合のフォールバック
     STATIC_URL = '/static/'
 
-# S3の設定
-AWS_DEFAULT_ACL = 'public-read'
+# S3 object access is granted by CloudFront OAC and bucket policy, not public ACLs.
+AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 
 # # django-storagesを有効化
