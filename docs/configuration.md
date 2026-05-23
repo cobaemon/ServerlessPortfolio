@@ -104,6 +104,8 @@
 
 `prod.py` では `CLOUDFRONT_DOMAIN_NAME` が設定されている場合、`STATIC_URL` を `https://{CLOUDFRONT_DOMAIN_NAME}/` に変更します。その場合、staticfiles backend は `config.storage_backends.LocalManifestS3Storage` です。
 
+S3 オブジェクトの ACL は `AWS_DEFAULT_ACL = None` です。静的ファイルへの読み取り権限は、公開 ACL ではなく CloudFront OAC と S3 bucket policy で制御します。
+
 `CLOUDFRONT_DOMAIN_NAME` がない場合、`STATIC_URL` は `/static/` です。
 
 ## 関連ファイル

@@ -459,7 +459,19 @@ function New-AutoCommitMessageFile {
         '- git status --porcelain=v1 による作業ツリー状態確認',
         '- git diff --cached --name-status によるステージ済み変更分類',
         '- 保護対象ドキュメント変更チェック',
-        '- branch-finalize-next.ps1 の停止条件に基づく Git 操作制御'
+        '- branch-finalize-next.ps1 の停止条件に基づく Git 操作制御',
+        '',
+        '原則確認:',
+        '- 第一原則: staged diff と git status に基づく事実確認を行った。',
+        '- 第二原則: 既存の branch-finalize-next 設計に沿って処理する。',
+        '- 第三原則: フォールバック、未使用コード、無関係な変更を含めない。',
+        '- 第四原則: 明示された branch-finalize-next 手順のみを実行する。',
+        '- 共通解釈規則: 指示対象を拡張または縮小せず、保護対象ドキュメント変更を停止条件にする。',
+        '- 実行前制御: ConfirmExecution、ブランチ形式、次ブランチ不存在、作業ツリー差分を確認する。',
+        '- 報告制御: 実行結果、ブランチ、commit、message path、作業ツリー状態を出力する。',
+        '- 実装制御: 既存スクリプト内の制御だけで commit と merge を実行する。',
+        '- スコープ変更なし: 現在ブランチの完了処理以外を対象にしない。',
+        '- 外部資産: 外部モジュール、パッケージ、ツールその他の資産を追加しない。'
     )
 
     Set-Content -LiteralPath $messagePath -Encoding utf8NoBOM -Value $commitMessage
