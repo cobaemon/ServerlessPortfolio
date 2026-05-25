@@ -173,7 +173,7 @@ TODO:
 
 - [x] `AWS_DEFAULT_ACL` の必要性を確認する。
 - [x] 不要であれば private 前提の設定に変更する。
-- [ ] S3 bucket policy と OAC 前提の配信確認を staging で行う。
+- [x] S3 bucket policy と OAC 前提の配信確認を staging で行う。
 
 対応状況:
 
@@ -181,7 +181,14 @@ TODO:
 - 2026-05-23 に AWS CloudFront 公式ドキュメントで、OAC では CloudFront distribution に S3 bucket policy で権限を付与する構成であることを確認。
 - 2026-05-23 に `config/settings/prod.py` の `AWS_DEFAULT_ACL` を `None` に変更。
 - 2026-05-23 に `portfolio.tests.ProductionStaticStorageSettingsTests` を追加し、production settings が public ACL を設定しないことを確認対象に追加。
-- staging pipeline による S3 bucket policy と OAC 前提の配信確認は未実施。
+- 2026-05-25 に `aws_portfolio_profile` で staging pipeline execution `ef1c320f-8dd7-41cb-9114-ca74fc665593` が source revision `2daad62dbc99c56167b3ce7d55ae4304e1927198` で `Succeeded` であることを確認。
+- 2026-05-25 に staging app stack `cobaemon-serverless-portfolio-staging-stack` が `UPDATE_COMPLETE`、CloudFront distribution が `E18LO9XBUTT6Y9` であることを確認。
+- 2026-05-25 に staging dependencies stack `cobaemon-portfolio-dependencies-staging` が `UPDATE_COMPLETE`、OAC ID が `EC2163L29TXKD`、static bucket が `cobaemon-serverless-portfolio-staging-static` であることを確認。
+- 2026-05-25 に staging bucket policy stack `cobaemon-serverless-portfolio-bucketpolicy-staging` が `CREATE_COMPLETE` であることを確認。
+- 2026-05-25 に static bucket policy が CloudFront service principal の `s3:GetObject` を `arn:aws:s3:::cobaemon-serverless-portfolio-staging-static/*` に許可し、`AWS:SourceArn` を `arn:aws:cloudfront::864454139429:distribution/E18LO9XBUTT6Y9` に限定していることを確認。
+- 2026-05-25 に CloudFront distribution `E18LO9XBUTT6Y9` の S3 origin `cobaemon-serverless-portfolio-staging-static.s3.ap-northeast-1.amazonaws.com` が Origin Access Control `EC2163L29TXKD` に紐付いていることを確認。
+- 2026-05-25 に static bucket の PublicAccessBlock が `BlockPublicAcls: true`、`IgnorePublicAcls: true`、`BlockPublicPolicy: true`、`RestrictPublicBuckets: true` であることを確認。
+- 2026-05-25 に CloudFront 経由の `https://d2t5vawf3svyin.cloudfront.net/css/styles.min.e55cb46da026.css` が `200 OK`、S3 直接アクセスの `https://cobaemon-serverless-portfolio-staging-static.s3.ap-northeast-1.amazonaws.com/css/styles.min.e55cb46da026.css` が `403 Forbidden` であることを確認。
 
 ### P3: 自動テストが実質存在しない
 
