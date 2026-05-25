@@ -1,19 +1,41 @@
-django
-django-environ
-django-storages
-boto3
-gunicorn
-pillow
-pillow-avif-plugin
-django-csp
-psycopg2-binary
-cryptography
-django-allauth
-django-otp
-qrcode
-requests
-pyjwt
-awsgi; sys_platform != 'win32'
-whitenoise
-mangum
-python-dotenv
+asgiref==3.11.1
+awsgi==0.0.5; sys_platform != 'win32'
+boto3==1.42.63
+botocore==1.42.97
+certifi==2026.5.20
+cffi==2.0.0
+charset-normalizer==3.4.7
+colorama==0.4.6; sys_platform == 'win32'
+cryptography==46.0.5
+django==6.0.3
+django-allauth==65.14.3
+django-csp==4.0
+django-environ==0.13.0
+django-otp==1.7.0
+django-storages==1.14.6
+gunicorn==25.1.0
+httptools==0.7.1; sys_platform != 'win32'
+idna==3.16
+jmespath==1.1.0
+mangum==0.21.0
+markupsafe==3.0.3; sys_platform != 'win32'
+packaging==26.2
+pillow==12.1.1
+pillow-avif-plugin==1.5.5
+psycopg2-binary==2.9.11
+pycparser==3.0
+pyjwt==2.11.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+qrcode==8.2
+requests==2.32.5
+s3transfer==0.16.1
+six==1.17.0
+sqlparse==0.5.5
+typing-extensions==4.15.0
+tzdata==2025.3; sys_platform == 'win32'
+urllib3==2.7.0
+uvloop==0.22.1; sys_platform != 'win32'
+websockets==16.0; sys_platform != 'win32'
+werkzeug==3.1.8; sys_platform != 'win32'
+whitenoise==6.12.0

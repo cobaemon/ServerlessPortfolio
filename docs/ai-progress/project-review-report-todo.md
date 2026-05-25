@@ -205,7 +205,7 @@ TODO:
 - [x] 問い合わせフォームの validation test を追加する。
 - [x] CSRF 有効時の POST test を追加する。
 - [x] URL routing test を追加する。
-- [ ] settings check を CI に追加する。
+- [x] settings check を CI に追加する。
 
 対応状況:
 
@@ -213,6 +213,8 @@ TODO:
 - 2026-05-21 に CSRF token 付き invalid payload が view まで到達し `400` になることをテストで確認。
 - 2026-05-21 に CSRF token なし POST が `403` になることをテストで確認。
 - 2026-05-21 に旧 `/contact` が `404` で、問い合わせフォーム action が `/portfolio/contact` になることをテストで確認。
+- 2026-05-25 に `buildspec.yml` へ `python manage.py check --fail-level WARNING` を追加し、staging と prod の `ENV` に応じた `DJANGO_SETTINGS_MODULE` で settings check を実行する構成にした。
+- 2026-05-25 に Docker ローカル環境の `verify` service へ `python manage.py check --fail-level WARNING`、Django test、`collectstatic --dry-run`、静的ファイル manifest 参照検査を追加した。
 
 ### P3: `STATICFILES_DIRS` が存在しない `static` ディレクトリを参照
 
@@ -226,9 +228,15 @@ TODO:
 
 TODO:
 
-- [ ] `STATICFILES_DIRS` の参照先を実在ディレクトリに合わせる。
-- [ ] 不要であれば `STATICFILES_DIRS` から削除する。
-- [ ] `manage.py check` の warning を 0 件にする。
+- [x] `STATICFILES_DIRS` の参照先が不要であることを確認する。
+- [x] 不要であれば `STATICFILES_DIRS` から削除する。
+- [x] `manage.py check` の warning を 0 件にする。
+
+対応状況:
+
+- 2026-05-25 に `python manage.py findstatic css/styles.css --verbosity 2` と `python manage.py findstatic js/scripts.js --verbosity 2` を実行し、`portfolio/static` 配下の CSS と JS が Django app static として検出されることを確認。
+- 2026-05-25 に `config/settings/base.py` から存在しない `BASE_DIR / "static"` を参照する `STATICFILES_DIRS` を削除。
+- 2026-05-25 に `config/settings/dev.py` が project root の `BASE_DIR` を維持して `.env` と SQLite DB を参照するように修正。
 
 ## 外部資産と依存関係の確認事項
 
@@ -237,20 +245,28 @@ TODO:
 根拠:
 
 - `buildspec.yml`: `pip install -r requirements.txt`。
-- `buildspec.yml`: `pip install aws-sam-cli`。
-- `buildspec.yml`: `pip install csscompressor`。
+- 変更前の `buildspec.yml`: `pip install aws-sam-cli`。
+- 変更前の `buildspec.yml`: `pip install csscompressor`。
 - `buildspec.yml`: Google Fonts の raw URL から `Montserrat.ttf` と `Lato.ttf` を取得。
-- `requirements.txt`: バージョン未固定の依存が列挙されている。
+- 変更前の `requirements.txt`: バージョン未固定の依存が列挙されている。
 - `.gitignore`: `portfolio/static/assets/fonts/` と `staticfiles/assets/fonts/` は Git 管理外。
 
 TODO:
 
-- [ ] 依存パッケージのバージョン固定方針を決める。
-- [ ] `aws-sam-cli` と `csscompressor` のバージョンを固定する。
-- [ ] Google Fonts のライセンス記載と取得元の固定方針を決める。
-- [ ] 外部資産のライセンス一覧を追加する。
+- [x] 依存パッケージのバージョン固定方針を決める。
+- [x] `aws-sam-cli` と `csscompressor` のバージョンを固定する。
+- [x] Google Fonts のライセンス記載と取得元の固定方針を決める。
+- [x] 外部資産のライセンス一覧を追加する。
 
-## 優先対応順
+対応状況:
+
+- 2026-05-25 に Docker build で未固定の `requirements.txt` が `django-6.0.5` を取得することを確認し、再現可能なローカル環境にはバージョン固定が必要であることを確認。
+- 2026-05-25 に `requirements.txt` の direct dependency と transitive dependency を、ローカル `.venv`、Docker build の解決結果、Linux/Docker 専用 `awsgi==0.0.5` の package metadata に基づいて固定。
+- 2026-05-25 に `sam --version` で `SAM CLI, version 1.160.1`、`pip show csscompressor` で `csscompressor 0.9.5` を確認し、`buildspec.yml` の追加 pip install を `aws-sam-cli==1.160.1` と `csscompressor==0.9.5` に固定。
+- 2026-05-25 に Google Fonts の `ofl/montserrat/OFL.txt` と `ofl/lato/OFL.txt` で SIL Open Font License Version 1.1 を確認。
+- 2026-05-25 に `docs/external-assets.md` を追加し、Docker image、Python dependencies、build tools、Google Fonts の取得元とライセンス確認結果を記録。
+
+## 対応済み優先順
 
 1. 問い合わせフォーム URL と CSRF の不整合を修正する。
 2. `dependencies.yaml` の S3 bucket policy を CloudFront distribution に限定する。
@@ -263,16 +279,13 @@ TODO:
 
 ## 未確認事項
 
-- AWS 実環境の現行 bucket policy。
-- staging pipeline の最新 execution id、source revision、status。
 - CloudFormation validate の結果。
-- AWS 各サービスで `Resource: "*"` が仕様上必須かどうか。
-- Google Fonts 取得ファイルのライセンス同梱要件。
 - 本番環境で問い合わせフォーム送信が実際に失敗しているかどうか。
 
 ## 次回作業候補
 
-- `vA.B.C` 作業ブランチで問い合わせフォームと CSRF の修正を行う。
+- チェックボックス形式の TODO は全件対応済み。
+- 新規 TODO は未設定。
 - 先にテストを追加し、現状の失敗を確認してから修正する。
 - 修正後に `.venv\Scripts\python.exe manage.py check` と `.venv\Scripts\python.exe manage.py test` を実行する。
 - AWS 反映が必要な TODO は、staging pipeline の source revision と実行状態を確認してから完了扱いにする。

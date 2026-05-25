@@ -21,11 +21,11 @@
 - `CONTENT_SECURITY_POLICY`
 - `LOGGING`
 
-`STATICFILES_DIRS` は `BASE_DIR / "static"` を参照します。
+アプリケーション静的ファイルは `portfolio/static` に配置し、Django の app static 検出で参照します。リポジトリ直下の `static` ディレクトリは使用しません。
 
 ## ローカル開発設定
 
-`config/settings/dev.py` は `.env` が存在する場合に読み込みます。
+`config/settings/dev.py` はプロジェクトルートの `.env` が存在する場合に読み込みます。
 
 `dev.py` の既定値は次の通りです。
 

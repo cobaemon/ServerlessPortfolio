@@ -320,7 +320,7 @@ function Get-StagedExternalAssetAcquisitionMatches {
     )
 
     $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    $matches = @()
+    $externalAssetMatches = @()
 
     foreach ($path in $paths) {
         $normalizedPath = $path.Replace('\', '/')
@@ -343,12 +343,12 @@ function Get-StagedExternalAssetAcquisitionMatches {
             }
 
             if ($addedLine -match $ExternalAssetCommandPattern) {
-                $matches += "${normalizedPath}: $addedLine"
+                $externalAssetMatches += "${normalizedPath}: $addedLine"
             }
         }
     }
 
-    return @($matches)
+    return @($externalAssetMatches)
 }
 
 function Assert-ExternalAssetChangesApproved {
@@ -949,6 +949,12 @@ function Assert-ExternalAssetCommitMessageApproved {
     $matches = @(Get-StagedExternalAssetAcquisitionMatches -StagedPaths $stagedPaths)
 
     if ($matches.Count -eq 0) {
+        return
+    }
+
+    $branch = Get-CurrentBranch
+
+    if ((Test-IsProtectedBranch -BranchName $branch) -and (Test-IsBranchFinalizeContext)) {
         return
     }
 

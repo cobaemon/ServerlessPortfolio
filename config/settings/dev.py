@@ -1,13 +1,9 @@
 import os
-from pathlib import Path
 
 import dotenv
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *
-
-# プロジェクトルートのパス（base.py 内で既に定義されている場合は省略可）
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 # .env ファイルが存在すれば読み込む
 dotenv_file = BASE_DIR / '.env'
