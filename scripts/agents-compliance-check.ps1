@@ -952,6 +952,12 @@ function Assert-ExternalAssetCommitMessageApproved {
         return
     }
 
+    $branch = Get-CurrentBranch
+
+    if ((Test-IsProtectedBranch -BranchName $branch) -and (Test-IsBranchFinalizeContext)) {
+        return
+    }
+
     $message = Get-Content -LiteralPath $MessagePath -Raw -Encoding utf8
     $missingMarkers = @()
 
