@@ -13,8 +13,8 @@ phases:
       - echo "依存関係のインストールを開始..."
       - pip install --upgrade pip
       - pip install -r requirements.txt
-      - pip install aws-sam-cli
-      - pip install csscompressor
+      - pip install aws-sam-cli==1.160.1
+      - pip install csscompressor==0.9.5
   pre_build:
     commands:
       - echo "SAMビルドの準備を開始..."
@@ -75,6 +75,7 @@ phases:
         export EMAIL_USE_SSL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_ssl" --query Parameter.Value --output text)"
         export LOG_LEVEL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/log_level" --query Parameter.Value --output text)"
         echo "Loaded build configuration for $ENV without printing secret values."
+      - python manage.py check --fail-level WARNING
       # env_vars.txt が存在しない場合に備えて初期化
       - echo "EXISTING_ARECORD=false" > env_vars.txt
       

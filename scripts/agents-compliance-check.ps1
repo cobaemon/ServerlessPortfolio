@@ -320,7 +320,7 @@ function Get-StagedExternalAssetAcquisitionMatches {
     )
 
     $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    $matches = @()
+    $externalAssetMatches = @()
 
     foreach ($path in $paths) {
         $normalizedPath = $path.Replace('\', '/')
@@ -343,12 +343,12 @@ function Get-StagedExternalAssetAcquisitionMatches {
             }
 
             if ($addedLine -match $ExternalAssetCommandPattern) {
-                $matches += "${normalizedPath}: $addedLine"
+                $externalAssetMatches += "${normalizedPath}: $addedLine"
             }
         }
     }
 
-    return @($matches)
+    return @($externalAssetMatches)
 }
 
 function Assert-ExternalAssetChangesApproved {

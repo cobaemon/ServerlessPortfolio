@@ -6,6 +6,8 @@
 
 `config/settings/base.py` の `STATIC_ROOT` は `BASE_DIR / "staticfiles"` です。
 
+リポジトリ直下の `static` ディレクトリは使用しません。`portfolio/static` は Django app static として検出されます。
+
 ## 本番配信
 
 `template.yaml` は `CloudFrontDistribution` を定義し、S3 静的ファイルバケットをオリジンにします。
@@ -33,6 +35,8 @@ CloudFront の `DefaultCacheBehavior` は次の設定を持ちます。
 - `python manage.py collectstatic --noinput` を実行。
 - `python manage.py render_static` を実行。
 - `staticfiles/` を `s3://cobaemon-serverless-portfolio-${ENV}-static/` に `--delete` 付きで同期。
+
+`Montserrat.ttf` と `Lato.ttf` のライセンス確認結果は [`external-assets.md`](external-assets.md) に記載しています。
 
 ## 静的ファイル参照検査
 

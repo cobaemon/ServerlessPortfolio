@@ -42,8 +42,9 @@ API Gateway の StageName は `Env` パラメータと同じ値です。
 
 主な処理は次の通りです。
 
-- `requirements.txt` のインストール。
-- `aws-sam-cli` と `csscompressor` のインストール。
+- バージョン固定済み `requirements.txt` のインストール。
+- `aws-sam-cli==1.160.1` と `csscompressor==0.9.5` のインストール。
+- `python manage.py check --fail-level WARNING` による Django settings check。
 - Route53 ホストゾーンと既存 A レコードの検出。
 - Django 翻訳ファイルの生成とコンパイル。
 - Google Fonts から `Montserrat.ttf` と `Lato.ttf` を取得して `portfolio/static/assets/fonts` に配置。

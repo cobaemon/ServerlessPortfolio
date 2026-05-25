@@ -2,35 +2,17 @@
 
 ## Python 依存関係
 
-`requirements.txt` には次のパッケージ名が記載されています。
+`requirements.txt` には direct dependency と transitive dependency のバージョンを記載しています。Windows ローカルだけで必要な依存は `sys_platform == 'win32'`、Linux/Docker だけで必要な依存は `sys_platform != 'win32'` の marker を付けています。
 
-- `django`
-- `django-environ`
-- `django-storages`
-- `boto3`
-- `gunicorn`
-- `pillow`
-- `pillow-avif-plugin`
-- `django-csp`
-- `psycopg2-binary`
-- `cryptography`
-- `django-allauth`
-- `django-otp`
-- `qrcode`
-- `requests`
-- `pyjwt`
-- `awsgi; sys_platform != 'win32'`
-- `whitenoise`
-- `mangum`
-- `python-dotenv`
-
-バージョン固定は `requirements.txt` には記載されていません。
+外部資産と dependency のライセンスは [`external-assets.md`](external-assets.md) に記載しています。
 
 ## ローカル設定
 
 ローカル開発用設定は `config/settings/dev.py` です。
 
-`.env` が存在する場合、`dev.py` は `python-dotenv` で読み込みます。
+プロジェクトルートの `.env` が存在する場合、`dev.py` は `python-dotenv` で読み込みます。
+
+Docker を使用する場合は [`local-docker.md`](local-docker.md) の手順を使用します。
 
 ## ローカル実行
 
@@ -47,11 +29,18 @@ python manage.py runserver
 
 ## テスト
 
-`portfolio/tests.py` は存在しますが、テストケースは定義されていません。
+`portfolio/tests.py` には問い合わせフォーム、CSRF、URL routing、production static storage settings の回帰テストがあります。
 
 ```powershell
 $env:DJANGO_SETTINGS_MODULE="config.settings.dev"
+python manage.py check --fail-level WARNING
 python manage.py test
+```
+
+Docker で同じ検査を実行する場合は次を使用します。
+
+```powershell
+docker compose run --rm verify
 ```
 
 ## AGENTS Hook
@@ -80,9 +69,17 @@ $env:DJANGO_SETTINGS_MODULE="config.settings.dev"
 python manage.py render_static
 ```
 
+Docker で静的ファイル収集を確認する場合は、作業ツリーへの出力を避けるため dry-run を使用します。
+
+```powershell
+docker compose run --rm web python manage.py collectstatic --noinput --dry-run
+```
+
 ## 関連ファイル
 
 - [`requirements.txt`](../requirements.txt)
+- [`Dockerfile`](../Dockerfile)
+- [`compose.yaml`](../compose.yaml)
 - [`manage.py`](../manage.py)
 - [`AGENTS.md`](../AGENTS.md)
 - [`scripts/agents-compliance-check.ps1`](../scripts/agents-compliance-check.ps1)

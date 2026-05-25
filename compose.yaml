@@ -1,0 +1,28 @@
+services:
+  web:
+    build:
+      context: .
+    environment: &django-dev-env
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      DJANGO_SECRET_KEY: dev-docker-secret-key
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: python manage.py runserver 0.0.0.0:8000
+
+  verify:
+    build:
+      context: .
+    profiles:
+      - verify
+    environment: *django-dev-env
+    volumes:
+      - .:/app
+    command: >
+      sh -c "python manage.py check --fail-level WARNING
+      && python manage.py test
+      && python manage.py collectstatic --noinput --dry-run
+      && python scripts/check_static_manifest.py"
