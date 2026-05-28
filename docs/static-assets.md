@@ -30,8 +30,8 @@ CloudFront の `DefaultCacheBehavior` は次の設定を持ちます。
 
 `buildspec.yml` は次の静的ファイル処理を行います。
 
-- Google Fonts の `Montserrat.ttf` と `Lato.ttf` を `portfolio/static/assets/fonts` に取得。
-- `portfolio/static/css/styles.css` を `csscompressor` で圧縮し、`styles.min.css` を生成。
+- `scripts/generate_static_assets.py` が Google Fonts の commit 固定 URL から `Montserrat.ttf` と `Lato.ttf` を `portfolio/static/assets/fonts` に取得。
+- `scripts/generate_static_assets.py` が `portfolio/static/css/styles.css` を `csscompressor` で圧縮し、`styles.min.css` を生成。
 - `python manage.py collectstatic --noinput` を実行。
 - `python manage.py render_static` を実行。
 - `staticfiles/` を `s3://cobaemon-serverless-portfolio-${ENV}-static/` に `--delete` 付きで同期。
