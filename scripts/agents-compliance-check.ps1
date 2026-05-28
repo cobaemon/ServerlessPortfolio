@@ -66,6 +66,24 @@ $RequiredAgentsMarkers = @(
     '実行前制御',
     '報告制御',
     '実装制御',
+    '制御系0設計',
+    '原則は、人間であるユーザーだけが変更できる不可分の領域である',
+    '原則は、Git hook、commit、push、ファイル編集、shell 実行、ツール実行の有無に関係なく、すべての応答、判断、作業、報告に常時適用する',
+    '制御系ファイル',
+    'AI/Codex は、ユーザーが制御系ファイルの作成、編集、削除、移動、上書きを明示指示していない場合、制御系ファイルを変更してはならない',
+    '制御は、GitHook制御の単一レイヤへ集約してはならない',
+    'Codex/AI は、開発効率化を目的として作業を遂行する',
+    '応答前制御',
+    '作業前制御',
+    'ツール実行前制御',
+    'ファイル編集前制御',
+    '実行中制御',
+    '報告前制御',
+    '事後監査制御',
+    '質問に対して、別インシデント、別対象、別スコープへ置き換えて回答していないこと',
+    '原則遵守と開発効率化要件の両方を満たす作業手順になっていること',
+    'ユーザーの目的または開発効率化要件と矛盾する対応案になった',
+    '対象インシデントをすり替えず、ユーザーが指摘した対象を固定していること',
     'スコープ変更禁止',
     'Hook 誤判定防止',
     '誤判定によりプロジェクト遅延、トークン、クレジット、pipeline 実行、または追加コストを発生させる制御を追加してはならない',
@@ -78,7 +96,12 @@ $RequiredAgentsMarkers = @(
     '侵害以上のインシデントで実環境または `origin/dev` に未承認変更が反映済みの場合',
     '侵害以上のインシデント復旧を反映した場合',
     '事実根拠に基づかない作業判断',
-    'hook 不備または原則不遵守',
+    '制御不備または原則不遵守',
+    '発生前に停止できたはずのゲート：',
+    '既存再発防止策が効かなかった理由：',
+    '再発防止策の検証方法：',
+    '自己検知・自己報告の成否：',
+    'AGENTS_CONTROL_SYSTEM_CHANGE_AUTHORIZED=1',
     'AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH=1'
 )
 
@@ -89,6 +112,7 @@ $PrincipleCommitMessageMarkers = @(
     '第三原則:',
     '第四原則:',
     '共通解釈規則:',
+    '制御系0設計:',
     '実行前制御:',
     '報告制御:',
     '実装制御:',
@@ -102,6 +126,7 @@ $PrincipleCommitMessageDetailMarkers = @(
     '第三原則:',
     '第四原則:',
     '共通解釈規則:',
+    '制御系0設計:',
     '実行前制御:',
     '報告制御:',
     '実装制御:',
@@ -113,6 +138,14 @@ $ExternalAssetCommitMessageMarkers = @(
     '外部資産承認:',
     'ライセンス:',
     '通告:',
+    'ユーザー明示許可:',
+    '対象差分:'
+)
+
+$ControlSystemCommitMessageMarkers = @(
+    '制御系変更承認:',
+    '制御系変更対象:',
+    '原則本文変更なし:',
     'ユーザー明示許可:',
     '対象差分:'
 )
@@ -131,6 +164,7 @@ $ProtectedBranches = @(
 
 $ExternalAssetChangeApprovalVariable = 'AGENTS_ALLOW_EXTERNAL_ASSET_CHANGE'
 $ExternalAssetCommandPattern = '(?i)\b(apt(-get)?\s+install|yum\s+install|dnf\s+install|apk\s+add|brew\s+install|choco\s+install|winget\s+install|python\s+-m\s+pip\s+install|pip\s+install|npm\s+(install|i)\b|yarn\s+add|pnpm\s+add|curl\s+.*https?://|wget\s+.*https?://)'
+$ControlSystemChangeApprovalVariable = 'AGENTS_CONTROL_SYSTEM_CHANGE_AUTHORIZED'
 $NonDeploymentPipelinePushApprovalVariable = 'AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH'
 $FallbackContinuationPattern = '(?i)(\|\|\s*(echo|true)\b|except\s+[^:]+:\s*pass\b)'
 
@@ -306,6 +340,136 @@ function Test-IsExternalAssetSensitivePath {
     )
 }
 
+function Test-IsControlSystemPath {
+    <#
+    .SYNOPSIS
+    Returns true when a repository path controls AI/Codex behavior or governance.
+
+    .PARAMETER RepositoryPath
+    Slash-separated repository-relative path.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    return (
+        $RepositoryPath -eq 'AGENTS.md' -or
+        $RepositoryPath -like '.githooks/*' -or
+        $RepositoryPath -eq 'scripts/agents-compliance-check.ps1' -or
+        $RepositoryPath -eq 'scripts/branch-finalize-next.ps1' -or
+        $RepositoryPath -eq 'docs/incidents/README.md' -or
+        $RepositoryPath -eq 'docs/ai-progress/README.md' -or
+        $RepositoryPath -eq 'docs/development-records/README.md' -or
+        $RepositoryPath -eq 'docs/index.md'
+    )
+}
+
+function Get-StagedControlSystemPaths {
+    <#
+    .SYNOPSIS
+    Returns staged paths that modify control-system files.
+    #>
+    $lines = Invoke-GitOutput -GitArguments @('diff', '--cached', '--name-only', '--diff-filter=ACDMRT')
+    $paths = @()
+
+    foreach ($line in $lines) {
+        $normalizedPath = ([string]$line).Replace('\', '/').Trim()
+
+        if ([string]::IsNullOrWhiteSpace($normalizedPath)) {
+            continue
+        }
+
+        if (Test-IsControlSystemPath -RepositoryPath $normalizedPath) {
+            $paths += $normalizedPath
+        }
+    }
+
+    return @($paths | Sort-Object -Unique)
+}
+
+function Normalize-LineEndings {
+    <#
+    .SYNOPSIS
+    Normalizes line endings for deterministic text comparison.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text
+    )
+
+    return ($Text -replace "`r`n", "`n" -replace "`r", "`n")
+}
+
+function Get-ImmutablePrincipleBlock {
+    <#
+    .SYNOPSIS
+    Returns the immutable AGENTS.md principle block.
+
+    .PARAMETER Text
+    AGENTS.md text.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text
+    )
+
+    $normalizedText = Normalize-LineEndings -Text $Text
+    $match = [regex]::Match($normalizedText, '(?ms)\A(?<block>.*?)(?=^##\s+(制御系0設計|スコープ変更禁止)\s*$)')
+
+    if (-not $match.Success) {
+        return $normalizedText
+    }
+
+    return $match.Groups['block'].Value.TrimEnd()
+}
+
+function Assert-PrincipleContentImmutable {
+    <#
+    .SYNOPSIS
+    Stops staged AGENTS.md changes that alter the immutable principle block.
+    #>
+    $controlPaths = @(Get-StagedControlSystemPaths)
+
+    if ($controlPaths -notcontains 'AGENTS.md') {
+        return
+    }
+
+    try {
+        $headText = (@(Invoke-GitOutput -GitArguments @('show', 'HEAD:AGENTS.md')) -join "`n")
+        $stagedText = (@(Invoke-GitOutput -GitArguments @('show', ':AGENTS.md')) -join "`n")
+    }
+    catch {
+        throw "AGENTS HOOK STOP: AGENTS.md principle block cannot be verified from HEAD and staged content. $($_.Exception.Message)"
+    }
+
+    $headPrinciples = Get-ImmutablePrincipleBlock -Text $headText
+    $stagedPrinciples = Get-ImmutablePrincipleBlock -Text $stagedText
+
+    if ($headPrinciples -ne $stagedPrinciples) {
+        throw 'AGENTS HOOK STOP: AGENTS.md immutable principle block was changed. Only the human user may change principles.'
+    }
+}
+
+function Assert-ControlSystemChangesAuthorized {
+    <#
+    .SYNOPSIS
+    Stops control-system file changes unless an explicit control-change guard is set.
+    #>
+    $controlPaths = @(Get-StagedControlSystemPaths)
+
+    if ($controlPaths.Count -eq 0) {
+        return
+    }
+
+    if (Test-EnvironmentFlagSet -Name $ControlSystemChangeApprovalVariable) {
+        Write-Output "AGENTS HOOK PASS: control-system changes explicitly approved by $ControlSystemChangeApprovalVariable."
+        return
+    }
+
+    throw "AGENTS HOOK STOP: control-system files changed without $ControlSystemChangeApprovalVariable=1. Paths: $($controlPaths -join ', ')"
+}
+
 function Get-StagedExternalAssetAcquisitionMatches {
     <#
     .SYNOPSIS
@@ -466,9 +630,12 @@ function Assert-IncidentRecordCycleDocuments {
 
         Assert-IncidentLevelMatchesImpact -Text $text -RepositoryPath $normalizedPath
         Assert-IncidentFactControlDocumented -Text $text -RepositoryPath $normalizedPath
-        Assert-IncidentHookDefectHasControl -Text $text -RepositoryPath $normalizedPath -StagedPaths $paths
+        Assert-IncidentControlDefectHasLayer -Text $text -RepositoryPath $normalizedPath
         Assert-IncidentScopeChangeDocumented -Text $text -RepositoryPath $normalizedPath
-        Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としてのフック修正：' -RepositoryPath $normalizedPath
+        Assert-IncidentDeployScopeBoundaryDocumented -Text $text -RepositoryPath $normalizedPath
+        Assert-IncidentGateSectionDocumented -Text $text -RepositoryPath $normalizedPath
+        Assert-IncidentAuditSectionsDocumented -Text $text -RepositoryPath $normalizedPath
+        Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としての制御系修正：' -RepositoryPath $normalizedPath
         Assert-IncidentCorrectiveSectionDocumented -Text $text -Heading '対応策としての関連ドキュメント修正：' -RepositoryPath $normalizedPath
     }
 
@@ -476,15 +643,7 @@ function Assert-IncidentRecordCycleDocuments {
         return
     }
 
-    $normalizedStagedPaths = @($paths | ForEach-Object { $_.Replace('\', '/') })
-
-    if ($normalizedStagedPaths -notcontains 'scripts/agents-compliance-check.ps1') {
-        throw 'AGENTS HOOK STOP: incident records must be committed with hook corrective changes in scripts/agents-compliance-check.ps1.'
-    }
-
-    if ($normalizedStagedPaths -notcontains 'AGENTS.md') {
-        throw 'AGENTS HOOK STOP: incident records must be committed with related procedure documentation changes in AGENTS.md.'
-    }
+    return
 }
 
 function Assert-IncidentFactControlDocumented {
@@ -527,10 +686,10 @@ function Assert-IncidentFactControlDocumented {
     }
 }
 
-function Assert-IncidentHookDefectHasControl {
+function Assert-IncidentControlDefectHasLayer {
     <#
     .SYNOPSIS
-    Stops hook-defect incident records unless hook remediation or impossibility is documented.
+    Stops control-defect incident records unless a control layer is documented.
 
     .PARAMETER Text
     Incident record Markdown text.
@@ -546,33 +705,36 @@ function Assert-IncidentHookDefectHasControl {
         [string]$Text,
 
         [Parameter(Mandatory = $true)]
-        [string]$RepositoryPath,
-
-        [Parameter(Mandatory = $false)]
-        [string[]]$StagedPaths = @()
+        [string]$RepositoryPath
     )
 
-    $mentionsHookDefect = (
-        $Text.Contains('hook 不備') -or
-        $Text.Contains('HOOKの設計') -or
+    $mentionsControlDefect = (
+        $Text.Contains('制御不備') -or
+        $Text.Contains('制御系') -or
+        $Text.Contains('制御不備') -or
+        $Text.Contains('制御系の設計') -or
         $Text.Contains('原則不遵守') -or
         $Text.Contains('厳守されていない')
     )
 
-    if (-not $mentionsHookDefect) {
+    if (-not $mentionsControlDefect) {
         return
     }
 
-    $normalizedStagedPaths = @($StagedPaths | ForEach-Object { $_.Replace('\', '/') })
-    $hasHookChange = ($normalizedStagedPaths -contains 'scripts/agents-compliance-check.ps1')
-    $documentsImpossibility = (
-        $Text.Contains('機械的停止が不可能') -or
-        $Text.Contains('hook 修正不要') -or
-        $Text.Contains('実装不能')
+    $documentsControlLayer = (
+        $Text.Contains('応答前制御') -or
+        $Text.Contains('作業前制御') -or
+        $Text.Contains('ツール実行前制御') -or
+        $Text.Contains('ファイル編集前制御') -or
+        $Text.Contains('実行中制御') -or
+        $Text.Contains('報告前制御') -or
+        $Text.Contains('GitHook制御') -or
+        $Text.Contains('事後監査制御') -or
+        $Text.Contains('制御区分：')
     )
 
-    if (-not $hasHookChange -and -not $documentsImpossibility) {
-        throw "AGENTS HOOK STOP: hook-defect incident record must include hook remediation or document impossibility: $RepositoryPath"
+    if (-not $documentsControlLayer) {
+        throw "AGENTS HOOK STOP: control-defect incident record must document the control layer that stops or routes the violation: $RepositoryPath"
     }
 }
 
@@ -615,10 +777,156 @@ function Assert-IncidentScopeChangeDocumented {
     }
 }
 
-function Assert-StagingVerificationClaimsIncludeSourceRevision {
+function Assert-IncidentDeployScopeBoundaryDocumented {
     <#
     .SYNOPSIS
-    Stops AI progress docs from claiming staging verification without source revision evidence.
+    Stops incident records about commit/deploy scope boundaries unless the pending, reflected, and omitted changes are documented.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $mentionsDeployScopeBoundary = (
+        $Text.Contains('stash') -or
+        $Text.Contains('デプロイ対象') -or
+        $Text.Contains('積み残し') -or
+        $Text.Contains('対象外変更') -or
+        $Text.Contains('保留変更') -or
+        (
+            $Text.Contains('未反映') -and
+            (
+                $Text.Contains('保留変更') -or
+                $Text.Contains('除外') -or
+                $Text.Contains('デプロイ対象') -or
+                $Text.Contains('対象外変更')
+            )
+        ) -or
+        (
+            $Text.Contains('branch-finalize') -and
+            (
+                $Text.Contains('保留変更') -or
+                $Text.Contains('除外') -or
+                $Text.Contains('unstaged') -or
+                $Text.Contains('untracked')
+            )
+        )
+    )
+
+    if (-not $mentionsDeployScopeBoundary) {
+        return
+    }
+
+    $hasDeployScopeBoundary = (
+        $Text.Contains('元の保留変更') -and
+        $Text.Contains('実際に反映した変更') -and
+        $Text.Contains('反映しなかった変更') -and
+        $Text.Contains('ユーザー確認の有無') -and
+        $Text.Contains('復旧案')
+    )
+
+    if (-not $hasDeployScopeBoundary) {
+        throw "AGENTS HOOK STOP: incident record about commit/deploy scope boundaries must document pending changes, reflected changes, omitted changes, user confirmation, and recovery proposal: $RepositoryPath"
+    }
+}
+
+function Assert-IncidentGateSectionDocumented {
+    <#
+    .SYNOPSIS
+    Stops incident records that do not identify the gate that should have stopped the incident.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $sectionBody = Get-MarkdownSectionBody -Text $Text -Heading '発生前に停止できたはずのゲート：'
+
+    if ($null -eq $sectionBody) {
+        throw "AGENTS HOOK STOP: incident record must include the gate that should have stopped the incident: $RepositoryPath"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($sectionBody)) {
+        throw "AGENTS HOOK STOP: incident record gate section must not be empty: $RepositoryPath"
+    }
+
+    if ($sectionBody -match '(?m)^\s*(未確認|未実施|不明)') {
+        throw "AGENTS HOOK STOP: incident record gate section must be confirmed: $RepositoryPath"
+    }
+}
+
+function Assert-IncidentAuditSectionsDocumented {
+    <#
+    .SYNOPSIS
+    Stops incident records that omit root-cause audit fields.
+
+    .PARAMETER Text
+    Incident record Markdown text.
+
+    .PARAMETER RepositoryPath
+    Incident record path used in error messages.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    $requiredHeadings = @(
+        '発生時点：',
+        '本来作用すべき制御：',
+        '実際に作用した制御：',
+        '制御が効かなかった理由：',
+        '既存再発防止策が効かなかった理由：',
+        '同種過去インシデント：',
+        '再発防止策の作用タイミング：',
+        '再発防止策の検証方法：',
+        '制御区分：',
+        '残存リスク：',
+        '自己検知・自己報告の成否：'
+    )
+
+    foreach ($heading in $requiredHeadings) {
+        $sectionBody = Get-MarkdownSectionBody -Text $Text -Heading $heading
+
+        if ($null -eq $sectionBody) {
+            throw "AGENTS HOOK STOP: incident record must include audit section '$heading': $RepositoryPath"
+        }
+
+        if ([string]::IsNullOrWhiteSpace($sectionBody)) {
+            throw "AGENTS HOOK STOP: incident record audit section must not be empty '$heading': $RepositoryPath"
+        }
+
+        if ($sectionBody -match '(?m)^\s*(未確認|未実施|不明)') {
+            throw "AGENTS HOOK STOP: incident record audit section must be confirmed '$heading': $RepositoryPath"
+        }
+    }
+}
+
+function Assert-DevelopmentRecordsIncludeFactControlSections {
+    <#
+    .SYNOPSIS
+    Stops development records that omit fact-control sections required for investigation records.
 
     .PARAMETER StagedPaths
     Staged repository paths.
@@ -628,46 +936,116 @@ function Assert-StagingVerificationClaimsIncludeSourceRevision {
         [string[]]$StagedPaths = @()
     )
 
-    $paths = @($StagedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-
-    foreach ($path in $paths) {
-        $normalizedPath = $path.Replace('\', '/')
-
-        if ($normalizedPath -notlike 'docs/ai-progress/*.md') {
+    foreach ($path in @($StagedPaths)) {
+        if ([string]::IsNullOrWhiteSpace($path)) {
             continue
         }
 
-        $stagedContent = Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")
-        $text = ($stagedContent -join "`n")
-        $claimsStagingVerification = (
-            $text -match 'staging pipeline' -and
+        $normalizedPath = $path.Replace('\', '/')
+        if ($normalizedPath -notlike 'docs/development-records/*.md') {
+            continue
+        }
+
+        if ($normalizedPath -eq 'docs/development-records/README.md') {
+            continue
+        }
+
+        $text = (@(Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")) -join "`n")
+        foreach ($heading in @('確認対象', '確認結果', '未確認事項')) {
+            $body = Get-MarkdownSectionBody -Text $text -Heading $heading
+            if ($null -eq $body -or [string]::IsNullOrWhiteSpace($body)) {
+                throw "AGENTS HOOK STOP: development record must include non-empty '$heading' section: $normalizedPath"
+            }
+        }
+    }
+}
+
+function Assert-ExternalVerificationClaimsIncludeContext {
+    <#
+    .SYNOPSIS
+    Stops documentation from claiming external verification success without identifying what was verified.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    foreach ($path in @($StagedPaths)) {
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            continue
+        }
+
+        $normalizedPath = $path.Replace('\', '/')
+        $isTrackedDocumentationScope = (
+            $normalizedPath -match '^docs/[^/]+\.md$' -or
+            $normalizedPath -match '^docs/ai-progress/[^/]+\.md$' -or
+            $normalizedPath -match '^docs/development-records/[^/]+\.md$'
+        )
+
+        if (-not $isTrackedDocumentationScope) {
+            continue
+        }
+
+        $text = (@(Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")) -join "`n")
+        $mentionsExternalTarget = (
+            $text -match '(?i)(pipeline|stack|site|deploy|deployment|CodePipeline|CodeBuild|CloudFormation)' -or
+            $text -match '(外部環境|デプロイ|検証サイト)'
+        )
+        $claimsVerificationSuccess = (
+            $text -match '(?i)(Succeeded|UPDATE_COMPLETE|200 OK)' -or
+            $text -match '(検証完了|確認完了|成功)'
+        )
+
+        if (-not ($mentionsExternalTarget -and $claimsVerificationSuccess)) {
+            continue
+        }
+
+        $hasVerificationContext = (
+            $text.Contains('確認対象') -and
+            $text.Contains('確認結果') -and
             (
-                $text -match 'Succeeded' -or
-                $text -match 'UPDATE_COMPLETE' -or
-                $text -match '200 OK'
+                $text -match '(?i)source revision' -or
+                $text -match '(?i)execution id' -or
+                $text -match '(?i)commit' -or
+                $text.Contains('対象差分')
             )
         )
 
-        if (-not $claimsStagingVerification) {
-            continue
-        }
-
-        if ($text -notmatch 'source revision') {
-            throw "AGENTS HOOK STOP: staging verification claims must include source revision evidence: $normalizedPath"
+        if (-not $hasVerificationContext) {
+            throw "AGENTS HOOK STOP: external verification claims must include target, result, and revision/execution context: $normalizedPath"
         }
     }
+}
+
+function Assert-AiWorkGuardAuthorized {
+    <#
+    .SYNOPSIS
+    Stops AI/Codex commits when the opt-in work guard is enabled without explicit authorization.
+    #>
+    if ($env:AGENTS_AI_WORK_GUARD -ne '1') {
+        return
+    }
+
+    if ($env:AGENTS_USER_WORK_AUTHORIZED -eq '1') {
+        return
+    }
+
+    throw 'AGENTS HOOK STOP: AI/Codex work guard requires AGENTS_USER_WORK_AUTHORIZED=1 before committing changes.'
 }
 
 function Get-MarkdownSectionBody {
     <#
     .SYNOPSIS
-    Returns the body of a level-2 Markdown section.
+    Returns the body of a Markdown or incident-record section.
 
     .PARAMETER Text
     Markdown text to inspect.
 
     .PARAMETER Heading
-    Level-2 heading text without the leading hashes.
+    Heading text without the leading hashes.
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -678,7 +1056,31 @@ function Get-MarkdownSectionBody {
     )
 
     $escapedHeading = [regex]::Escape($Heading)
-    $match = [regex]::Match($Text, "(?ms)^##\s+$escapedHeading\s*\r?\n(?<body>.*?)(?=^##\s+|\z)")
+    $plainSectionHeadings = @(
+        'タイトル：',
+        '背景：',
+        '発生インシデントの説明：',
+        '定量記録：',
+        'なぜ発生したのか：',
+        '何に違反したのか：',
+        '発生時点：',
+        '本来作用すべき制御：',
+        '実際に作用した制御：',
+        '制御が効かなかった理由：',
+        '既存再発防止策が効かなかった理由：',
+        '同種過去インシデント：',
+        '発生前に停止できたはずのゲート：',
+        '再発防止策の作用タイミング：',
+        '再発防止策の検証方法：',
+        '制御区分：',
+        '残存リスク：',
+        '自己検知・自己報告の成否：',
+        '制御不備または原則不遵守：',
+        '対応策としての制御系修正：',
+        '対応策としての関連ドキュメント修正：'
+    )
+    $plainHeadingPattern = (($plainSectionHeadings | ForEach-Object { [regex]::Escape($_) }) -join '|')
+    $match = [regex]::Match($Text, "(?ms)^(?:#{1,6}\s+)?$escapedHeading\s*\r?\n(?<body>.*?)(?=^(?:#{1,6}\s+.+|(?:$plainHeadingPattern)\s*)\r?$|\z)")
 
     if (-not $match.Success) {
         return $null
@@ -972,6 +1374,47 @@ function Assert-ExternalAssetCommitMessageApproved {
     }
 
     Assert-CommitMessageMarkerBodiesDocumented -Message $message -Markers $ExternalAssetCommitMessageMarkers -Context 'external asset approval'
+}
+
+function Assert-ControlSystemCommitMessageApproved {
+    <#
+    .SYNOPSIS
+    Stops control-system file changes unless commit message documents explicit approval.
+
+    .PARAMETER MessagePath
+    Commit message file path passed by Git.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$MessagePath
+    )
+
+    $controlPaths = @(Get-StagedControlSystemPaths)
+
+    if ($controlPaths.Count -eq 0) {
+        return
+    }
+
+    $branch = Get-CurrentBranch
+
+    if ((Test-IsProtectedBranch -BranchName $branch) -and (Test-IsBranchFinalizeContext)) {
+        return
+    }
+
+    $message = Get-Content -LiteralPath $MessagePath -Raw -Encoding utf8
+    $missingMarkers = @()
+
+    foreach ($marker in $ControlSystemCommitMessageMarkers) {
+        if (-not $message.Contains($marker)) {
+            $missingMarkers += $marker
+        }
+    }
+
+    if ($missingMarkers.Count -gt 0) {
+        throw "AGENTS HOOK STOP: control-system changes require commit message approval markers. Missing: $($missingMarkers -join ', ') Paths: $($controlPaths -join ', ')"
+    }
+
+    Assert-CommitMessageMarkerBodiesDocumented -Message $message -Markers $ControlSystemCommitMessageMarkers -Context 'control-system approval'
 }
 
 function Get-CurrentBranch {
@@ -1270,11 +1713,15 @@ Assert-AgentsRulesPresent -RepositoryRoot $repositoryRoot
 
 if ($Mode -eq 'pre-commit') {
     Assert-DirectCommitBranchAllowed
+    Assert-AiWorkGuardAuthorized
     $stagedPaths = Get-StagedPaths
+    Assert-PrincipleContentImmutable
+    Assert-ControlSystemChangesAuthorized
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
     Assert-ExternalAssetChangesApproved -StagedPaths $stagedPaths
     Assert-NoFallbackContinuationAdded -StagedPaths $stagedPaths
-    Assert-StagingVerificationClaimsIncludeSourceRevision -StagedPaths $stagedPaths
+    Assert-DevelopmentRecordsIncludeFactControlSections -StagedPaths $stagedPaths
+    Assert-ExternalVerificationClaimsIncludeContext -StagedPaths $stagedPaths
     Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
     exit 0
@@ -1293,6 +1740,7 @@ if ([string]::IsNullOrWhiteSpace($CommitMessagePath)) {
 Assert-CommitMessageHasTitleAndBody -MessagePath $CommitMessagePath
 Assert-CommitMessageIncludesPrincipleGate -MessagePath $CommitMessagePath
 Assert-ExternalAssetCommitMessageApproved -MessagePath $CommitMessagePath
+Assert-ControlSystemCommitMessageApproved -MessagePath $CommitMessagePath
 Assert-ProtectedBranchCommitMessageAllowed -MessagePath $CommitMessagePath
 Write-Output 'AGENTS HOOK PASS: commit-msg checks completed.'
 exit 0
