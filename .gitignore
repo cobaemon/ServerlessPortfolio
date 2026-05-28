@@ -164,7 +164,10 @@ env_dev.json
 
 # Fonts downloaded during build
 portfolio/static/assets/fonts/
-staticfiles/assets/fonts/
+
+# Generated static assets
+portfolio/static/css/styles.min.css
+staticfiles/
 
 # kiro
 .kiro

@@ -67,8 +67,8 @@
 
 | 資産 | 取得元 | ライセンス確認結果 |
 | --- | --- | --- |
-| Montserrat Regular | `https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Regular.ttf` | SIL Open Font License 1.1 |
-| Lato Regular | `https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf` | SIL Open Font License 1.1 |
+| Montserrat | `https://raw.githubusercontent.com/google/fonts/48133440178622e215912d34d386c5ee1682c677/ofl/montserrat/Montserrat%5Bwght%5D.ttf` | SIL Open Font License 1.1 |
+| Lato Regular | `https://raw.githubusercontent.com/google/fonts/48133440178622e215912d34d386c5ee1682c677/ofl/lato/Lato-Regular.ttf` | SIL Open Font License 1.1 |
 
 Google Fonts の `ofl/montserrat/OFL.txt` と `ofl/lato/OFL.txt` で SIL Open Font License Version 1.1 を確認しました。
 

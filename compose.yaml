@@ -22,7 +22,10 @@ services:
     volumes:
       - .:/app
     command: >
-      sh -c "python manage.py check --fail-level WARNING
+      sh -c "python -m pip install csscompressor==0.9.5
+      && python scripts/generate_static_assets.py
+      && python manage.py check --fail-level WARNING
       && python manage.py test
-      && python manage.py collectstatic --noinput --dry-run
+      && python manage.py collectstatic --noinput
+      && python manage.py render_static
       && python scripts/check_static_manifest.py"

@@ -184,18 +184,7 @@ phases:
         cp -R "$LOCALE_BEFORE_DIR/locale" locale
         python manage.py compilemessages
         
-      # フォントをダウンロードして配置
-      - mkdir -p portfolio/static/assets/fonts
-      - curl -L -o portfolio/static/assets/fonts/Montserrat.ttf https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Regular.ttf
-      - curl -L -o portfolio/static/assets/fonts/Lato.ttf https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf
-
-      # CSS minification
-      - |
-        python - <<'EOF'
-        import pathlib, csscompressor
-        src = pathlib.Path('portfolio/static/css/styles.css').read_text()
-        pathlib.Path('portfolio/static/css/styles.min.css').write_text(csscompressor.compress(src))
-        EOF
+      - python scripts/generate_static_assets.py
 
       # 静的ファイルの収集とS3への同期
       - python manage.py collectstatic --noinput
