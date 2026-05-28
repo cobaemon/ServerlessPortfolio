@@ -2,6 +2,18 @@
 
 このディレクトリは ServerlessPortfolio の詳細ドキュメントを管理します。
 
+## 配置ルール
+
+`docs/` 直下には、プロジェクト仕様、設計、設定、運用、デプロイ、開発環境など、継続的に参照するプロジェクトドキュメントを配置します。
+
+AI 作業進捗、作業途中の AI 用 TODO、AI が使用する確認記録は `docs/ai-progress/` に配置します。
+
+作業中に発生した指示違反、手順逸脱、影響発生、復旧対応の記録は `docs/incidents/` に配置します。
+
+開発過程で発生または使用する調査、方針、対応案、検討記録は `docs/development-records/` に配置します。
+
+`docs/` 直下へ新しい文書を追加する場合は、恒久的なプロジェクトドキュメントであることを確認し、この索引へ追加します。
+
 ## 文書一覧
 
 - [アーキテクチャ](architecture.md): Django、Lambda、API Gateway、Route53、ACM、S3、CloudFront の構成。
@@ -10,6 +22,8 @@
 - [開発環境](development.md): ローカル実行、依存関係、テスト、AGENTS Hook、静的ファイル生成。
 - [Docker ローカル環境](local-docker.md): Docker Compose によるローカル検証、起動、動作確認。
 - [デプロイと CI/CD](deployment.md): SAM、CodePipeline、CodeBuild、CloudFormation の流れ。
+- [AI 作業進捗](ai-progress/README.md): AI 作業進捗、作業途中の TODO、AI が使用する確認記録。
+- [開発記録](development-records/README.md): 開発過程で発生・使用する調査、方針、対応案の記録。
 - [Staging デプロイ Runbook](staging-deployment-runbook.md): staging デプロイ、確認、ロールバック、影響範囲。
 - [IAM 権限最適化手順](iam-permission-optimization.md): staging で IAM 権限縮小を検証してから prod へ反映する手順。
 - [インシデント記録](incidents/README.md): 作業中に発生した指示違反、手順逸脱、影響発生、復旧対応の記録。

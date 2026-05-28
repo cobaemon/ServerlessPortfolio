@@ -10,7 +10,7 @@ It performs the following operations only after explicit confirmation:
 2. Compute the next branch by incrementing only C.
 3. Stop if the next branch already exists.
 4. Stop if protected source-of-truth documents are changed.
-5. Commit uncommitted changes only when changes exist.
+5. Commit staged changes only when staged changes exist and unstaged/untracked scope is empty.
 6. Generate a commit message with title, purpose, summary, scope, branch processing, and verification notes.
 7. Switch to dev and merge the source branch with --no-ff.
 8. Create and switch to the next work branch from dev.
@@ -150,6 +150,31 @@ function Convert-ToRepositoryPath {
     return $Path.Replace('\', '/').Trim()
 }
 
+function Test-IsControlSystemPath {
+    <#
+    .SYNOPSIS
+    Returns true when a repository path controls AI/Codex behavior or governance.
+
+    .PARAMETER RepositoryPath
+    Slash-separated repository-relative path.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    return (
+        $RepositoryPath -eq 'AGENTS.md' -or
+        $RepositoryPath -like '.githooks/*' -or
+        $RepositoryPath -eq 'scripts/agents-compliance-check.ps1' -or
+        $RepositoryPath -eq 'scripts/branch-finalize-next.ps1' -or
+        $RepositoryPath -eq 'docs/incidents/README.md' -or
+        $RepositoryPath -eq 'docs/ai-progress/README.md' -or
+        $RepositoryPath -eq 'docs/development-records/README.md' -or
+        $RepositoryPath -eq 'docs/index.md'
+    )
+}
+
 function Get-ChangedRepositoryPaths {
     <#
     .SYNOPSIS
@@ -214,6 +239,41 @@ function Assert-CleanWorkingTree {
     if (-not [string]::IsNullOrWhiteSpace($status)) {
         throw "STOP: working tree is not clean after $Context. Status:`n$status"
     }
+}
+
+function Assert-BranchFinalizeScopeReady {
+    <#
+    .SYNOPSIS
+    Stops branch finalization when unstaged or untracked paths make commit/deploy scope ambiguous.
+    #>
+    param()
+
+    $unstagedPaths = @(
+        Invoke-GitOutput -GitArguments @('diff', '--name-only') |
+            ForEach-Object { [string]$_ } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+    $untrackedPaths = @(
+        Invoke-GitOutput -GitArguments @('ls-files', '--others', '--exclude-standard') |
+            ForEach-Object { [string]$_ } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+
+    if ($unstagedPaths.Count -eq 0 -and $untrackedPaths.Count -eq 0) {
+        return
+    }
+
+    $scopeLines = @()
+
+    if ($unstagedPaths.Count -gt 0) {
+        $scopeLines += "unstaged=$($unstagedPaths -join ', ')"
+    }
+
+    if ($untrackedPaths.Count -gt 0) {
+        $scopeLines += "untracked=$($untrackedPaths -join ', ')"
+    }
+
+    throw "STOP: branch-finalize-next requires confirmed commit/deploy scope before staging. Resolve, stage, or obtain explicit user scope confirmation for pending paths. $($scopeLines -join '; ')"
 }
 
 function Get-NextBranchName {
@@ -423,6 +483,7 @@ function New-AutoCommitMessageFile {
     $summaryBullets = New-ChangeSummaryBullets -Changes $changes
     $changedFileCount = @($changes | Select-Object -ExpandProperty Path -Unique).Count
     $changedCategories = (($changes | Select-Object -ExpandProperty Category -Unique | Sort-Object) -join '、')
+    $controlSystemPaths = @($changes | Where-Object { Test-IsControlSystemPath -RepositoryPath $_.Path } | Select-Object -ExpandProperty Path -Unique | Sort-Object)
 
     $commitMessage = @(
         "chore: finalize $SourceBranch",
@@ -467,12 +528,25 @@ function New-AutoCommitMessageFile {
         '- 第三原則: フォールバック、未使用コード、無関係な変更を含めない。',
         '- 第四原則: 明示された branch-finalize-next 手順のみを実行する。',
         '- 共通解釈規則: 指示対象を拡張または縮小せず、保護対象ドキュメント変更を停止条件にする。',
+        '- 制御系0設計: branch-finalize-next の明示指示、対象ブランチ、変更対象、停止条件を確認したうえで処理する。',
         '- 実行前制御: ConfirmExecution、ブランチ形式、次ブランチ不存在、作業ツリー差分を確認する。',
         '- 報告制御: 実行結果、ブランチ、commit、message path、作業ツリー状態を出力する。',
         '- 実装制御: 既存スクリプト内の制御だけで commit と merge を実行する。',
         '- スコープ変更なし: 現在ブランチの完了処理以外を対象にしない。',
         '- 外部資産: 外部モジュール、パッケージ、ツールその他の資産を追加しない。'
     )
+
+    if ($controlSystemPaths.Count -gt 0) {
+        $commitMessage += @(
+            '',
+            '制御系変更承認:',
+            '- 制御系変更承認: branch-finalize-next 実行前にユーザー明示指示と AGENTS_CONTROL_SYSTEM_CHANGE_AUTHORIZED=1 が必要。',
+            "- 制御系変更対象: $($controlSystemPaths -join '、')",
+            '- 原則本文変更なし: AGENTS.md の原則本文は変更しない。',
+            '- ユーザー明示許可: 制御系変更はユーザー明示指示がある場合のみ対象にする。',
+            '- 対象差分: git diff --cached --name-status で制御系ファイルを確認する。'
+        )
+    }
 
     Set-Content -LiteralPath $messagePath -Encoding utf8NoBOM -Value $commitMessage
     return $messagePath
@@ -547,20 +621,18 @@ if (Test-GitOk -GitArguments @('show-ref', '--verify', '--quiet', "refs/heads/$n
 }
 
 Assert-NoProtectedDocumentChange
+Assert-BranchFinalizeScopeReady
 
-$statusBeforeCommit = Get-GitText -GitArguments @('status', '--porcelain=v1')
+$statusBeforeCommit = Get-GitText -GitArguments @('diff', '--cached', '--name-only')
 $commitCreated = $false
 $commitSha = 'none'
 $commitMessagePath = 'none'
 
 if (-not [string]::IsNullOrWhiteSpace($statusBeforeCommit)) {
-    Invoke-GitCommand -GitArguments @('add', '-A')
-    Assert-NoProtectedDocumentChange
-
     $stagedFiles = Get-GitText -GitArguments @('diff', '--cached', '--name-only')
 
     if ([string]::IsNullOrWhiteSpace($stagedFiles)) {
-        throw 'STOP: git add -A completed, but no staged changes were found. Empty commits are forbidden.'
+        throw 'STOP: staged changes were expected, but no staged changes were found. Empty commits are forbidden.'
     }
 
     $commitMessagePath = New-AutoCommitMessageFile -SourceBranch $currentBranch -IntegrationBranchName $IntegrationBranch -NextBranch $nextBranch
