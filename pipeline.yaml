@@ -62,8 +62,6 @@ Resources:
                     - README.md
                     - LICENSE
                     - .kiro/**
-                    - .playwright-mcp/**
-                    - .aws-sam/**
       ArtifactStore:
         Type: S3
         Location: !Ref S3Bucket
