@@ -175,9 +175,7 @@ $PipelineTriggerDenylistPatterns = @(
     'scripts/branch-finalize-next.ps1',
     'README.md',
     'LICENSE',
-    '.kiro/**',
-    '.playwright-mcp/**',
-    '.aws-sam/**'
+    '.kiro/**'
 )
 $DeploymentRuntimeSourcePatterns = @(
     '^pipeline\.yaml$',

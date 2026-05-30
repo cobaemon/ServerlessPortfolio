@@ -132,7 +132,8 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 
 - prod pipeline と staging pipeline はどちらも AWS 側で `pipelineType = V2`、`triggers = null` だった。
 - AWS CodePipeline trigger は push event に branch filter と file path filter を設定でき、exclude pattern は include pattern より優先される。
-- 現行の deploy、build、runtime に影響する source から、denylist 候補の `docs/**`、`AGENTS.md`、`.githooks/**`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1`、`README.md`、`LICENSE`、`.kiro/**`、`.playwright-mcp/**`、`.aws-sam/**` への参照は確認されなかった。
+- 現行の deploy、build、runtime に影響する source から、denylist 候補の `docs/**`、`AGENTS.md`、`.githooks/**`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1`、`README.md`、`LICENSE`、`.kiro/**` への参照は確認されなかった。
+- CodePipeline の `FilePaths.Excludes` は AWS 側 validation で最大8件に制限されるため、denylist は上記8件に限定する。
 - `pipeline.yaml` に V2 trigger を明示し、`FilePaths.Excludes` で denylist を設定する。
 - `scripts/agents-compliance-check.ps1` に、deploy、build、runtime に影響する source が CodePipeline trigger denylist path を参照する staged 変更を停止する検査を追加する。
 
