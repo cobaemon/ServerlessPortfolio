@@ -120,6 +120,36 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 
 最優先。
 
+## 追加対応案 B: docs / 制御系のみの push で pipeline を起動しない
+
+### 確認対象
+
+- AWS CodePipeline pipeline type: `cobaemon-serverless-portfolio-pipeline`、`cobaemon-serverless-portfolio-staging-pipeline`。
+- AWS CodePipeline trigger 仕様: V2 pipeline の Git push file path filter。
+- ローカル定義: `pipeline.yaml`、`buildspec.yml`、`buildspec-deps.yml`、`template.yaml`、`dependencies.yaml`、`bucketpolicy.yaml`、`requirements.txt`、`samconfig.toml`、`Dockerfile`、`.dockerignore`、`manage.py`、`asgi_lambda.py`、`config/`、`portfolio/`、`templates/`、`locale/`、`scripts/generate_static_assets.py`、`scripts/check_static_manifest.py`。
+
+### 確認結果
+
+- prod pipeline と staging pipeline はどちらも AWS 側で `pipelineType = V2`、`triggers = null` だった。
+- AWS CodePipeline trigger は push event に branch filter と file path filter を設定でき、exclude pattern は include pattern より優先される。
+- 現行の deploy、build、runtime に影響する source から、denylist 候補の `docs/**`、`AGENTS.md`、`.githooks/**`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1`、`README.md`、`LICENSE`、`.kiro/**`、`.playwright-mcp/**`、`.aws-sam/**` への参照は確認されなかった。
+- `pipeline.yaml` に V2 trigger を明示し、`FilePaths.Excludes` で denylist を設定する。
+- `scripts/agents-compliance-check.ps1` に、deploy、build、runtime に影響する source が CodePipeline trigger denylist path を参照する staged 変更を停止する検査を追加する。
+
+### 未確認事項
+
+- staging 反映後に、docs-only push で pipeline が起動しないこと。
+- staging 反映後に、docs と deploy 対象 path が混在する push で pipeline が起動すること。
+- staging 反映後に、unknown root file の push で pipeline が起動すること。
+- unknown root file 検証で追加する一時ファイルを削除した後も、最終作業ツリーに検証用ファイルが残らないこと。
+
+### 採用条件
+
+- include allowlist は使用しない。
+- denylist は deploy、build、runtime に影響しないと確認済みの path だけに限定する。
+- 未知の新規ファイルは pipeline 起動側に倒す。
+- staging で docs-only、mixed、unknown root file の検証を実施し、source revision、execution id、pipeline 起動有無を記録する。
+
 ## 対応案 B: dependencies stage を通常デプロイから分離する
 
 ### 内容

@@ -43,6 +43,27 @@ Resources:
     Properties:
       Name: !Ref CodePipelineName
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      PipelineType: V2
+      Triggers:
+        - ProviderType: CodeStarSourceConnection
+          GitConfiguration:
+            SourceActionName: CodeConnectionsSource
+            Push:
+              - Branches:
+                  Includes:
+                    - !Ref BranchName
+                FilePaths:
+                  Excludes:
+                    - docs/**
+                    - AGENTS.md
+                    - .githooks/**
+                    - scripts/agents-compliance-check.ps1
+                    - scripts/branch-finalize-next.ps1
+                    - README.md
+                    - LICENSE
+                    - .kiro/**
+                    - .playwright-mcp/**
+                    - .aws-sam/**
       ArtifactStore:
         Type: S3
         Location: !Ref S3Bucket

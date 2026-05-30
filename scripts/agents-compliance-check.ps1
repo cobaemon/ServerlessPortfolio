@@ -167,6 +167,38 @@ $ExternalAssetCommandPattern = '(?i)\b(apt(-get)?\s+install|yum\s+install|dnf\s+
 $ControlSystemChangeApprovalVariable = 'AGENTS_CONTROL_SYSTEM_CHANGE_AUTHORIZED'
 $NonDeploymentPipelinePushApprovalVariable = 'AGENTS_ALLOW_NON_DEPLOYMENT_PIPELINE_PUSH'
 $FallbackContinuationPattern = '(?i)(\|\|\s*(echo|true)\b|except\s+[^:]+:\s*pass\b)'
+$PipelineTriggerDenylistPatterns = @(
+    'docs/**',
+    'AGENTS.md',
+    '.githooks/**',
+    'scripts/agents-compliance-check.ps1',
+    'scripts/branch-finalize-next.ps1',
+    'README.md',
+    'LICENSE',
+    '.kiro/**',
+    '.playwright-mcp/**',
+    '.aws-sam/**'
+)
+$DeploymentRuntimeSourcePatterns = @(
+    '^pipeline\.yaml$',
+    '^buildspec\.yml$',
+    '^buildspec-deps\.yml$',
+    '^template\.yaml$',
+    '^dependencies\.yaml$',
+    '^bucketpolicy\.yaml$',
+    '^requirements\.txt$',
+    '^samconfig\.toml$',
+    '^Dockerfile$',
+    '^\.dockerignore$',
+    '^manage\.py$',
+    '^asgi_lambda\.py$',
+    '^config/',
+    '^portfolio/',
+    '^templates/',
+    '^locale/',
+    '^scripts/generate_static_assets\.py$',
+    '^scripts/check_static_manifest\.py$'
+)
 
 function Invoke-GitOutput {
     <#
@@ -586,6 +618,119 @@ function Assert-NoFallbackContinuationAdded {
 
     if ($matches.Count -gt 0) {
         throw "AGENTS HOOK STOP: staged changes add fallback continuation patterns. Matches: $($matches -join '; ')"
+    }
+}
+
+function Test-IsDeploymentRuntimeSourcePath {
+    <#
+    .SYNOPSIS
+    Returns true when a path can affect deploy, build, or runtime behavior.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryPath
+    )
+
+    foreach ($pattern in $DeploymentRuntimeSourcePatterns) {
+        if ($RepositoryPath -match $pattern) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-LineIsInsidePipelineTriggerBlock {
+    <#
+    .SYNOPSIS
+    Returns true when a pipeline.yaml line belongs to the top-level Triggers block.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string[]]$Lines,
+
+        [Parameter(Mandatory = $true)]
+        [int]$LineIndex
+    )
+
+    $triggerIndent = $null
+
+    for ($index = 0; $index -le $LineIndex; $index += 1) {
+        $line = $Lines[$index]
+
+        if ($line -match '^(\s*)Triggers:\s*$') {
+            $triggerIndent = $Matches[1].Length
+            continue
+        }
+
+        if ($null -ne $triggerIndent -and -not [string]::IsNullOrWhiteSpace($line)) {
+            $currentIndent = ([regex]::Match($line, '^\s*')).Value.Length
+            if ($currentIndent -le $triggerIndent) {
+                $triggerIndent = $null
+            }
+        }
+    }
+
+    return ($null -ne $triggerIndent)
+}
+
+function Assert-PipelineTriggerDenylistNotReferencedByDeploymentSources {
+    <#
+    .SYNOPSIS
+    Stops deploy/build/runtime sources from adding references to paths excluded from CodePipeline triggers.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    $matches = @()
+
+    foreach ($path in @($StagedPaths)) {
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            continue
+        }
+
+        $normalizedPath = $path.Replace('\', '/')
+        if (-not (Test-IsDeploymentRuntimeSourcePath -RepositoryPath $normalizedPath)) {
+            continue
+        }
+
+        $stagedContent = @()
+        try {
+            $stagedContent = @(Invoke-GitOutput -GitArguments @('show', ":$normalizedPath"))
+        } catch {
+            continue
+        }
+
+        for ($index = 0; $index -lt $stagedContent.Count; $index += 1) {
+            $line = [string]$stagedContent[$index]
+
+            foreach ($denylistPattern in $PipelineTriggerDenylistPatterns) {
+                if (-not $line.Contains($denylistPattern)) {
+                    continue
+                }
+
+                $isAllowedTriggerDefinition = (
+                    $normalizedPath -eq 'pipeline.yaml' -and
+                    (Test-LineIsInsidePipelineTriggerBlock -Lines $stagedContent -LineIndex $index)
+                )
+
+                if ($isAllowedTriggerDefinition) {
+                    continue
+                }
+
+                $matches += "${normalizedPath}:$($index + 1): $denylistPattern"
+            }
+        }
+    }
+
+    if ($matches.Count -gt 0) {
+        throw "AGENTS HOOK STOP: deploy/build/runtime sources must not reference CodePipeline trigger denylist paths. Matches: $($matches -join '; ')"
     }
 }
 
@@ -1720,6 +1865,7 @@ if ($Mode -eq 'pre-commit') {
     Assert-DeliverableDocumentsHaveNoEvidenceLabels -StagedPaths $stagedPaths
     Assert-ExternalAssetChangesApproved -StagedPaths $stagedPaths
     Assert-NoFallbackContinuationAdded -StagedPaths $stagedPaths
+    Assert-PipelineTriggerDenylistNotReferencedByDeploymentSources -StagedPaths $stagedPaths
     Assert-DevelopmentRecordsIncludeFactControlSections -StagedPaths $stagedPaths
     Assert-ExternalVerificationClaimsIncludeContext -StagedPaths $stagedPaths
     Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
