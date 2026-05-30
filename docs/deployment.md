@@ -34,6 +34,21 @@ API Gateway の StageName は `Env` パラメータと同じ値です。
 
 `Source` は CodeStarSourceConnection を使い、`FullRepositoryId` と `BranchName` パラメータを参照します。既定値は `cobaemon/ServerlessPortfolio` と `main` です。
 
+CodePipeline は V2 pipeline として定義し、Git push trigger に file path filter を設定します。
+
+`FilePaths.Excludes` は、デプロイ、ビルド、runtime に影響しないことを確認した path だけを除外します。除外対象は次の通りです。
+
+- `docs/**`
+- `AGENTS.md`
+- `.githooks/**`
+- `scripts/agents-compliance-check.ps1`
+- `scripts/branch-finalize-next.ps1`
+- `README.md`
+- `LICENSE`
+- `.kiro/**`
+
+上記の path だけを含む push は pipeline を起動しません。除外対象外の path が 1 つでも含まれる push は pipeline 起動対象です。未知の root file は除外対象に含めず、pipeline 起動側に倒します。
+
 `Deploy` ステージは `CloudFormationDeploy` と `BucketPolicyDeploy` を実行します。
 
 ## CodeBuild

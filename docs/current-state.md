@@ -11,6 +11,14 @@
 - CodeBuild 定義: `buildspec.yml`、`buildspec-deps.yml`
 - 静的ファイルバケットポリシー定義: `bucketpolicy.yaml`
 
+## CodePipeline trigger
+
+`pipeline.yaml` は CodePipeline V2 trigger を定義しています。
+
+`docs/**`、`AGENTS.md`、`.githooks/**`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1`、`README.md`、`LICENSE`、`.kiro/**` だけを含む push は pipeline を起動しません。
+
+除外対象外の path を含む push は pipeline 起動対象です。未知の root file は pipeline 起動側に倒します。
+
 ## staging 関連
 
 staging 環境は `Env=staging` として実装されています。

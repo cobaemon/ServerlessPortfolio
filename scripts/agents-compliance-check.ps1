@@ -1163,6 +1163,52 @@ function Assert-ExternalVerificationClaimsIncludeContext {
     }
 }
 
+function Assert-AdoptedSpecRecordsIncludeDocumentReflectionStatus {
+    <#
+    .SYNOPSIS
+    Stops adopted specification, procedure, deployment, or operations records that do not document project documentation reflection status.
+
+    .PARAMETER StagedPaths
+    Staged repository paths.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string[]]$StagedPaths = @()
+    )
+
+    foreach ($path in @($StagedPaths)) {
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            continue
+        }
+
+        $normalizedPath = $path.Replace('\', '/')
+        if ($normalizedPath -notlike 'docs/development-records/*.md') {
+            continue
+        }
+
+        if ($normalizedPath -eq 'docs/development-records/README.md') {
+            continue
+        }
+
+        $text = (@(Invoke-GitOutput -GitArguments @('show', ":$normalizedPath")) -join "`n")
+        $mentionsAdoption = (
+            $text -match '(正式採用|本採用|本番反映|prod\s*反映|main\s*反映|恒久化|採用済み)'
+        )
+        $mentionsSpecOrProcedure = (
+            $text -match '(仕様|運用|手順|デプロイ|外部環境)' -or
+            $text -match '(?i)(pipeline|deployment|operation|procedure|specification)'
+        )
+
+        if (-not ($mentionsAdoption -and $mentionsSpecOrProcedure)) {
+            continue
+        }
+
+        if (-not $text.Contains('ドキュメント反映状況')) {
+            throw "AGENTS HOOK STOP: adopted specification or procedure records must include document reflection status: $normalizedPath"
+        }
+    }
+}
+
 function Assert-AiWorkGuardAuthorized {
     <#
     .SYNOPSIS
@@ -1866,6 +1912,7 @@ if ($Mode -eq 'pre-commit') {
     Assert-PipelineTriggerDenylistNotReferencedByDeploymentSources -StagedPaths $stagedPaths
     Assert-DevelopmentRecordsIncludeFactControlSections -StagedPaths $stagedPaths
     Assert-ExternalVerificationClaimsIncludeContext -StagedPaths $stagedPaths
+    Assert-AdoptedSpecRecordsIncludeDocumentReflectionStatus -StagedPaths $stagedPaths
     Assert-IncidentRecordCycleDocuments -StagedPaths $stagedPaths
     Write-Output 'AGENTS HOOK PASS: pre-commit checks completed.'
     exit 0

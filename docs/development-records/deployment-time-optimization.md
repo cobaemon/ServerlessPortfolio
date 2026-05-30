@@ -180,6 +180,39 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 
 - prod pipeline への反映は未実施。
 
+### prod 正式採用確認
+
+確認対象:
+
+- `origin/main`、`origin/dev`、`dev`、`main`、`HEAD` の revision。
+- prod pipeline `cobaemon-serverless-portfolio-pipeline` の source revision、execution status、action execution details。
+- prod pipeline の trigger 定義。
+- prod application stack `cobaemon-serverless-portfolio-stack`。
+- prod site `https://serverless.portfolio.cobaemon.com/` と同 site が参照する主要 CSS / JS。
+- 新しいデプロイ仕様を反映すべきドキュメント。
+
+確認結果:
+
+- `origin/main`、`origin/dev`、`dev`、`main`、`HEAD` は `de846b887ff794d5c931408762a1d245e643e952` で一致した。
+- prod pipeline execution `97cc188b-09ab-4c2d-91b6-f929fd089991` は source revision `de846b887ff794d5c931408762a1d245e643e952` で `Succeeded` になった。
+- prod pipeline の `FilePaths.Excludes` は、`docs/**`、`AGENTS.md`、`.githooks/**`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1`、`README.md`、`LICENSE`、`.kiro/**` だった。
+- prod application stack `cobaemon-serverless-portfolio-stack` は `UPDATE_COMPLETE` だった。
+- prod site `https://serverless.portfolio.cobaemon.com/` は HTTP 200、title `Portfolio`、content length `40650` だった。
+- prod site が参照する `fonts.f852bbc34226.css`、`styles.min.e55cb46da026.css`、`bootstrap.bundle.min.js`、`scripts.4539c5f9bede.js` は HTTP 200 だった。
+
+ドキュメント反映状況:
+
+- 反映済み: `docs/deployment.md` に CodePipeline V2 trigger、file path filter、denylist、unknown root file の扱いを記載した。
+- 反映済み: `docs/current-state.md` に現在の CodePipeline trigger 仕様を記載した。
+- 反映済み: `docs/development-records/deployment-time-optimization.md` に staging 検証結果、prod 正式採用結果、ドキュメント反映状況を記録した。
+- 対象外: `README.md` は詳細デプロイ仕様を `docs/deployment.md` に委譲しており、新しい詳細仕様の直接記載対象ではない。
+- 対象外: `docs/index.md` は既に `docs/deployment.md` と `docs/current-state.md` を索引しており、新規ドキュメント追加がないため索引更新は不要。
+- 対象外: `docs/staging-deployment-runbook.md` は staging 初回構築、確認、ロールバック手順が主対象で、共通 pipeline trigger 仕様は `docs/deployment.md` に記載する。
+
+未確認事項:
+
+- prod で docs-only push を追加実行して pipeline 非起動を再検証することは未実施。prod での追加 docs-only push は pipeline 起動抑制の検証目的だけでも `main` を変更するため、staging 検証結果と prod trigger 定義確認を正式採用根拠とする。
+
 ## 対応案 B: dependencies stage を通常デプロイから分離する
 
 ### 内容
