@@ -151,6 +151,28 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 - 未知の新規ファイルは pipeline 起動側に倒す。
 - staging で docs-only、mixed、unknown root file の検証を実施し、source revision、execution id、pipeline 起動有無を記録する。
 
+### staging 実装反映確認
+
+確認対象:
+
+- `cobaemon-serverless-portfolio-staging-pipeline` の pipeline 定義。
+- source revision `fb29525618f05c37d35e2aa5ac1135e1c66a9e3c` の pipeline execution。
+- CloudFormation stack `cobaemon-serverless-portfolio-staging-pipeline`。
+
+確認結果:
+
+- `aws codepipeline get-pipeline` で、`FilePaths.Excludes` に `docs/**`、`AGENTS.md`、`.githooks/**`、`scripts/agents-compliance-check.ps1`、`scripts/branch-finalize-next.ps1`、`README.md`、`LICENSE`、`.kiro/**` が反映済みであることを確認した。
+- execution `54edf18a-7507-4784-b011-bfa32923c123` は source revision `fb29525618f05c37d35e2aa5ac1135e1c66a9e3c` で起動し、`Source` action と `UpdatePipeline / SelfMutate` action は `Succeeded` だった。
+- 同 execution の最終 status は `Cancelled`、status summary は `Pipeline definition was updated` だった。
+- CloudFormation stack `cobaemon-serverless-portfolio-staging-pipeline` は `UPDATE_COMPLETE` だった。
+
+未確認事項:
+
+- docs-only push で pipeline が起動しないこと。
+- docs と deploy 対象 path が混在する push で pipeline が起動すること。
+- unknown root file の push で pipeline が起動すること。
+- staging pipeline の各検証 source revision と execution id。
+
 ## 対応案 B: dependencies stage を通常デプロイから分離する
 
 ### 内容
