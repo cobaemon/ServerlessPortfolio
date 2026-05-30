@@ -234,6 +234,7 @@ Git hooks は `.githooks` を使用する。Hook 本体は `scripts/agents-compl
 - `AGENTS.md` に第一原則、第二原則、第三原則、第四原則、共通解釈規則、実行前制御、報告制御、実装制御、制御系0設計、スコープ変更禁止の必須マーカーが存在しない場合は停止する。
 - 成果物ドキュメントである `README.md` または `docs/` 配下に `エビデンス:`、`エビデンス：`、`Evidence:`、`Evidence：` のラベルが含まれる場合は停止する。
 - `docs/development-records/` 配下の開発記録に、`確認対象`、`確認結果`、`未確認事項` のセクションが存在しない場合は停止する。
+- `docs/development-records/` 配下の開発記録で、仕様、運用、手順、デプロイ、pipeline、外部環境に関する正式採用、本番反映、恒久化を記録する場合、`ドキュメント反映状況` が存在しない場合は停止する。
 - buildspec、scripts、workflow に `|| echo`、`|| true` などのフォールバック継続パターンを staged で追加する場合は停止する。
 - deploy、build、runtime に影響する source が、CodePipeline trigger denylist の対象 path を参照する staged 変更を含む場合は停止する。ただし `pipeline.yaml` の `Triggers` 定義内で denylist を宣言する行は対象外とする。
 - `docs/incidents/` 配下のインシデント記録ファイル名が `{yyyyMMdd}_{HHmmss}_Incident.md` 形式でない場合は停止する。
