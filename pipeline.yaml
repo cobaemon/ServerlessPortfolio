@@ -54,6 +54,7 @@ Resources:
                     - !Ref BranchName
                 FilePaths:
                   Excludes:
+                    # Deny only confirmed non-deployment paths; unknown files must trigger.
                     - docs/**
                     - AGENTS.md
                     - .githooks/**
