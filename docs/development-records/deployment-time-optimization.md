@@ -168,7 +168,7 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 
 未確認事項:
 
-- docs-only push で pipeline が起動しないこと。
+- docs-only push で pipeline が起動しないこと: source revision `badfd3b01c1bd714ac7065b56943a565cff0017c` を `dev` に push 後、75 秒後の最新 execution は `54edf18a-7507-4784-b011-bfa32923c123` のままで、同 revision の execution は作成されなかった。
 - docs と deploy 対象 path が混在する push で pipeline が起動すること。
 - unknown root file の push で pipeline が起動すること。
 - staging pipeline の各検証 source revision と execution id。
