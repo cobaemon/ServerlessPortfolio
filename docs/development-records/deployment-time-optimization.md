@@ -166,12 +166,19 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 - 同 execution の最終 status は `Cancelled`、status summary は `Pipeline definition was updated` だった。
 - CloudFormation stack `cobaemon-serverless-portfolio-staging-pipeline` は `UPDATE_COMPLETE` だった。
 
+追加確認結果:
+
+- docs-only push: source revision `badfd3b01c1bd714ac7065b56943a565cff0017c` を `dev` に push 後、75 秒後の最新 execution は `54edf18a-7507-4784-b011-bfa32923c123` のままで、同 revision の execution は作成されなかった。
+- docs と deploy 対象 path の mixed push: source revision `34b069e12a92568432dae24b839178dcf6008b9c` で execution `a6b56902-c4a3-4653-9aed-3dd44a825819` が起動し、`Succeeded` になった。
+- unknown root file push: source revision `0c0d9de781a16a878e3b89a1492d88f127a1faf2` で execution `2de15534-d4a1-4d7e-a6c4-b3bb1cf1967a` が起動し、`Succeeded` になった。
+- cleanup push: source revision `49a1e993c2d5164629040164150f4cda3542c504` で execution `57421bc7-f822-4356-aae1-42e8c35156db` が起動し、`Succeeded` になった。
+- cleanup 後、`git ls-files pipeline-trigger-verification.tmp` は空で、検証用一時ファイルは Git 管理に残っていない。
+- cleanup 後の staging site `https://staging.serverless.portfolio.cobaemon.com/` は HTTP 200、title `Portfolio`、content length `40650` だった。
+- cleanup 後の staging site が参照する主要静的ファイルは HTTP 200 だった。対象は `fonts.f852bbc34226.css`、`styles.min.e55cb46da026.css`、`scripts.4539c5f9bede.js`。
+
 未確認事項:
 
-- docs-only push で pipeline が起動しないこと: source revision `badfd3b01c1bd714ac7065b56943a565cff0017c` を `dev` に push 後、75 秒後の最新 execution は `54edf18a-7507-4784-b011-bfa32923c123` のままで、同 revision の execution は作成されなかった。
-- docs と deploy 対象 path が混在する push で pipeline が起動すること。
-- unknown root file の push で pipeline が起動すること。
-- staging pipeline の各検証 source revision と execution id。
+- prod pipeline への反映は未実施。
 
 ## 対応案 B: dependencies stage を通常デプロイから分離する
 
