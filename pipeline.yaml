@@ -536,6 +536,7 @@ Resources:
                   - lambda:GetFunction
                   - lambda:GetFunctionConfiguration
                   - lambda:ListTags
+                  - lambda:ListVersionsByFunction
                   - lambda:RemovePermission
                   - lambda:TagResource
                   - lambda:UntagResource
