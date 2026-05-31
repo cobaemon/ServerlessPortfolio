@@ -1,0 +1,86 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Loading ServerlessPortfolio control guard"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Freezing ServerlessPortfolio instruction contract"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking ServerlessPortfolio pre-tool policy"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking ServerlessPortfolio approval policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Auditing ServerlessPortfolio tool result"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking ServerlessPortfolio final response"
+          }
+        ]
+      }
+    ]
+  }
+}

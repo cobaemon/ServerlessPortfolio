@@ -51,7 +51,7 @@ Git hooks は `.githooks` を使用します。有効化コマンドは次の通
 git config core.hooksPath .githooks
 ```
 
-Hook 本体は `scripts/agents-compliance-check.ps1` です。`pre-commit` は `AGENTS.md` の必須原則マーカーと成果物ドキュメントのエビデンスラベルを検査します。`commit-msg` は commit message のタイトルと本文を検査します。
+Hook 本体は `scripts/project_control_guard.py` です。CodexHook と GitHook は同じ共通ポリシーを使用します。`pre-commit` は制御系ファイル、CodexHook 設定、GitHook 設定、staged diff、インシデント記録を検査します。`commit-msg` は commit message のタイトルと本文を検査します。
 
 ## 静的ファイル
 
@@ -82,7 +82,8 @@ docker compose run --rm web python manage.py collectstatic --noinput --dry-run
 - [`compose.yaml`](../compose.yaml)
 - [`manage.py`](../manage.py)
 - [`AGENTS.md`](../AGENTS.md)
-- [`scripts/agents-compliance-check.ps1`](../scripts/agents-compliance-check.ps1)
+- [`scripts/project_control_guard.py`](../scripts/project_control_guard.py)
+- [`scripts/branch-finalize-next.ps1`](../scripts/branch-finalize-next.ps1)
 - [`config/settings/dev.py`](../config/settings/dev.py)
 - [`portfolio/tests.py`](../portfolio/tests.py)
 - [`portfolio/management/commands/render_static.py`](../portfolio/management/commands/render_static.py)
