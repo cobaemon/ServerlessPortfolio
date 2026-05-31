@@ -57,6 +57,9 @@ Resources:
       Handler: asgi_lambda.handler
       Runtime: python3.12
       CodeUri: ./
+      AutoPublishAlias: live
+      SnapStart:
+        ApplyOn: PublishedVersions
       Environment:
         Variables:
           DJANGO_SETTINGS_MODULE: !FindInMap [EnvMapping, !Ref Env, SettingsModule]

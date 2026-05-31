@@ -40,8 +40,9 @@ CodePipeline は V2 pipeline として定義し、Git push trigger に file path
 
 - `docs/**`
 - `AGENTS.md`
+- `.codex/**`
 - `.githooks/**`
-- `scripts/agents-compliance-check.ps1`
+- `scripts/project_control_guard.py`
 - `scripts/branch-finalize-next.ps1`
 - `README.md`
 - `LICENSE`

@@ -1,2 +1,2 @@
 #!/bin/sh
-pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/agents-compliance-check.ps1 -Mode pre-push
+python -B scripts/project_control_guard.py --pre-push

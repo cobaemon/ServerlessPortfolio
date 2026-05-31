@@ -1,2 +1,2 @@
 #!/bin/sh
-pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/agents-compliance-check.ps1 -Mode commit-msg -CommitMessagePath "$1"
+python -B scripts/project_control_guard.py --commit-msg "$1"
