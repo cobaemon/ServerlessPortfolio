@@ -531,6 +531,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - lambda:AddPermission
+                  - lambda:CreateAlias
                   - lambda:CreateFunction
                   - lambda:DeleteFunction
                   - lambda:GetFunction
