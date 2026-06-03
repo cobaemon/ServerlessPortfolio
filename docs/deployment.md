@@ -40,13 +40,9 @@ CodePipeline は V2 pipeline として定義し、Git push trigger に file path
 
 - `docs/**`
 - `AGENTS.md`
-- `.codex/**`
-- `.githooks/**`
-- `scripts/project_control_guard.py`
 - `scripts/branch-finalize-next.ps1`
 - `README.md`
 - `LICENSE`
-- `.kiro/**`
 
 上記の path だけを含む push は pipeline を起動しません。除外対象外の path が 1 つでも含まれる push は pipeline 起動対象です。未知の root file は除外対象に含めず、pipeline 起動側に倒します。
 

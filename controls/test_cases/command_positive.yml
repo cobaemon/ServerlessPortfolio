@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "category": "command",
+  "cases": [
+    {"id": "CP-001", "kind": "command", "input": "git status --short", "expected": "ALLOW"},
+    {"id": "CP-002", "kind": "command", "input": "git diff --check", "expected": "ALLOW"},
+    {"id": "CP-003", "kind": "command", "input": "python -m json.tool .codex/hooks.json", "expected": "ALLOW"}
+  ]
+}

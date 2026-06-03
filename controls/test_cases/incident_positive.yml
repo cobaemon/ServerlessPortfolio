@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "category": "incident",
+  "cases": [
+    {
+      "id": "IP-001",
+      "kind": "incident",
+      "input": "incident record\nviolated principles\nviolated invariants\nroot cause\nblast radius\ncontrol change\nregression self-test\nverification evidence\nremaining risk\nowner / next required action",
+      "expected": "ALLOW"
+    }
+  ]
+}

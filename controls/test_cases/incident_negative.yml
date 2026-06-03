@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "category": "incident",
+  "cases": [
+    {"id": "IN-001", "kind": "incident", "input": "incident record: 記録のみ", "expected": "DENY"}
+  ]
+}

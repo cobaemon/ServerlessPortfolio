@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "category": "human_not_blocked",
+  "cases": [
+    {"id": "HN-001", "kind": "command", "actor": "human", "input": "git push origin main", "expected": "WARN"}
+  ]
+}

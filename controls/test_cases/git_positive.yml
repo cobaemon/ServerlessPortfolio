@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "category": "git",
+  "cases": [
+    {"id": "GP-001", "kind": "command", "input": "git status --short", "expected": "ALLOW"},
+    {"id": "GP-002", "kind": "command", "input": "git diff --cached --name-only", "expected": "ALLOW"}
+  ]
+}

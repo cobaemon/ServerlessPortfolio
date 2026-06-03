@@ -57,13 +57,9 @@ Resources:
                     # Deny only confirmed non-deployment paths; unknown files must trigger.
                     - docs/**
                     - AGENTS.md
-                    - .codex/**
-                    - .githooks/**
-                    - scripts/project_control_guard.py
                     - scripts/branch-finalize-next.ps1
                     - README.md
                     - LICENSE
-                    - .kiro/**
       ArtifactStore:
         Type: S3
         Location: !Ref S3Bucket
@@ -532,11 +528,14 @@ Resources:
                 Effect: Allow
                 Action:
                   - lambda:AddPermission
+                  - lambda:CreateAlias
                   - lambda:CreateFunction
                   - lambda:DeleteFunction
                   - lambda:GetFunction
                   - lambda:GetFunctionConfiguration
                   - lambda:ListTags
+                  - lambda:ListVersionsByFunction
+                  - lambda:PublishVersion
                   - lambda:RemovePermission
                   - lambda:TagResource
                   - lambda:UntagResource

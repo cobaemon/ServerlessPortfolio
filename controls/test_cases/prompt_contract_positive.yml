@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "category": "prompt_contract",
+  "cases": [
+    {
+      "id": "PCP-001",
+      "kind": "prompt",
+      "input": "設計書に従い包括制御を実装しろ",
+      "assert_work_type": "IMPLEMENTATION_ALLOWED"
+    },
+    {
+      "id": "PCP-002",
+      "kind": "prompt",
+      "input": "正式な設計書を作成して",
+      "assert_work_type": "DESIGN_DOCUMENT_ALLOWED"
+    }
+  ]
+}
