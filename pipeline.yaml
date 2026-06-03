@@ -57,9 +57,6 @@ Resources:
                     # Deny only confirmed non-deployment paths; unknown files must trigger.
                     - docs/**
                     - AGENTS.md
-                    - .codex/**
-                    - .githooks/**
-                    - scripts/project_control_guard.py
                     - scripts/branch-finalize-next.ps1
                     - README.md
                     - LICENSE

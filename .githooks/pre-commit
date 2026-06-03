@@ -1,2 +1,2 @@
 #!/bin/sh
-python -B scripts/project_control_guard.py --pre-commit
+python -B -m scripts.control.cli --git-hook pre-commit

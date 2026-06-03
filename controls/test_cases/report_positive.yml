@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "category": "report",
+  "cases": [
+    {
+      "id": "RP-001",
+      "kind": "report",
+      "input": "未確認事項: CI ログ未取得。証跡: git diff 出力。判定: 未確認。",
+      "expected": "ALLOW"
+    },
+    {
+      "id": "RP-002",
+      "kind": "report",
+      "input": "要件ID: AC-001\nユーザー指示: 実装\n判定基準: ファイル存在\n実施内容: 追加\n証跡: controls/principles.yml\n判定: 満足\n未確認事項: なし\n完了",
+      "expected": "ALLOW"
+    }
+  ]
+}

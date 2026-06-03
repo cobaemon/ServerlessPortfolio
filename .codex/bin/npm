@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ -z "$GUARD_REAL_PYTHON" ]; then
+  echo "GUARD_REAL_PYTHON is required for guarded wrappers." >&2
+  exit 126
+fi
+"$GUARD_REAL_PYTHON" -B .codex/bin/guarded_command.py npm "$@"

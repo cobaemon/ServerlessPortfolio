@@ -2,14 +2,24 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Loading ServerlessPortfolio control guard"
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Loading comprehensive control policy"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Passing control contract to subagent"
           }
         ]
       }
@@ -19,52 +29,83 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Freezing ServerlessPortfolio instruction contract"
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Classifying current-turn contract"
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": ".*",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Checking ServerlessPortfolio pre-tool policy"
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Checking tool access"
           }
         ]
       }
     ],
     "PermissionRequest": [
       {
-        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Checking ServerlessPortfolio approval policy"
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Checking permission request"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": ".*",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Auditing ServerlessPortfolio tool result"
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Checking tool result"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Persisting compact control summary"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Restoring compact control summary"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Checking subagent report"
           }
         ]
       }
@@ -74,10 +115,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "commandWindows": "python -B \"$(git rev-parse --show-toplevel)/scripts/project_control_guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Checking ServerlessPortfolio final response"
+            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "timeout": 5,
+            "statusMessage": "Checking final report"
           }
         ]
       }

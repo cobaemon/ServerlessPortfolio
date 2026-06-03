@@ -3,10 +3,10 @@
 Finalizes a vA.B.C work branch and creates the next vA.B.(C+1) branch.
 
 .DESCRIPTION
-This guarded workflow commits staged changes when present, merges the current
-work branch into the integration branch with --no-ff, and creates the next work
-branch. It never pushes, force-pushes, rebases, resets, cleans, or bypasses
-hooks.
+This guarded workflow stages all working tree changes, commits them when
+present, merges the current work branch into the integration branch with
+--no-ff, and creates the next work branch. It never pushes, force-pushes,
+rebases, resets, cleans, or bypasses hooks.
 #>
 
 [CmdletBinding()]
@@ -42,25 +42,50 @@ function Get-GitText {
     return (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
 }
 
-function Assert-CleanScope {
-    $porcelain = Get-GitText @('status', '--porcelain')
-    if (-not $porcelain) { return }
+function Assert-NoUnmergedChanges {
+    param([Parameter(Mandatory = $true)][string]$Porcelain)
 
-    $unstagedOrUntracked = @()
-    foreach ($line in ($porcelain -split "`n")) {
+    if (-not $Porcelain) { return }
+
+    $unmerged = @()
+    foreach ($line in ($Porcelain -split "`n")) {
         if (-not $line) { continue }
         $indexStatus = $line.Substring(0, 1)
         $workTreeStatus = $line.Substring(1, 1)
-        if ($line.StartsWith('??') -or $workTreeStatus -ne ' ') {
-            $unstagedOrUntracked += $line
+        $pairStatus = $line.Substring(0, 2)
+        if ($indexStatus -eq 'U' -or $workTreeStatus -eq 'U' -or $pairStatus -in @('AA', 'DD')) {
+            $unmerged += $line
         }
-        if ($indexStatus -eq 'U' -or $workTreeStatus -eq 'U') {
+    }
+
+    if ($unmerged.Count -gt 0) {
+        throw "STOP: unmerged changes exist. Resolve conflicts before branch-finalize-next.`n$($unmerged -join "`n")"
+    }
+}
+
+function Stage-WorktreeChanges {
+    $before = Get-GitText @('status', '--porcelain')
+    if (-not $before) { return }
+
+    Assert-NoUnmergedChanges -Porcelain $before
+
+    # branch-finalize-next is the version boundary, so every current worktree change becomes part of this commit.
+    Invoke-Git @('add', '--all')
+
+    $after = Get-GitText @('status', '--porcelain')
+    Assert-NoUnmergedChanges -Porcelain $after
+
+    $unstagedOrUntracked = @()
+    foreach ($line in ($after -split "`n")) {
+        if (-not $line) { continue }
+        $workTreeStatus = $line.Substring(1, 1)
+        if ($line.StartsWith('??') -or $workTreeStatus -ne ' ') {
             $unstagedOrUntracked += $line
         }
     }
 
     if ($unstagedOrUntracked.Count -gt 0) {
-        throw "STOP: unstaged or untracked changes exist. Fix scope before branch-finalize-next.`n$($unstagedOrUntracked -join "`n")"
+        throw "STOP: git add --all did not stage every worktree change.`n$($unstagedOrUntracked -join "`n")"
     }
 }
 
@@ -77,17 +102,13 @@ function New-CommitMessage {
 制御された作業ブランチを統合
 
 目的: $SourceBranch の staged 変更を $IntegrationBranch へ統合し、次作業ブランチ $NextBranch を作成する。
-概要: branch-finalize-next により staged diff を commit し、--no-ff merge で統合する。
+概要: branch-finalize-next により worktree 全体を staging して commit し、--no-ff merge で統合する。
 対応: push、force push、reset、clean、rebase、squash、--no-verify は実行しない。
-検証: branch-finalize-next の停止条件、GitHook、Git 終了コードを確認する。
-制御系変更: staged diff に制御系ファイルが含まれる場合、共通ポリシーと hook により検査する。
-対象: staged diff 全体。
+検証: branch-finalize-next の停止条件と Git 終了コードを確認する。
+対象: branch-finalize-next 実行時の worktree 全体。
 外部資産: 追加なし。
-制御系変更承認: ユーザーの STG 検証指示に対する正規手順として実行する。
-制御系変更対象: staged diff に含まれる制御系ファイル。
-原則本文変更なし: AGENTS の原則本文は維持し、制御レイヤを再設計する。
 ユーザー明示許可: STG での検証、検証結果報告、採用基準判定の指示に基づく。
-対象差分: staged diff 全体。
+対象差分: worktree 全体を staging した差分。
 対象差分:
 $stat
 "@
@@ -112,7 +133,7 @@ $nextBranch = "v$major.$minor.$($patch + 1)"
 $existing = Get-GitText @('branch', '--list', $nextBranch)
 if ($existing) { throw "STOP: next branch already exists: $nextBranch" }
 
-Assert-CleanScope
+Stage-WorktreeChanges
 
 $staged = Get-GitText @('diff', '--cached', '--name-only')
 $commitCreated = $false

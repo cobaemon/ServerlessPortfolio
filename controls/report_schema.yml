@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "format": "json-compatible-yaml",
+  "positive_claim_terms": [
+    "完了",
+    "対応済み",
+    "実装済み",
+    "成功",
+    "検証済み",
+    "確認済み",
+    "問題なし",
+    "満たしている",
+    "再発防止済み",
+    "passed",
+    "green",
+    "done",
+    "implemented",
+    "verified"
+  ],
+  "required_evidence_markers": [
+    "要件ID",
+    "ユーザー指示",
+    "判定基準",
+    "実施内容",
+    "証跡",
+    "判定",
+    "未確認事項"
+  ],
+  "evidence_or_unknown_markers": [
+    "証跡",
+    "エビデンス",
+    "Evidence",
+    "evidence",
+    "未確認",
+    "未取得",
+    "未実施"
+  ],
+  "incident_required_markers": [
+    "incident record",
+    "violated principles",
+    "violated invariants",
+    "root cause",
+    "blast radius",
+    "control change",
+    "regression self-test",
+    "verification evidence",
+    "remaining risk",
+    "owner / next required action"
+  ]
+}

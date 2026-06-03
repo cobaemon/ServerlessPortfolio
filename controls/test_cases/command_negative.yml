@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "category": "command",
+  "cases": [
+    {"id": "CN-001", "kind": "command", "input": "find . -type f", "expected": "DENY"},
+    {"id": "CN-002", "kind": "command", "input": "ls -laR", "expected": "DENY"},
+    {"id": "CN-003", "kind": "command", "input": "npm install left-pad", "expected": "DENY"},
+    {"id": "CN-004", "kind": "command", "input": "pip install pyyaml", "expected": "DENY"}
+  ]
+}
