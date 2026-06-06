@@ -4,11 +4,11 @@
 
 Django プロジェクトは `config` です。URL ルーティングは `config/urls.py` にあります。
 
-`config/urls.py` のルート構成は次の通りです。
+`config/urls.py` のローカル Django ルート構成は次の通りです。
 
 - `/admin/`: Django Admin。
 - `/i18n/`: Django 標準の言語切り替え URL。
-- `/`: `/portfolio/top/` への恒久リダイレクト。
+- `/`: `/portfolio/top/` への恒久リダイレクト。AWS 環境の `GET /` は API Gateway mock 301 で処理し、Lambda を呼び出しません。
 - `/portfolio/`: `portfolio.urls` を include。
 - `/favicon.ico`: `/static/favicon.ico` へのリダイレクト。
 

@@ -17,7 +17,9 @@ flowchart LR
     Lambda["AWS Lambda"]
     Django["Django ASGI アプリ"]
 
-    User --> Route53 --> Domain --> Api --> Lambda --> Django
+    User --> Route53 --> Domain --> Api
+    Api -->|"GET / mock 301"| User
+    Api -->|"Django routes"| Lambda --> Django
 ```
 
 ## 静的ファイル経路
@@ -36,7 +38,7 @@ flowchart LR
 ### `template.yaml`
 
 - `DjangoFunction`: Django アプリケーションを実行する Lambda 関数。
-- `DjangoApi`: API Gateway REST API。
+- `DjangoApi`: API Gateway REST API。`GET /` は mock 301 として `/portfolio/top/` へリダイレクトし、Lambda を呼び出しません。
 - `ServerlessCertificate`: API Gateway カスタムドメイン用 ACM 証明書。
 - `ApiGatewayCustomDomain`: `DomainName` パラメータで指定される API Gateway カスタムドメイン。
 - `ApiGatewayBasePathMapping`: カスタムドメインを API Gateway のステージへ割り当てるマッピング。

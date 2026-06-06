@@ -83,12 +83,6 @@ Resources:
           LOG_LEVEL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/log_level}}"
           ENV: !Ref Env
       Events:
-        GetEndpoint:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DjangoApi
-            Path: /
-            Method: GET
         PostEndpoint:
           Type: Api
           Properties:
@@ -136,6 +130,36 @@ Resources:
     Properties:
       StageName: !Ref Env
       Name: CobaemonServerlessPortfolioApi
+      MergeDefinitions: true
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: CobaemonServerlessPortfolioApi
+          version: "1.0"
+        paths:
+          /:
+            get:
+              responses:
+                "301":
+                  description: Redirect to the portfolio top page without invoking Lambda.
+                  headers:
+                    Location:
+                      type: string
+                    Cache-Control:
+                      type: string
+              x-amazon-apigateway-integration:
+                type: mock
+                passthroughBehavior: when_no_match
+                requestTemplates:
+                  application/json: '{"statusCode": 301}'
+                responses:
+                  default:
+                    statusCode: "301"
+                    responseParameters:
+                      method.response.header.Location: "'/portfolio/top/'"
+                      method.response.header.Cache-Control: "'no-cache'"
+                    responseTemplates:
+                      application/json: ""
       Cors:
         AllowOrigin: !Sub "'${AllowedOrigin}'"
         AllowMethods: "'GET,POST,OPTIONS'"

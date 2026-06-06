@@ -5,6 +5,7 @@ Regression tests for portfolio routing, CSRF handling, and production settings.
 import importlib
 import os
 import re
+from pathlib import Path
 from unittest.mock import patch
 
 from django.test import Client, SimpleTestCase, override_settings
@@ -128,3 +129,30 @@ class ProductionStaticStorageSettingsTests(SimpleTestCase):
             prod_settings = importlib.reload(prod_settings)
 
         self.assertIsNone(prod_settings.AWS_DEFAULT_ACL)
+
+
+class ApiGatewayRootRedirectTemplateTests(SimpleTestCase):
+    """
+    Verify that the deployed root GET redirect does not invoke the Django Lambda.
+    """
+
+    def test_root_get_uses_api_gateway_mock_redirect(self):
+        """
+        The API template must keep GET / out of Lambda and return a 301 redirect.
+        """
+        template = self._template_text()
+
+        self.assertNotIn("GetEndpoint:", template)
+        self.assertIn("MergeDefinitions: true", template)
+        self.assertIn("x-amazon-apigateway-integration:", template)
+        self.assertIn("type: mock", template)
+        self.assertIn("method.response.header.Location: \"'/portfolio/top/'\"", template)
+        self.assertRegex(template, r"(?s)PostEndpoint:.*Path: /\r?\n\s+Method: POST")
+
+    def _template_text(self):
+        """
+        Return the SAM template text from the repository root.
+        """
+        return (Path(__file__).resolve().parents[1] / "template.yaml").read_text(
+            encoding="utf-8"
+        )
