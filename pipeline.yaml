@@ -539,6 +539,7 @@ Resources:
                   - lambda:RemovePermission
                   - lambda:TagResource
                   - lambda:UntagResource
+                  - lambda:UpdateAlias
                   - lambda:UpdateFunctionCode
                   - lambda:UpdateFunctionConfiguration
                 Resource:
