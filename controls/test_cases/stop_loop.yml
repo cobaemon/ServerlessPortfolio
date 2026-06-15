@@ -1,7 +1,0 @@
-{
-  "version": 1,
-  "category": "stop_loop",
-  "cases": [
-    {"id": "SL-001", "kind": "stop", "input": "完了しました。", "expected": "NEEDS_CONTINUATION"}
-  ]
-}

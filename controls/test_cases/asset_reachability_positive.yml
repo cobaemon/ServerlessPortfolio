@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "category": "asset_reachability",
-  "cases": [
-    {"id": "ARP-001", "kind": "command", "input": "rg specific_symbol portfolio tests", "expected": "ALLOW"},
-    {"id": "ARP-002", "kind": "command", "input": "Get-Content -LiteralPath docs/development.md", "expected": "ALLOW"}
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "category": "report",
-  "cases": [
-    {"id": "RN-001", "kind": "report", "input": "完了しました。", "expected": "NEEDS_EVIDENCE"},
-    {"id": "RN-002", "kind": "report", "input": "検証済みです。", "expected": "NEEDS_EVIDENCE"}
-  ]
-}

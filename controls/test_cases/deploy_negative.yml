@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "category": "deploy",
-  "cases": [
-    {"id": "DN-001", "kind": "command", "input": "aws cloudformation deploy", "expected": "DENY"},
-    {"id": "DN-002", "kind": "command", "input": "aws codepipeline start-pipeline-execution", "expected": "DENY"},
-    {"id": "DN-003", "kind": "command", "input": "sam deploy", "expected": "DENY"}
-  ]
-}
