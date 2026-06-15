@@ -24,8 +24,15 @@ $ErrorActionPreference = 'Stop'
 
 function Invoke-Git {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
-    $output = & git @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & git @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     if ($output) { $output | ForEach-Object { Write-Output ([string]$_) } }
     if ($exitCode -ne 0) {
         throw "STOP: git $($Arguments -join ' ') failed with exit code $exitCode."
@@ -34,8 +41,15 @@ function Invoke-Git {
 
 function Get-GitText {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
-    $output = & git @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & git @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     if ($exitCode -ne 0) {
         throw "STOP: git $($Arguments -join ' ') failed with exit code $exitCode. $output"
     }
