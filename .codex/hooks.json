@@ -5,9 +5,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Loading comprehensive control policy"
+            "statusMessage": "Loading Control Platform v2 policy"
           }
         ]
       }
@@ -17,9 +17,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Passing control contract to subagent"
+            "statusMessage": "Passing Control Platform v2 contract"
           }
         ]
       }
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
             "statusMessage": "Classifying current-turn contract"
           }
@@ -42,21 +42,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Checking tool access"
+            "statusMessage": "Checking Control Platform v2 tool policy"
           }
         ]
       }
     ],
     "PermissionRequest": [
       {
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Checking permission request"
+            "statusMessage": "Checking Control Platform v2 permission policy"
           }
         ]
       }
@@ -67,9 +68,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Checking tool result"
+            "statusMessage": "Checking Control Platform v2 tool result policy"
           }
         ]
       }
@@ -79,9 +80,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Persisting compact control summary"
+            "statusMessage": "Checking Control Platform v2 compact preconditions"
           }
         ]
       }
@@ -91,9 +92,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Restoring compact control summary"
+            "statusMessage": "Restoring Control Platform v2 compact context"
           }
         ]
       }
@@ -103,9 +104,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Checking subagent report"
+            "statusMessage": "Checking Control Platform v2 subagent report"
           }
         ]
       }
@@ -115,9 +116,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -B .codex/hooks/codex_hook_adapter.py",
+            "command": "python -B scripts/control_platform/codex_hook_adapter.py",
             "timeout": 5,
-            "statusMessage": "Checking final report"
+            "statusMessage": "Checking Control Platform v2 final report"
           }
         ]
       }

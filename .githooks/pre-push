@@ -1,2 +1,2 @@
 #!/bin/sh
-python -B -m scripts.control.cli --git-hook pre-push
+python -B -m scripts.control_platform.cli --git-hook pre-push

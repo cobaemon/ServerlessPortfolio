@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "expire-artifacts-after-365-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Expiration": {
+        "Days": 365
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    }
+  ]
+}

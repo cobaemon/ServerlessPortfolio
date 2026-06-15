@@ -74,6 +74,35 @@ CodePipeline は V2 pipeline として定義し、Git push trigger に file path
 
 staging のデプロイ、確認、ロールバック、影響範囲は [`staging-deployment-runbook.md`](staging-deployment-runbook.md) に記載しています。
 
+## デプロイ後のAWS確認
+
+STG と PROD のデプロイ作業は、AWS 側の反映確認を責任範囲に含めます。完了報告には、CodePipeline の source revision と status、CloudFormation の stack status、Lambda の alias/version/readiness を証跡として含めます。
+
+公開エンドポイントがある場合は、HTTP または browser の疎通結果も確認し、未確認項目が残る場合は完了ではなく未確認として報告します。
+
+## S3 artifact bucket の保持
+
+CodePipeline artifact bucket は `pipeline.yaml` の `S3Bucket` parameter と `ArtifactStore.Location` で既存 bucket を参照します。bucket 本体はこの template では作成しないため、CloudFormation import は行いません。
+
+対象 bucket は次の2件です。
+
+- `cobaemon-serverless-portfolio-prod-artifacts`
+- `cobaemon-serverless-portfolio-staging-artifacts`
+
+保持ルールの正本は [`aws/s3-lifecycle/artifacts-365-days.json`](../aws/s3-lifecycle/artifacts-365-days.json) とします。365日経過した artifact object を削除対象にし、開始後7日を超えた未完了 multipart upload を中止します。
+
+AWSへ適用する場合は、このJSONをそのまま `put-bucket-lifecycle-configuration` に渡します。適用後は `get-bucket-lifecycle-configuration` の結果が正本JSONと一致することを証跡として残します。
+
+## CloudWatch Logs の保持
+
+現行 CodeBuild log group は `pipeline.yaml` の `AWS::Logs::LogGroup` で管理し、`RetentionInDays: 365` を設定します。
+
+現行 Lambda log group は `template.yaml` の `AWS::Logs::LogGroup` で管理し、`RetentionInDays: 365` を設定します。
+
+既存 log group は CloudFormation import で stack 管理へ取り込みます。`DeletionPolicy` と `UpdateReplacePolicy` は `Delete` とし、template 管理から外れた log group は保持しません。
+
+現行 Lambda、現行 CodeBuild、現行 Synthetics に対応しない log group は管理外 log group として削除対象です。
+
 ## IAM 権限最適化
 
 IAM 権限縮小は、初回 staging デプロイを完了してから staging で段階的に検証します。

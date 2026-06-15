@@ -124,6 +124,14 @@ Resources:
         Value: portfolio
       - Key: service
         Value: lambda
+
+  DjangoFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DjangoFunction}"
+      RetentionInDays: 365
   
   DjangoApi:
     Type: AWS::Serverless::Api

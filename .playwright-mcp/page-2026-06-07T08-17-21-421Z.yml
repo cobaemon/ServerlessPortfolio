@@ -1,0 +1,77 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "Portfolio" [ref=e4] [cursor=pointer]:
+        - /url: /portfolio/top/#page-top
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link "Portfolio" [ref=e8] [cursor=pointer]:
+            - /url: "#portfolio"
+        - listitem [ref=e9]:
+          - link "About" [ref=e10] [cursor=pointer]:
+            - /url: "#about"
+        - listitem [ref=e11]:
+          - link "Contact" [ref=e12] [cursor=pointer]:
+            - /url: "#contact"
+        - separator
+        - listitem [ref=e13]:
+          - link "Account" [ref=e14] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=e15]:
+          - link "Languages" [ref=e16] [cursor=pointer]:
+            - /url: "#"
+  - banner [ref=e17]:
+    - generic [ref=e18]:
+      - img "..." [ref=e20]
+      - heading "Hirotaka Kobayashi" [level=1] [ref=e21]
+      - img "Star Icon" [ref=e25]
+      - paragraph [ref=e27]: Programmer
+  - generic [ref=e29]:
+    - heading "Portfolio" [level=2] [ref=e30]
+    - generic [ref=e34]:
+      - img "..." [ref=e39] [cursor=pointer]
+      - img "..." [ref=e44] [cursor=pointer]
+      - img "..." [ref=e49] [cursor=pointer]
+      - img "..." [ref=e54] [cursor=pointer]
+      - img "..." [ref=e59] [cursor=pointer]
+  - generic [ref=e61]:
+    - heading "About" [level=2] [ref=e62]
+    - generic [ref=e66]:
+      - paragraph [ref=e68]: 4年間のプログラミング経験を通じて、幅広い言語と技術を習得しました。C++、C、C#を学び、PythonとDart/Flutterも独学で習得しました。これらのスキルを活用して、さまざまなプロジェクトに取り組んできました。
+      - generic [ref=e69]:
+        - paragraph
+        - text: Pythonベースのプロジェクトでは、家庭の予算アプリ、パスワード管理アプリ、Djangoフレームワークを使用したWebポートフォリオを開発しました。さらに、機械学習技術を活用して手書き文字認識アプリを作成しました。
+      - generic [ref=e70]:
+        - paragraph
+        - text: Dart/Flutterの開発では、データベースアクセス制御アプリを作成しました。この経験を通じて、さまざまなプラットフォームや環境での開発能力を向上させることができました。
+      - generic [ref=e71]:
+        - paragraph
+        - text: 私は積極的にチームプロジェクトに参加し、ファイル共有アプリや家庭の予算アプリを開発してきました。これにより、チーム開発のスキルを磨き、他のメンバーと協力してプロジェクトを進める能力を身につけることができました。私の多様な技術的専門知識とチームワークは、将来のプロジェクトで確実に役立つでしょう。
+  - generic [ref=e73]:
+    - heading "Contact Me" [level=2] [ref=e74]
+    - img "Star Icon" [ref=e78]
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - textbox "Full Name" [ref=e84]:
+          - /placeholder: Enter your name...
+        - generic: Full Name
+      - generic [ref=e85]:
+        - textbox "Email Address" [ref=e86]:
+          - /placeholder: name@example.com
+        - generic: Email Address
+      - generic [ref=e87]:
+        - textbox "Phone Number" [ref=e88]:
+          - /placeholder: (123) 456-7890
+        - generic: Phone Number
+      - generic [ref=e89]:
+        - textbox "Message" [ref=e90]:
+          - /placeholder: Enter your message here...
+        - generic: Message
+      - button "Send" [ref=e91] [cursor=pointer]
+  - contentinfo [ref=e92]:
+    - generic [ref=e95]:
+      - heading "Around the Web" [level=4] [ref=e96]
+      - link "..." [ref=e97] [cursor=pointer]:
+        - /url: https://github.com/cobaemon
+        - generic:
+          - img "..."

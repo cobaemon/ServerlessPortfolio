@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "skills": [
+    {
+      "name": "stg-deploy-procedure",
+      "description": "Execute the closed STG deployment procedure without discretionary push-content stops.",
+      "path": ".agents/skills/stg-deploy-procedure/SKILL.md",
+      "policy_gate": "INV-FIXED-PROCEDURE"
+    },
+    {
+      "name": "performance-verification",
+      "description": "Verify performance without mixing server, HTTP, browser, paint, real-user, cold-like, and warm samples.",
+      "path": ".agents/skills/performance-verification/SKILL.md",
+      "policy_gate": "INV-PERF-LAYER"
+    },
+    {
+      "name": "incident-response",
+      "description": "Record and analyze incidents with root cause, violated invariant, control change, regression test, and residual risk.",
+      "path": ".agents/skills/incident-response/SKILL.md",
+      "policy_gate": "INV-INCIDENT-LIFECYCLE"
+    },
+    {
+      "name": "control-change",
+      "description": "Modify the control platform without incident-specific if-statements or unconnected controls.",
+      "path": ".agents/skills/control-change/SKILL.md",
+      "policy_gate": "INV-REPORT-GATE"
+    },
+    {
+      "name": "evidence-reporting",
+      "description": "Produce reports that separate facts, evidence, judgments, and unknowns.",
+      "path": ".agents/skills/evidence-reporting/SKILL.md",
+      "policy_gate": "INV-P1-EVIDENCE"
+    }
+  ]
+}

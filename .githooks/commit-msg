@@ -1,2 +1,2 @@
 #!/bin/sh
-python -B -m scripts.control.cli --git-hook commit-msg "$1"
+python -B -m scripts.control_platform.cli --git-hook commit-msg "$1"

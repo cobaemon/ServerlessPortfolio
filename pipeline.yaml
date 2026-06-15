@@ -201,6 +201,22 @@ Resources:
         - Key: service
           Value: codepipeline
 
+  CodeBuildProjectLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/codebuild/${CodePipelineName}-Build"
+      RetentionInDays: 365
+
+  CodeBuildDepsProjectLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/codebuild/${CodePipelineName}-Deps"
+      RetentionInDays: 365
+
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:

@@ -10,10 +10,10 @@ phases:
     runtime-versions:
       python: 3.12
     commands:
-      - python -B -m scripts.control.cli --validate-policy
-      - python -B -m scripts.control.cli --validate-hooks
-      - python -B -m scripts.control.cli --validate-githooks
-      - python -B -m scripts.control.cli --self-test
+      - python -B -m scripts.control_platform.cli --validate-policy
+      - python -B -m scripts.control_platform.cli --validate-hooks
+      - python -B -m scripts.control_platform.cli --validate-githooks
+      - python -B -m scripts.control_platform.cli --self-test
       - echo "依存関係のインストールを開始..."
       - pip install --upgrade pip
       - pip install -r requirements.txt

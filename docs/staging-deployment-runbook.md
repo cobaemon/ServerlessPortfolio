@@ -152,6 +152,21 @@ aws codepipeline get-pipeline-state `
   --profile aws_portfolio_profile
 ```
 
+Lambda alias、published version、readiness を確認する。
+
+```powershell
+aws lambda list-aliases `
+  --function-name cobaemon-serverless-portfolio-staging-stack-DjangoFunction `
+  --region ap-northeast-1 `
+  --profile aws_portfolio_profile
+
+aws lambda get-function-configuration `
+  --function-name cobaemon-serverless-portfolio-staging-stack-DjangoFunction:live `
+  --region ap-northeast-1 `
+  --profile aws_portfolio_profile `
+  --query "{Version:Version,State:State,LastUpdateStatus:LastUpdateStatus,SnapStart:SnapStart}"
+```
+
 API Gateway custom domain を確認する。
 
 ```powershell

@@ -1,0 +1,42 @@
+{
+  "id": "stg-deploy-fixed-procedure",
+  "version": "2.0.0",
+  "type": "closed_state_machine",
+  "deployment_unit": "branch_or_revision_unless_user_explicitly_limits_scope",
+  "policy_gate": "INV-FIXED-PROCEDURE",
+  "states": [
+    "confirm_current_turn_deploy_permission",
+    "resolve_authoritative_runbook",
+    "verify_local_preconditions",
+    "push_or_release_step_when_allowed_by_contract",
+    "observe_pipeline",
+    "verify_cloudformation",
+    "verify_lambda_alias_version_readiness",
+    "verify_http_or_browser_contract_evidence",
+    "report_with_evidence_matrix"
+  ],
+  "allowed_hard_stop_predicates": [
+    "AWS profile or credentials unavailable",
+    "target environment unknown",
+    "fixed procedure definition missing or contradictory",
+    "local uncommitted, unstaged, or untracked worktree changes outside procedure",
+    "pipeline, CloudFormation, Lambda readiness, or HTTP verification fails"
+  ],
+  "forbidden_stop_predicates": [
+    "origin/dev..branch contains multiple commits",
+    "commit range contains control changes",
+    "post-push evidence is not available before push",
+    "subset deploy seems safer without user request",
+    "existing unpushed commits require manual content review before the fixed push step"
+  ],
+  "decision_for_forbidden_stop": "DENY_STOP_CONTINUE_PROCEDURE",
+  "post_execution_evidence": [
+    "source revision",
+    "pipeline status",
+    "CloudFormation status",
+    "Lambda alias/version/readiness",
+    "HTTP evidence",
+    "browser evidence when user-visible or browser performance is claimed",
+    "unknowns explicitly listed"
+  ]
+}
