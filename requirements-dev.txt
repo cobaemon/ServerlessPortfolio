@@ -1,0 +1,22 @@
+# 開発・テスト専用依存（Lambda 配布物 requirements.txt には同梱しない）。
+#
+# 用途: Contact_Function ドメイン層のプロパティテスト（PBT）。
+#   出典: tasks.md 1.4〜2.6、design.md「Testing Strategy」（行451-454）。
+#
+# ライセンス注記（第二原則6・要ライセンス確認）:
+#   Hypothesis は Mozilla Public License 2.0（MPL-2.0）で配布される。
+#   出典: 公式リポジトリ LICENSE.txt
+#     https://raw.githubusercontent.com/HypothesisWorks/hypothesis/master/LICENSE.txt
+#     （原文: "released under the Mozilla Public License v 2.0"）。
+#   ※ design.md 行451 は「BSD ライセンス」と記載しており事実と相違する（要訂正）。
+#   本依存は開発・テスト時のみ使用し、改変せず、Lambda 配布物へ同梱しないため、
+#   MPL-2.0 のソース開示義務の実務的対象外である（非配布・非改変）。
+#
+# バージョン固定（第三原則2 整合性）: 実行環境 venv は Python 3.13。
+#   確認日時点の最新版を厳密固定する（出典: `pip index versions hypothesis` = 6.158.0）。
+#   配布物メタデータの License-Expression = MPL-2.0 を確認済み（`pip show hypothesis`）。
+hypothesis==6.158.0
+# Hypothesis の推移的依存（transitive dependency）。開発・テスト時のみ使用。
+#   ライセンス: Apache License 2.0（`pip show sortedcontainers` の License 欄で確認済み）。
+#   再現性のためバージョンを固定する（第三原則2 整合性）。
+sortedcontainers==2.4.0
