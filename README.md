@@ -1,4 +1,4 @@
-# ServerlessPortfolio
+﻿# ServerlessPortfolio
 
 Djangoベースのサーバーレスポートフォリオアプリケーションです。AWS Lambda、API Gateway、CloudFront、S3を使用した完全なサーバーレスアーキテクチャで構築されています。
 
@@ -61,15 +61,36 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 # 依存関係のインストール
 pip install -r requirements.txt
 
-# 環境変数の設定
-cp env.json.example env.json
-# env.jsonを編集して必要な環境変数を設定
+# ローカル開発用の環境変数を config/.env に設定
+cat <<'EOF' > config/.env
+DJANGO_SECRET_KEY=dev-default-secret-key
+ALLOWED_HOSTS=localhost,127.0.0.1
+LOG_LEVEL=INFO
+
+# SMTP を使わない場合は空のままで console backend が使われます
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+DEFAULT_FROM_EMAIL=webmaster@localhost
+DEFAULT_TO_EMAIL=
+EMAIL_USE_TLS=False
+EMAIL_USE_SSL=False
+EOF
 
 # データベースのマイグレーション
-python manage.py migrate
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py migrate
 
 # 開発サーバーの起動
-python manage.py runserver
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py runserver
+```
+
+PowerShell の場合:
+
+```powershell
+$env:DJANGO_SETTINGS_MODULE="config.settings.dev"
+.\.venv\Scripts\python.exe manage.py migrate
+.\.venv\Scripts\python.exe manage.py runserver
 ```
 
 ### 2. AWS設定
@@ -237,21 +258,21 @@ sam deploy --template-file dependencies.yaml `
 
 ```bash
 # 開発サーバーの起動
-python manage.py runserver
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py runserver
 
 # 静的ファイルの収集
-python manage.py collectstatic
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py collectstatic
 
 # 翻訳ファイルの生成
-python manage.py makemessages -l ja
-python manage.py makemessages -l en
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py makemessages -l ja
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py makemessages -l en
 # 他の言語も同様
 
 # 翻訳ファイルのコンパイル
-python manage.py compilemessages
+DJANGO_SETTINGS_MODULE=config.settings.dev python manage.py compilemessages
 ```
 
-ローカルでSMTP送信をテストする場合は、`.env` に以下の環境変数を設定します。
+ローカルで SMTP 送信をテストする場合は、`config/.env` に以下の環境変数を設定します。
 
 - `EMAIL_HOST`
 - `EMAIL_PORT`
@@ -266,7 +287,6 @@ Gmail 等の外部 SMTP サーバーを利用する場合は、`EMAIL_PORT=587` 
 `EMAIL_USE_TLS=True` を指定するのが一般的です。
 
 設定がない場合は `django.core.mail.backends.console.EmailBackend` が使用されます。
-メールの内容はCloudWatch Logsに出力されますが、実際の送信は行われません。
 
 ### テスト
 

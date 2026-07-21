@@ -1,4 +1,4 @@
-version: 0.2
+﻿version: 0.2
 
 env:
   variables:
@@ -106,8 +106,8 @@ phases:
         
       # フォントをダウンロードして配置
       - mkdir -p portfolio/static/assets/fonts
-      - curl -L -o portfolio/static/assets/fonts/Montserrat.ttf https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Regular.ttf
-      - curl -L -o portfolio/static/assets/fonts/Lato.ttf https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf
+      - curl -L -o portfolio/static/assets/fonts/Montserrat.ttf https://github.com/google/fonts/raw/refs/heads/main/ofl/montserrat/Montserrat%5Bwght%5D.ttf
+      - curl -L -o portfolio/static/assets/fonts/Lato.ttf https://github.com/google/fonts/raw/refs/heads/main/ofl/lato/Lato-Regular.ttf
 
       # CSS minification
       - |
@@ -165,3 +165,4 @@ artifacts:
     - parameters.json
     - bucketpolicy.yaml
     - bucketpolicy-parameters.json
+
