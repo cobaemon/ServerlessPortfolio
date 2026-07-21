@@ -153,6 +153,8 @@ class ApiGatewayRootRedirectTemplateTests(SimpleTestCase):
         """
         Return the SAM template text from the repository root.
         """
-        return (Path(__file__).resolve().parents[1] / "template.yaml").read_text(
+        # tests/ パッケージ化に伴い本ファイルは 1 階層深くなったため、リポジトリ
+        # ルートは parents[2]（.../portfolio/tests/ → portfolio → リポジトリルート）。
+        return (Path(__file__).resolve().parents[2] / "template.yaml").read_text(
             encoding="utf-8"
         )
