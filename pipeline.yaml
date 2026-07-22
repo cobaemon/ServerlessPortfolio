@@ -547,8 +547,13 @@ Resources:
                   - lambda:CreateAlias
                   - lambda:CreateFunction
                   - lambda:DeleteFunction
+                  # Contact_Function の予約同時実行数（ReservedConcurrentExecutions, C7）の
+                  # 設定・解除に必要（出典: template.yaml ContactFunction、design.md C3/C7）。
+                  - lambda:PutFunctionConcurrency
+                  - lambda:DeleteFunctionConcurrency
                   - lambda:GetFunction
                   - lambda:GetFunctionConfiguration
+                  - lambda:GetFunctionConcurrency
                   - lambda:ListTags
                   - lambda:ListVersionsByFunction
                   - lambda:PublishVersion
