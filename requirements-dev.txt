@@ -20,3 +20,25 @@ hypothesis==6.158.0
 #   ライセンス: Apache License 2.0（`pip show sortedcontainers` の License 欄で確認済み）。
 #   再現性のためバージョンを固定する（第三原則2 整合性）。
 sortedcontainers==2.4.0
+
+# IaC スナップショット/ポリシーテスト（tasks.md 5.5）用の YAML パーサ。
+#
+# 用途: SAM/CloudFormation テンプレート（template.yaml / dependencies.yaml /
+#   bucketpolicy.yaml）を構造的に解析し、SnapStart 不在・SES IAM 最小権限・
+#   S3 OAC 経由限定・ResponseHeadersPolicy(CSP)+redirect-to-https・API スロットリング・
+#   Lambda 予約同時実行数・WAF 既定不在を検証する（出典: tests/iac/test_template_policies.py、
+#   design.md「Testing Strategy > スナップショット/ポリシーテスト（IaC）」）。
+#   CloudFormation 短縮タグ（!Ref/!Sub/!GetAtt/!Equals/!Not/!FindInMap/!If 等）を
+#   SafeLoader サブクラス + マルチコンストラクタで解釈する（cfn-lint/aws-sam-cli と同一手法）。
+#
+# ライセンス注記（第二原則6・要ライセンス確認）:
+#   PyYAML は MIT License で配布される。
+#   出典: `pip show PyYAML` の License 欄 = "MIT"、
+#     配布物メタデータ Classifier = "License :: OSI Approved :: MIT License"（確認済み）、
+#     公式サイト https://pyyaml.org/ 。
+#   本依存は開発・テスト時のみ使用し、改変せず、Lambda 配布物（requirements.txt）へ
+#   同梱しない（非配布・非改変）。
+#
+# バージョン固定（第三原則2 整合性）: 実行環境 venv は Python 3.13。
+#   確認日時点で cp313 ホイールが提供される版を厳密固定する（再現性確保）。
+pyyaml==6.0.3
