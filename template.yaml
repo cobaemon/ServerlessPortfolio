@@ -256,10 +256,15 @@ Resources:
       Handler: contact_function.handler.lambda_handler
       Runtime: python3.12
       CodeUri: ./
-      # Lambda 予約同時実行数の上限（無料制御）。乱用時の同時実行増加・SES 大量送信・
-      # 従量課金の暴発（爆発半径）を抑制する（出典: design.md C3/C7「Lambda 予約同時実行数」、
-      # requirements.md R8-6）。保守的な上限であり後続タスクで調整可能とする（design 上は undetermined）。
-      ReservedConcurrentExecutions: 5
+      # Lambda 予約同時実行数（ReservedConcurrentExecutions）は本アカウントでは設定しない。
+      # 理由（事実・実測）: 対象アカウント(864454139429)の Lambda 同時実行上限は 10
+      # （aws lambda get-account-settings: ConcurrentExecutions=10）であり、AWS は予約後も
+      # 未予約同時実行を最低 10 残すことを要求するため、上限 10 のアカウントではいかなる
+      # 予約値も設定できない（InvalidRequest: decreases UnreservedConcurrentExecution below 10）。
+      # 代替の爆発半径・コスト暴発抑制（R8-6/R1・design.md C7）: (1) アカウント全体の同時実行が
+      # 10 に自然にキャップされること、(2) ContactApi の API Gateway スロットリング
+      # （ThrottlingRateLimit/BurstLimit）を維持することで担保する。将来クォータ引き上げ時に
+      # 予約同時実行数の再導入を検討する（出典: design.md C7、requirements.md R8-6）。
       Environment:
         Variables:
           # SsmConfigProvider が Parameter Store パス（/${Env}/portfolio/parameter/...）を

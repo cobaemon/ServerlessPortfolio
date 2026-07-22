@@ -820,15 +820,22 @@ class ContactApiThrottlingTests(unittest.TestCase):
 
 
 class ContactFunctionReservedConcurrencyTests(unittest.TestCase):
-    """Contact_Function 予約同時実行数上限の検証（R8-6）.
+    """Contact_Function 予約同時実行数に関する検証（R8-6）.
 
-    乱用時の爆発半径・SES 大量送信・従量課金の暴発を抑制するため、
-    `ContactFunction` に `ReservedConcurrentExecutions` が設定されていることを
-    検証する（出典: design.md C3/C7、requirements.md R8-6/R1）。
+    対象アカウント(864454139429)の Lambda 同時実行上限は 10
+    （aws lambda get-account-settings: ConcurrentExecutions=10）であり、AWS は予約後も
+    未予約同時実行を最低 10 残すことを要求するため、上限 10 のアカウントでは
+    `ReservedConcurrentExecutions` をいかなる値でも設定できない
+    （InvalidRequest: decreases UnreservedConcurrentExecution below 10）。
+    したがって本アカウントでは予約同時実行数を設定しないことを意図的な決定とし、
+    誤って再設定されないことを検証する。爆発半径・コスト暴発の抑制（R8-6/R1）は
+    (1) アカウント全体の同時実行上限 10 による自然なキャップ、(2) ContactApi の
+    API Gateway スロットリング（別テスト ContactApi... で検証）で担保する
+    （出典: design.md C7、requirements.md R8-6、実測 aws lambda get-account-settings）。
     """
 
-    def test_contact_function_has_reserved_concurrency(self) -> None:
-        """ContactFunction に予約同時実行数の上限が設定されている（R8-6）."""
+    def test_contact_function_reserved_concurrency_absent_due_to_account_limit(self) -> None:
+        """ContactFunction に予約同時実行数を設定しない（アカウント上限10の制約, R8-6）."""
         # ContactFunction が存在することを前提とする。
         self.assertIn(
             _CONTACT_FUNCTION_ID,
@@ -836,26 +843,16 @@ class ContactFunctionReservedConcurrencyTests(unittest.TestCase):
             msg="ContactFunction が template.yaml に存在しない（tasks.md 5.2 未反映）",
         )
         properties = _TEMPLATE_RESOURCES[_CONTACT_FUNCTION_ID]["Properties"]
-        reserved = properties.get("ReservedConcurrentExecutions")
-        # 設定されていること（未設定=無制限は暴発抑制にならない）。
-        self.assertIsNotNone(
-            reserved,
-            msg="ReservedConcurrentExecutions が未設定（R8-6 違反、無制限は暴発抑制にならない）",
-        )
-        # 整数かつ非負であること（bool は明示除外）。
-        self.assertIsInstance(
-            reserved,
-            int,
-            msg=f"ReservedConcurrentExecutions が整数でない: {reserved!r}",
-        )
-        self.assertFalse(
-            isinstance(reserved, bool),
-            msg="ReservedConcurrentExecutions が bool である（整数値であるべき）",
-        )
-        self.assertGreaterEqual(
-            reserved,
-            0,
-            msg=f"ReservedConcurrentExecutions が負値: {reserved!r}",
+        # 予約同時実行数は本アカウント（上限10）では設定不可のため、未設定であること。
+        # 将来クォータ引き上げ時に再導入する場合は本テストとアカウント制約を再評価する。
+        self.assertNotIn(
+            "ReservedConcurrentExecutions",
+            properties,
+            msg=(
+                "ReservedConcurrentExecutions が設定されている。アカウント同時実行上限が 10 の間は "
+                "AWS の未予約最低 10 制約により設定不可（InvalidRequest）。"
+                "爆発半径抑制はアカウント上限と ContactApi スロットリングで担保する（R8-6, design.md C7）。"
+            ),
         )
 
 
