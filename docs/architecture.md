@@ -43,8 +43,8 @@ flowchart LR
 - `ApiGatewayCustomDomain`: `DomainName` パラメータで指定される API Gateway カスタムドメイン。
 - `ApiGatewayBasePathMapping`: カスタムドメインを API Gateway のステージへ割り当てるマッピング。
 - `ApiGatewayRecordSet`: Route53 A レコード。
-- `StaticFilesResponseHeadersPolicy`: 静的ファイル配信用 CloudFront のレスポンスヘッダーポリシー。
-- `CloudFrontDistribution`: S3 静的ファイルバケットをオリジンにする CloudFront ディストリビューション。
+- `DisplayResponseHeadersPolicy`: 表示（S3 Default Behavior）レスポンス用のヘッダポリシー。セキュリティヘッダ（CSP/HSTS/X-Content-Type-Options/X-Frame-Options/Referrer-Policy）と静的ファイル用 CORS を統合したもの（旧 `StaticFilesResponseHeadersPolicy` を統合・置換）。
+- `CloudFrontDistribution`: S3 静的オリジン（表示/静的）と ContactApi オリジン（問い合わせ POST）の複数オリジンを持つ CloudFront ディストリビューション。
 
 ### `dependencies.yaml`
 

@@ -37,10 +37,65 @@ Parameters:
     AllowedValues:
       - "true"
       - "false"
+  # SES 検証済み送信元 identity（ドメインまたはメールアドレス）。
+  # Contact_Function の SES 実行ロールを検証済み identity ARN にリソース限定する
+  # ために使用する（ワイルドカード禁止、出典: design.md C4、requirements.md R6-2, R9-3）。
+  # 値そのものはコードにハードコードせず Parameter Store から取得する
+  # （出典: requirements.md R6-7、AllowedOrigin/AllowedHosts と同じ参照方式で一貫性を保つ）。
+  # 運用注記: 本パラメータが指す SSM パス（既定 /prod/portfolio/parameter/ses_verified_identity）に、
+  # ap-northeast-1 で検証済みの SES identity 文字列（例: ドメイン名または送信元メールアドレス）を
+  # 事前登録しておく必要がある（SES identity 検証はリージョン単位、出典: design.md C4）。
+  SesVerifiedIdentity:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: "The verified Amazon SES identity (domain or email) used to scope the ses:SendEmail resource ARN"
+    Default: /prod/portfolio/parameter/ses_verified_identity
+
+  # CloudFront 用 ACM 証明書（us-east-1）の ARN。
+  # CloudFront はビューア証明書を us-east-1 の ACM でのみ受け付ける（出典: AWS 公式
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-cloudfront-distribution-viewercertificate.html 、
+  # design.md Architecture「ACM: CloudFront 用証明書は us-east-1 で発行する」）。
+  # 本スタックの配備先は ap-northeast-1（samconfig.toml）であり、同一スタック内で
+  # AWS::CertificateManager::Certificate を作成するとスタックのリージョン（ap-northeast-1）に
+  # 発行され CloudFront では使用できない。したがって us-east-1 の証明書は別スタック等で
+  # 事前発行し、その ARN を本パラメータで受け取って参照する（ARN をハードコードしない、
+  # 非破壊で追加、出典: tasks.md 5.3「CloudFront 用 ACM 証明書（us-east-1）を非破壊で追加」、
+  # design.md「移行手順」）。
+  # 既定は空文字。空の間は既存挙動（CloudFront 既定証明書）を維持し、現行デプロイを一切
+  # 変更しない（Conditions: HasCloudFrontCertificate で切替）。ARN を与えるのは Route53 の
+  # カスタムドメイン切替（DNS カットオーバー、design.md「移行手順」ステップ4）と同時に行う
+  # 段階運用であり、AWS 公式仕様上、カスタム証明書は Aliases（代替ドメイン名）と対で指定する
+  # 必要があるため、ARN 指定時のみ Aliases も併せて有効化する（既定の空時は Aliases を付けない）。
+  CloudFrontCertificateArn:
+    Type: String
+    Description: "ACM certificate ARN in us-east-1 for CloudFront viewer certificate (empty keeps the default CloudFront certificate)"
+    Default: ""
+
+  # CloudFront の表示レスポンスへ付与する Content-Security-Policy ヘッダ値（ハッシュベース CSP）。
+  # 静的配信では per-request nonce を発行できないため nonce を廃し、インライン script/style の
+  # SHA-256（'sha256-...'）をビルド時に算出して反映する（出典: design.md C5/C6、requirements.md R7-2, R7-5）。
+  # 具体の 'sha256-...' 値および CloudFront 配信ドメインはテンプレート作成時点では未確定であり、
+  # ビルドステップ（tasks.md 4.1 の portfolio/management/commands/_csp_hash.py と 4.4 の render_static 拡張）が
+  # 最終的な CSP 文字列を生成し、デプロイ時に本パラメータへ供給する（buildspec の --parameter-overrides 等）。
+  # そのため sha256 値をここで捏造しない。既定値は design.md C6 の許可元表（base.py の
+  # CONTENT_SECURITY_POLICY.DIRECTIVES から nonce を除去したもの）に一致する静的ディレクティブのみを
+  # 記載した「安全な下限」であり、現行より緩和しない（'self' と現行許可の https 配信元のみ。
+  # 出典: config/settings/base.py の CONTENT_SECURITY_POLICY）。ビルドが CloudFront ドメインと
+  # 'sha256-...' を付加した完全版を供給する。report-uri は静的配信に Django のレポート受信
+  # エンドポイントが存在しないため既定から除外している（レポート機能の有無であり許可元の緩和ではない、
+  # 出典: design.md C6「report-uri の扱いはタスクで判断」）。
+  ContentSecurityPolicy:
+    Type: String
+    Description: "Hash-based Content-Security-Policy header value for display responses (finalized value with inline sha256 hashes is supplied by the build step)"
+    Default: "default-src 'self' https:; script-src 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; script-src-elem 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; style-src 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; style-src-elem 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'"
 
 Conditions:
   IsProd: !Equals [ !Ref Env, prod ]
   CreateARecord: !Equals [ !Ref ExistingARecord, "false" ]
+  # CloudFront 用 ACM 証明書 ARN が与えられているか（空文字でない）。
+  # True のときのみカスタムビューア証明書 + Aliases を有効化し、False（既定）では
+  # 既存の CloudFront 既定証明書を維持して現行デプロイを非破壊に保つ（出典: 上記
+  # CloudFrontCertificateArn パラメータ注記、AWS 公式 ViewerCertificate 仕様）。
+  HasCloudFrontCertificate: !Not [ !Equals [ !Ref CloudFrontCertificateArn, "" ] ]
 
 Mappings:
   EnvMapping:
@@ -58,14 +113,10 @@ Resources:
       Runtime: python3.12
       CodeUri: ./
       AutoPublishAlias: live
-      SnapStart:
-        ApplyOn: PublishedVersions
       Environment:
         Variables:
           DJANGO_SETTINGS_MODULE: !FindInMap [EnvMapping, !Ref Env, SettingsModule]
           DJANGO_SECRET_KEY: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:DJANGO_SECRET_KEY}}"
-          EMAIL_HOST_USER: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:EMAIL_HOST_USER}}"
-          EMAIL_HOST_PASSWORD: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:EMAIL_HOST_PASSWORD}}"
           GOOGLE_CLIENT_ID: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GOOGLE_CLIENT_ID}}"
           GOOGLE_CLIENT_SECRET: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
           GITHUB_CLIENT_ID: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
@@ -172,6 +223,115 @@ Resources:
         AllowOrigin: !Sub "'${AllowedOrigin}'"
         AllowMethods: "'GET,POST,OPTIONS'"
 
+  # 問い合わせ送信用 API Gateway（Django 非依存の Contact_Function 専用）。
+  # 表示は静的配信のため、本 API は動的処理（問い合わせ POST）のみを担う
+  # （出典: design.md C3「API Gateway 連携」、目標アーキテクチャ、requirements.md R4-1, R4-2）。
+  # 無料のプラットフォーム制御束としてスロットリング（レート/バースト上限）を設定し、
+  # 問い合わせ経路の乱用・DoS・従量課金の暴発を追加料金なしで抑制する
+  # （WAF レートベースルールの代替、出典: design.md C7/「セキュリティ×コスト戦略」、requirements.md R8-6）。
+  ContactApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Env
+      Name: CobaemonServerlessPortfolioContactApi
+      # ステージ/メソッドのスロットリング上限（全リソース・全メソッドに適用）。
+      # 値は保守的な既定値であり、後続タスク（実測・チューニング）で調整可能とする
+      # （design 上は undetermined。決めつけず、まず控えめな上限で乱用を抑える）。
+      MethodSettings:
+        - ResourcePath: "/*"        # すべてのリソースパスに適用
+          HttpMethod: "*"           # すべての HTTP メソッドに適用
+          ThrottlingRateLimit: 5    # 定常レート上限（リクエスト/秒）。調整可能
+          ThrottlingBurstLimit: 10  # バースト上限（同時許容数）。調整可能
+
+  # 問い合わせ送信処理を担う Django 非依存の軽量 Lambda（Contact_Function、design.md C3）。
+  # 実行時に Django を import・ロードしない（handler は標準ライブラリ・boto3・自パッケージのみ
+  # 参照、出典: contact_function/handler.py、requirements.md R4-1, R4-2）。
+  # ハンドラのモジュールパスが `contact_function.handler` であり絶対 import
+  # （`from contact_function.adapters...`）を用いるため、パッケージ親をパスに含める
+  # 既存と同一の CodeUri（リポジトリルート ./）を用いる（DjangoFunction と一貫、
+  # 既存パッケージングを壊さない）。
+  ContactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: contact_function.handler.lambda_handler
+      Runtime: python3.12
+      CodeUri: ./
+      # Lambda 予約同時実行数の上限（無料制御）。乱用時の同時実行増加・SES 大量送信・
+      # 従量課金の暴発（爆発半径）を抑制する（出典: design.md C3/C7「Lambda 予約同時実行数」、
+      # requirements.md R8-6）。保守的な上限であり後続タスクで調整可能とする（design 上は undetermined）。
+      ReservedConcurrentExecutions: 5
+      Environment:
+        Variables:
+          # SsmConfigProvider が Parameter Store パス（/${Env}/portfolio/parameter/...）を
+          # 構築するために環境名を参照する（出典: contact_function/adapters/config_provider.py、
+          # design.md DM4）。値はハードコードせず Env パラメータから供給する（R6-7）。
+          ENV: !Ref Env
+      Events:
+        # 問い合わせ送信（POST /portfolio/contact）を Contact_Function へ接続する
+        # （出典: design.md C3、requirements.md R4-1）。
+        ContactPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ContactApi
+            Path: /portfolio/contact
+            Method: POST
+        # CORS プリフライト（OPTIONS）も handler が Origin 依存で応答するため Lambda へ接続する
+        # （SAM の mock OPTIONS を使わず、handler の Origin 検証・CORS 応答に一元化。
+        #  出典: contact_function/handler.py の OPTIONS 分岐、design.md C7、requirements.md R8-5）。
+        ContactOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ContactApi
+            Path: /portfolio/contact
+            Method: OPTIONS
+      # 実行ロールは最小権限のみを付与する（ワイルドカード禁止、出典: requirements.md R9-3、
+      # design.md C4）。SAM の Properties.Policies 直下に定義し、ロールへ確実に適用する。
+      Policies:
+        # CloudWatch Logs への基本出力（既存 DjangoFunction と同一の managed policy、
+        # 出典: template.yaml DjangoFunction、requirements.md R9-3 の許容範囲）。
+        - AWSLambdaBasicExecutionRole
+        # SES 送信権限: SESv2 SendEmail のみ（ses_email_sender.py は SendEmail のみ使用し
+        # SendRawEmail は使わない、出典: contact_function/adapters/ses_email_sender.py）。
+        # リソースは検証済み identity ARN に限定し、ワイルドカードを用いない
+        # （出典: design.md C4、requirements.md R6-2, R9-3）。リージョンはスタック配備先
+        # （ap-northeast-1）に解決される。
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource:
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesVerifiedIdentity}"
+        # Parameter Store 読み取り権限: SsmConfigProvider が get_parameter で参照する
+        # 3 パラメータのみに限定する（GetParameter 単体で十分。出典:
+        # contact_function/adapters/config_provider.py、design.md DM4）。
+        # 対象パス以外・ワイルドカードは付与しない（最小権限、requirements.md R9-3）。
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Env}/portfolio/parameter/default_from_email"
+                - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Env}/portfolio/parameter/default_to_mail"
+                - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Env}/portfolio/parameter/csrf_trusted_origins"
+      # リソースタグ（既存リソースと同じ env/app/service の 3 種で一貫性を保つ。
+      # SAM の Properties.Tags は文字列マップ形式。出典: coding-conventions.md「Tags」方針）。
+      Tags:
+        env: !Ref Env
+        app: portfolio
+        service: contact-lambda
+
+  # Contact_Function 用 CloudWatch Logs ロググループ（既存 DjangoFunctionLogGroup と同一方針）。
+  # 明示定義により保持期間を制御し、無期限保持による Logs コスト増を避ける
+  # （コスト最適化の趣旨と整合、出典: design.md C8/C9 の CloudWatch Logs 帰属）。
+  # 保持日数は既存 DjangoFunctionLogGroup（365 日）と一貫させ、後続タスクで調整可能とする。
+  ContactFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ContactFunction}"
+      RetentionInDays: 365
+
   ServerlessCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
@@ -211,7 +371,47 @@ Resources:
         DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
         HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
 
-  # WAF設定（セキュリティ強化が必要な場合に有効化）
+  # ============================================================
+  # WAF（AWS::WAFv2）— 既定不採用（コメントアウトのまま保持）
+  # ============================================================
+  # 【方針】WAF は既定で採用しない。以下の WAFWebACL / WAFWebACLAssociation は
+  #   無効（コメントアウト）のまま保持し、下記「段階導入条件」を満たした場合にのみ
+  #   最小構成へ縮退して有効化する（出典: design.md「セキュリティ×コスト戦略」/
+  #   「WAF/レート制限方針（R8-6、確定）」、requirements.md R8-6）。
+  #
+  # 【既定不採用の判断根拠】（出典: design.md「WAF 既定不採用の判断根拠」）
+  #   1. 攻撃対象領域の構造的縮小: 静的ファースト配信＋脱 Django により表示経路から
+  #      Lambda を排除し、動的処理は「DB を触らず SES 送信のみを行う検証済みの
+  #      1 エンドポイント（問い合わせ POST）」に限定される。SQLi・テンプレート
+  #      インジェクション等の主要ベクタが構造的にほぼ存在しないため、シグネチャ型
+  #      マネージドルールの限界効用が小さい。
+  #   2. 費用対効果: WAF は Web ACL 約 USD 5.00/月＋ルール約 USD 1.00/月/グループ
+  #      （＋リクエスト従量、Bot Control は追加で月額発生）であり、固有運用コスト上限
+  #      Cost_Budget（税込 USD 10.00）の大半を WAF が消費するため費用対効果が低い。
+  #
+  # 【代替として採用済みの無料〜ほぼ無料の制御束】（出典: design.md「採用する
+  #   無料〜ほぼ無料の制御束」、requirements.md R8-6）
+  #   乱用・DoS・コスト暴発・不正入力には次の制御で対処する:
+  #   API Gateway スロットリング（WAF レートベースルールの代替）/ Lambda 予約同時実行数
+  #   の上限 / Origin・Referer 検証＋CORS 制限 / ハニーポット（隠しフィールド）/
+  #   SES 最小権限＋検証済み送信元 / S3 OAC＋バケットポリシー＋HTTPS 強制 /
+  #   CloudFront セキュリティヘッダ（CSP 等）/ AWS Shield Standard（CloudFront に自動適用）/
+  #   AWS Budgets・CloudWatch アラーム（コスト異常＝乱用兆候の早期検知）。
+  #
+  # 【段階導入条件（エスカレーション経路）】（出典: design.md「WAF 段階導入条件」）
+  #   - 発動条件: 標的型攻撃・継続的な乱用が「実際に観測された場合」にのみ導入する。
+  #     観測前の予防的導入は行わない。
+  #   - 最小構成へ縮退: Web ACL 1 枚＋レートベースルール 1 つ、Bot Control 無し、
+  #     守る対象を CloudFront か問い合わせ API（ContactApi）のどちらか 1 つに限定
+  #     （税込 約 USD 6〜7）。
+  #
+  # 【注意】以下にコメントアウトされているブロックはマネージドルール 5 種フルセット
+  #   （AWSManagedRulesCommonRuleSet / SQLiRuleSet / KnownBadInputsRuleSet /
+  #   AmazonIpReputationList / BotControlRuleSet）である。段階導入時はこのフルセットを
+  #   そのまま有効化してはならない。誤って全ルールを有効化しないよう、必ず上記の
+  #   最小構成（Web ACL 1 枚＋レートベースルール 1 つ、Bot Control 無し、適用先 1 つに
+  #   限定）へ縮退させたうえで有効化すること。
+  # ============================================================
   # WAFWebACL:
   #   Type: AWS::WAFv2::WebACL
   #   Properties:
@@ -342,12 +542,51 @@ Resources:
   #             StringEquals:
   #               "AWS:SourceArn": !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
-  StaticFilesResponseHeadersPolicy:
+  # 表示（S3 Default Behavior）レスポンス用のレスポンスヘッダポリシー。
+  # design.md C5 の方針「既存 StaticFilesResponseHeadersPolicy（CORS 用）は用途が異なるため
+  # 保持しつつ、SecurityHeadersConfig + CustomHeadersConfig（CSP）を持つポリシーを新設または統合」
+  # に対し、1 つの CacheBehavior は 1 つの ResponseHeadersPolicy しか参照できないため、
+  # 旧 CORS 専用ポリシー（StaticFilesResponseHeadersPolicy）を廃し、その CORS 設定を本ポリシーへ
+  # 統合したうえでセキュリティヘッダ（CSP/HSTS/X-Content-Type-Options/X-Frame-Options/Referrer-Policy）を
+  # 併せ持つ単一ポリシーへ統一する（未使用リソースを残さない、出典: principles.md 第三原則4）。
+  # CloudFront の ResponseHeadersPolicy は CorsConfig と SecurityHeadersConfig を同一ポリシーに
+  # 併記可能（出典: AWS 公式 ResponseHeadersPolicyConfig）。本ポリシーは表示（S3 Default）Behavior に
+  # のみ適用し、問い合わせ（API）Behavior には適用しない（design.md C5/C6、requirements.md R7）。
+  DisplayResponseHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
       ResponseHeadersPolicyConfig:
-        Name: !Sub "StaticFilesCORS-${Env}"
-        Comment: "CORS policy for static files"
+        Name: !Sub "DisplaySecurityHeaders-${Env}"
+        Comment: "Security headers (CSP/HSTS/nosniff/DENY/Referrer-Policy) and static-file CORS for display responses"
+        # セキュリティ応答ヘッダ集合（出典: design.md C6「付与するセキュリティ応答ヘッダ集合」、
+        # requirements.md R7-1/R7-3/R7-6）。現行 Django 相当以上の値とし緩和しない。
+        SecurityHeadersConfig:
+          # Content-Security-Policy（必須, R7-6）。ハッシュベース CSP の値は ContentSecurityPolicy
+          # パラメータから供給する（nonce を含めず、sha256 はビルドが付加。出典: 同パラメータ注記、C6）。
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: !Ref ContentSecurityPolicy
+            Override: true
+          # Strict-Transport-Security（HTTPS 強制の恒久化, R7-3）。max-age は 2 年。
+          # includeSubDomains を付与（対象ホスト配下に別サブドメインは存在しない）。
+          # preload はプリロードリスト登録という不可逆運用を伴うため既定 false（決めつけない）。
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Preload: false
+            Override: true
+          # X-Content-Type-Options: nosniff（MIME スニッフィング抑止, R7-6）。
+          ContentTypeOptions:
+            Override: true
+          # X-Frame-Options: DENY（クリックジャッキング抑止, R7-6。CSP frame-ancestors 'none' と整合）。
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          # Referrer-Policy: same-origin（Django SECURE_REFERRER_POLICY 既定と一致させ整合性を保つ,
+          # 出典: Django 既定 same-origin。R7-6）。
+          ReferrerPolicy:
+            ReferrerPolicy: same-origin
+            Override: true
+        # 静的ファイル配信用 CORS（旧 StaticFilesResponseHeadersPolicy から統合、設定は不変）。
         CorsConfig:
           AccessControlAllowOrigins:
             Items:
@@ -363,12 +602,16 @@ Resources:
               - "*"
           OriginOverride: true
 
-  # CloudFrontディストリビューション（静的ファイル配信用）
+  # CloudFront ディストリビューション（案A: 単一エントリ + 複数オリジン）。
+  # (1) S3 オリジン: 表示/静的（Default Behavior, Lambda 非経由, 出典: design.md 案A/R3-4）。
+  # (2) ContactApi オリジン: 問い合わせ POST（Behavior /portfolio/contact, 動的, 出典: design.md C3/C7）。
+  # 全 Behavior で ViewerProtocolPolicy: redirect-to-https による HTTPS 強制を適用（R7-4, R9-1）。
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Origins:
+          # S3 静的オリジン（既存, OAC 経由。dependencies.yaml の OAC を ImportValue で参照）。
           - Id: !Sub "S3-cobaemon-serverless-portfolio-${Env}-static"
             DomainName: !Sub "cobaemon-serverless-portfolio-${Env}-static.s3.${AWS::Region}.amazonaws.com"
             S3OriginConfig:
@@ -376,9 +619,37 @@ Resources:
             OriginAccessControlId:
               Fn::ImportValue:
                 Fn::Sub: "cobaemon-portfolio-${Env}-oac-id"
+          # ContactApi（API Gateway REST API）オリジン。REST API の URL はステージ名を含むため、
+          # OriginPath にステージ（/${Env}）を指定する（ContactApi.StageName は !Ref Env, 出典:
+          # template.yaml ContactApi）。API Gateway は HTTPS 必須のため CustomOriginConfig で
+          # OriginProtocolPolicy: https-only, OriginSSLProtocols: TLSv1.2 を指定する（出典: design.md C3
+          # 「API Gateway オリジン」、AWS 公式 CustomOriginConfig）。
+          - Id: !Sub "ContactApi-${Env}"
+            DomainName: !Sub "${ContactApi}.execute-api.${AWS::Region}.amazonaws.com"
+            OriginPath: !Sub "/${Env}"
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              HTTPSPort: 443
+              OriginSSLProtocols:
+                - TLSv1.2
         Enabled: true
         DefaultRootObject: index.html
         HttpVersion: http2and3
+        # ARN 指定時のみカスタムドメイン（Aliases）を有効化する。AWS 公式仕様上、カスタム証明書は
+        # Aliases と対で指定する必要がある（Aliases 無しの場合は CloudFrontDefaultCertificate: true、
+        # 出典: AWS 公式 ViewerCertificate）。既定（空 ARN）では Aliases を付けず現行を非破壊に保つ。
+        Aliases: !If
+          - HasCloudFrontCertificate
+          - [ !Ref DomainName ]
+          - !Ref AWS::NoValue
+        # ビューア証明書: ARN 指定時は us-east-1 の ACM 証明書を sni-only / TLSv1.2_2021 で使用。
+        # 未指定時は CloudFront 既定証明書を使用（現行挙動維持, 非破壊。出典: 上記パラメータ注記）。
+        ViewerCertificate: !If
+          - HasCloudFrontCertificate
+          - AcmCertificateArn: !Ref CloudFrontCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         DefaultCacheBehavior:
           TargetOriginId: !Sub "S3-cobaemon-serverless-portfolio-${Env}-static"
           ViewerProtocolPolicy: redirect-to-https
@@ -392,7 +663,36 @@ Resources:
             - OPTIONS
           Compress: true
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
-          ResponseHeadersPolicyId: !Ref StaticFilesResponseHeadersPolicy
+          # 表示レスポンスにセキュリティヘッダ + CSP + CORS を付与（統合ポリシー, design.md C5/C6）。
+          ResponseHeadersPolicyId: !Ref DisplayResponseHeadersPolicy
+        # 問い合わせ POST 用 Behavior（動的経路）。POST を許可するため AllowedMethods は
+        # CloudFront が許容する完全 7 メソッド集合を指定する（CloudFront は [GET,HEAD]/
+        # [GET,HEAD,OPTIONS]/全7メソッド の 3 集合のみ許可し、POST を含むには全7が必須。
+        # 出典: AWS 公式 CacheBehavior AllowedMethods）。動的応答のためキャッシュ無効
+        # （CachePolicyId: CachingDisabled = 4135ea2d-...）とし、POST ボディ・ヘッダ・クエリを
+        # オリジンへ転送する。API Gateway は viewer の Host ヘッダを転送されると 403 になるため、
+        # Host を除く全ビューア値を転送する AllViewerExceptHostHeader（b689b0a8-...）を用いる
+        # （出典: AWS 公式 using-managed-origin-request-policies「AllViewerExceptHostHeader は
+        # API Gateway/Lambda 関数 URL オリジン向け」）。セキュリティヘッダ用 ResponseHeadersPolicy は
+        # 表示応答用のため本 API Behavior には適用しない（design.md C6）。
+        CacheBehaviors:
+          - PathPattern: /portfolio/contact
+            TargetOriginId: !Sub "ContactApi-${Env}"
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # AllViewerExceptHostHeader
 
 Outputs:
   ApiUrl:
