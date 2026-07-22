@@ -33,14 +33,10 @@ DATABASES = {
     }
 }
 
-# メール設定 - 必須項目
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-if not EMAIL_HOST_USER:
-    raise ImproperlyConfigured("Set the EMAIL_HOST_USER environment variable")
-
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-if not EMAIL_HOST_PASSWORD:
-    raise ImproperlyConfigured("Set the EMAIL_HOST_PASSWORD environment variable")
+# SMTP 認証情報（EMAIL_HOST_USER / EMAIL_HOST_PASSWORD）は本番設定から除去した。
+# 問い合わせメール送信は Amazon SES 直連携（Contact_Function）へ移行するため、
+# SMTP 認証情報を Secrets Manager・ビルド環境・Django 設定のいずれからも保持しない
+# （出典: requirements.md R6-3、design.md C4、tasks.md 5.1/6.1）。
 
 # OAuth設定 - 必須項目
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")

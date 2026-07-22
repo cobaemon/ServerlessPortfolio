@@ -51,10 +51,12 @@ phases:
         import os
         import shlex
 
+        # SMTP 認証情報（EMAIL_HOST_USER / EMAIL_HOST_PASSWORD）は Secrets Manager から
+        # 除外した。問い合わせメール送信は Amazon SES 直連携（Contact_Function）へ移行し、
+        # SMTP 認証情報をビルド環境・Django 設定へ展開しない（出典: requirements.md R6-3、
+        # design.md C4、tasks.md 6.1）。
         required_keys = [
             "DJANGO_SECRET_KEY",
-            "EMAIL_HOST_USER",
-            "EMAIL_HOST_PASSWORD",
             "GOOGLE_CLIENT_ID",
             "GOOGLE_CLIENT_SECRET",
             "GITHUB_CLIENT_ID",
@@ -190,12 +192,20 @@ phases:
         
       - python scripts/generate_static_assets.py
 
-      # 静的ファイルの収集とS3への同期
+      # 静的ファイルの収集（Django 静的アセット）を行う
       - python manage.py collectstatic --noinput
-      - python manage.py render_static
-      - echo "静的ファイルをS3に同期中..."
-      - BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
-      - aws s3 sync staticfiles/ s3://${BUCKET_NAME}/ --delete
+      # 7 言語フルページ静的化（render_static）→ 全言語成功時のみ S3 同期。
+      # render_static は settings.LANGUAGES（ja, en, fr, es, ru, zh-hans, ar）を
+      # 事前レンダリングし、いずれかの言語で生成失敗すると CommandError で非ゼロ終了する
+      # （出典: portfolio/management/commands/render_static.py、design.md C2/C9、R3-6）。
+      # `&&` 連結により、全言語の生成が成功した場合にのみ aws s3 sync を実行する。
+      # これにより部分同期を行わず、既存の配信状態を保全する（部分同期しない、R3-2/R3-6）。
+      - echo "7 言語の表示ページを事前レンダリングし、成功時のみ S3 へ同期します..."
+      - |
+        BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
+        python manage.py render_static \
+          && echo "全言語の Prerendered_Page 生成に成功しました。静的ファイルをS3に同期中..." \
+          && aws s3 sync staticfiles/ s3://${BUCKET_NAME}/ --delete
   build:
     commands:
       - echo "SAMビルドを実行中..."
