@@ -19,6 +19,12 @@ phases:
       - pip install -r requirements.txt
       - pip install aws-sam-cli==1.160.1
       - pip install csscompressor==0.9.5
+      # 非退行検証（scripts/measurement/non_regression_check.py, tasks.md 8.5）が
+      # template.yaml / bucketpolicy.yaml / dependencies.yaml を構造解析するため PyYAML を
+      # ビルド環境へ個別導入する。PyYAML は MIT License（出典: requirements-dev.txt の
+      # ライセンス注記、pyyaml==6.0.3）。ビルド専用ツールであり Lambda 配布物
+      # （requirements.txt / sam build）へは同梱しない（非配布、requirements-dev.txt と整合）。
+      - pip install pyyaml==6.0.3
   pre_build:
     commands:
       - echo "SAMビルドの準備を開始..."
@@ -82,6 +88,15 @@ phases:
         export LOG_LEVEL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/log_level" --query Parameter.Value --output text)"
         echo "Loaded build configuration for $ENV without printing secret values."
       - python manage.py check --fail-level WARNING
+      # デプロイ後非退行検証（構成検証段, R9-7）を既存検証段（check --fail-level WARNING,
+      # Control Platform self-test）へ接続する。HTTPS 強制・S3 OAC 経由のみ・7 言語表示配信・
+      # Contact_Payload 4 項目限定・CSP 付与を IaC（template.yaml/bucketpolicy.yaml/
+      # dependencies.yaml）と Django 設定から決定的に検証し、不適合が 1 件でもあれば非ゼロ終了で
+      # ビルドを失敗させる（check --fail-level WARNING と同じ段階的失敗方針。出典:
+      # scripts/measurement/non_regression_check.py、design.md C9、tasks.md 8.5、requirements.md R9-7）。
+      # 実配信エンドポイント実測（--base-url）は DNS 切替後の運用手順のため本段では行わない
+      # （design.md「移行手順」/Notes）。未指定時の実測次元は undetermined として記録され失敗させない。
+      - python -m scripts.measurement.non_regression_check
       # env_vars.txt が存在しない場合に備えて初期化
       - echo "EXISTING_ARECORD=false" > env_vars.txt
       

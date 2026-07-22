@@ -1,0 +1,20 @@
+{
+  "baseline": {
+    "trials": [
+      {"index": 1, "lcp_seconds": 3.1, "ttfb_seconds": 0.95, "is_warm": true, "source": "lh-base-1"},
+      {"index": 2, "lcp_seconds": 3.4, "ttfb_seconds": 1.02, "is_warm": true, "source": "lh-base-2"},
+      {"index": 3, "lcp_seconds": 3.2, "ttfb_seconds": 0.90, "is_warm": true, "source": "lh-base-3"},
+      {"index": 4, "lcp_seconds": 3.6, "ttfb_seconds": 1.20, "is_warm": true, "source": "lh-base-4"},
+      {"index": 5, "lcp_seconds": 3.0, "ttfb_seconds": 0.88, "is_warm": true, "source": "lh-base-5"}
+    ]
+  },
+  "post_change": {
+    "trials": [
+      {"index": 1, "lcp_seconds": 1.8, "ttfb_seconds": 0.30, "is_warm": true, "source": "lh-post-1"},
+      {"index": 2, "lcp_seconds": 2.1, "ttfb_seconds": 0.42, "is_warm": true, "source": "lh-post-2"},
+      {"index": 3, "lcp_seconds": 1.9, "ttfb_seconds": 0.35, "is_warm": true, "source": "lh-post-3"},
+      {"index": 4, "lcp_seconds": 2.4, "ttfb_seconds": 0.55, "is_warm": true, "source": "lh-post-4"},
+      {"index": 5, "lcp_seconds": 2.0, "ttfb_seconds": 0.38, "is_warm": true, "source": "lh-post-5"}
+    ]
+  }
+}
