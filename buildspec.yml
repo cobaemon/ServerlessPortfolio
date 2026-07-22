@@ -86,6 +86,13 @@ phases:
         export EMAIL_USE_TLS="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_tls" --query Parameter.Value --output text)"
         export EMAIL_USE_SSL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_ssl" --query Parameter.Value --output text)"
         export LOG_LEVEL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/log_level" --query Parameter.Value --output text)"
+        # CloudFront 配信ドメイン（bare・スキームなし）。拡張版 render_static（ハッシュベース CSP 生成）は
+        # settings.AWS_S3_CUSTOM_DOMAIN（= 環境変数 CLOUDFRONT_DOMAIN_NAME）を必須とし、未設定時は
+        # フォールバックせず CommandError で中断する（出典: portfolio/management/commands/render_static.py
+        # _resolve_cloudfront_domain、config/settings/prod.py AWS_S3_CUSTOM_DOMAIN、requirements.md R7-5、
+        # design.md C6/C9）。collectstatic の静的URL生成と render_static を同一ストレージ設定で一貫させるため
+        # ビルド全体へ供給する。値は Parameter Store（既存 config と同じ非ハードコード方式）から取得する。
+        export CLOUDFRONT_DOMAIN_NAME="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/cloudfront_domain_name" --query Parameter.Value --output text)"
         echo "Loaded build configuration for $ENV without printing secret values."
       - python manage.py check --fail-level WARNING
       # デプロイ後非退行検証（構成検証段, R9-7）を既存検証段（check --fail-level WARNING,

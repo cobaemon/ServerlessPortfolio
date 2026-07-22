@@ -51,7 +51,7 @@ aws secretsmanager describe-secret `
   --profile aws_portfolio_profile
 ```
 
-staging 用 Parameter Store が9件存在することを確認する。
+staging 用 Parameter Store が11件存在することを確認する（従来9件に加え、cost-performance-optimization で `ses_verified_identity`（SES 最小権限スコープ用）と `cloudfront_domain_name`（render_static のハッシュベース CSP 生成用）を追加。出典: design.md C4/C6、buildspec.yml）。
 
 ```powershell
 aws ssm describe-parameters `
@@ -273,7 +273,7 @@ prod 用の `serverless.portfolio.cobaemon.com`、`prod/portfolio/secret`、`/pr
 
 - `aws sts get-caller-identity` のアカウントが想定と異なる。
 - `staging/portfolio/secret` が存在しない、または削除予定である。
-- `/staging/portfolio/parameter/` 配下が9件ではない。
+- `/staging/portfolio/parameter/` 配下が11件ではない。
 - `cobaemon-serverless-portfolio-staging-artifacts` が存在しない。
 - CloudFormation template validation が失敗する。
 - Git worktree に意図しない差分がある。
