@@ -642,14 +642,28 @@ class UrllibEndpointProber:
             else urllib.request.build_opener(_NoRedirectHandler)
         )
         request = urllib.request.Request(url, method="GET")
-        # with で確実にクローズする。HTTPError も応答として扱うため呼び出し側で捕捉する。
-        with opener.open(request, timeout=self._timeout_seconds) as response:
-            # ヘッダ名を小文字へ正規化して保持する（照合時の大文字小文字差を排除）。
-            headers = {key.lower(): value for key, value in response.headers.items()}
+        try:
+            # with で確実にクローズする。
+            with opener.open(request, timeout=self._timeout_seconds) as response:
+                # ヘッダ名を小文字へ正規化して保持する（照合時の大文字小文字差を排除）。
+                headers = {key.lower(): value for key, value in response.headers.items()}
+                return ProbeResponse(
+                    status=response.status,
+                    headers=headers,
+                    final_url=response.url,
+                )
+        except urllib.error.HTTPError as http_error:
+            # リダイレクト非追従時の 3xx（例: HTTP→HTTPS の 301）や 4xx/5xx は urllib が
+            # HTTPError を送出するが、これらは「取得失敗」ではなく有効な HTTP 応答
+            # （ステータス・ヘッダ・URL を持つ）である。リダイレクト検証等のため応答として扱う。
+            # 真の取得失敗（接続不可・DNS 解決失敗等）は URLError（HTTPError の親）として
+            # 送出され本 except では捕捉されず、呼び出し側が undetermined として明示記録する
+            # （握りつぶさない、出典: requirements.md R9-1、design.md「移行手順」）。
+            headers = {key.lower(): value for key, value in http_error.headers.items()}
             return ProbeResponse(
-                status=response.status,
+                status=http_error.code,
                 headers=headers,
-                final_url=response.url,
+                final_url=http_error.url,
             )
 
 
