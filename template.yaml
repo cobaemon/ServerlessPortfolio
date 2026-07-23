@@ -365,6 +365,13 @@ Resources:
       Stage: !Ref Env
       BasePath: ""
 
+  # カスタムドメインの A(Alias) レコード。DNS カットオーバー（design.md「移行手順」ステップ4）を
+  # IaC で制御する: CloudFront 用証明書 ARN（CloudFrontCertificateArn）が指定されている場合
+  # （HasCloudFrontCertificate=true＝カットオーバー実施）は CloudFront ディストリビューションへ向け、
+  # 未指定（既定）は現行どおり API Gateway カスタムドメインへ向ける（非破壊）。同一 RecordSet の
+  # AliasTarget を差し替える in-place 更新のため、レコードの削除・再作成による切替断は生じない
+  # （出典: design.md「移行手順」/案A、requirements.md R3-3/R3-4）。証明書 ARN を空へ戻せば
+  # API Gateway 向きへロールバックできる。
   ApiGatewayRecordSet:
     Type: AWS::Route53::RecordSet
     Condition: CreateARecord
@@ -372,9 +379,15 @@ Resources:
       HostedZoneId: !Ref HostedZoneId
       Name: !Sub "${DomainName}."
       Type: A
-      AliasTarget:
-        DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
-        HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
+      AliasTarget: !If
+        - HasCloudFrontCertificate
+        # カットオーバー時: CloudFront ディストリビューションへ向ける。CloudFront の Alias 用
+        # Hosted Zone ID は全ディストリビューション共通の固定グローバル値 Z2FDTNDATAQYW2（AWS 公式）。
+        - DNSName: !GetAtt CloudFrontDistribution.DomainName
+          HostedZoneId: Z2FDTNDATAQYW2
+        # 既定（証明書未指定）: 現行どおり API Gateway カスタムドメインへ向ける（非破壊）。
+        - DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
+          HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
 
   # ============================================================
   # WAF（AWS::WAFv2）— 既定不採用（コメントアウトのまま保持）
