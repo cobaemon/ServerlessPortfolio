@@ -223,11 +223,34 @@ phases:
       # `&&` 連結により、全言語の生成が成功した場合にのみ aws s3 sync を実行する。
       # これにより部分同期を行わず、既存の配信状態を保全する（部分同期しない、R3-2/R3-6）。
       - echo "7 言語の表示ページを事前レンダリングし、成功時のみ S3 へ同期します..."
+      # S3 同期の成功後、CloudFront のキャッシュを破棄して新しくする（create-invalidation）。
+      # S3 更新だけではエッジが TTL 満了まで旧内容を返すため、更新内容を即時反映する目的。
+      # ディストリビューション ID は既存アプリスタックの CloudFrontDistribution リソースから解決する
+      # （既存の ApiGatewayRecordSet 検出と同じ describe-stack-resource パターン）。スタック/リソースが
+      # まだ無い初回デプロイ等では未検出としてキャッシュ破棄をスキップする（新規配信のため不要。
+      # 既存 Route53 検出と同じ `|| true` + 判定イディオムに一貫）。create-invalidation 自体の失敗は
+      # 握りつぶさず非ゼロ終了でビルドを失敗させる（出典: 本運用対策、design.md C1/C9）。
       - |
         BUCKET_NAME="cobaemon-serverless-portfolio-${ENV}-static"
+        STACK_NAME="cobaemon-serverless-portfolio-${ENV}-stack"
+        if [ "$ENV" = "prod" ]; then
+          STACK_NAME="cobaemon-serverless-portfolio-stack"
+        fi
         python manage.py render_static \
           && echo "全言語の Prerendered_Page 生成に成功しました。静的ファイルをS3に同期中..." \
-          && aws s3 sync staticfiles/ s3://${BUCKET_NAME}/ --delete
+          && aws s3 sync staticfiles/ s3://${BUCKET_NAME}/ --delete \
+          && echo "CloudFront のキャッシュを破棄して新しくします（更新内容を即時反映）..." \
+          && DISTRIBUTION_ID=$(aws cloudformation describe-stack-resource \
+               --stack-name "$STACK_NAME" \
+               --logical-resource-id CloudFrontDistribution \
+               --query 'StackResourceDetail.PhysicalResourceId' \
+               --output text 2>/dev/null || true) \
+          && if [ -n "$DISTRIBUTION_ID" ] && [ "$DISTRIBUTION_ID" != "None" ]; then \
+               echo "CloudFront ディストリビューション ${DISTRIBUTION_ID} のキャッシュを破棄して新しくします..."; \
+               aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"; \
+             else \
+               echo "CloudFront ディストリビューション未検出（初回デプロイ等）。キャッシュ破棄はスキップします（新規配信のため不要）。"; \
+             fi
   build:
     commands:
       - echo "SAMビルドを実行中..."

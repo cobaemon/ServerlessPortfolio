@@ -463,6 +463,14 @@ Resources:
                   - cloudfront:CreateOriginAccessControl
                 # These CloudFront OAC actions do not support resource-level permissions.
                 Resource: "*"
+              # 静的アセット/HTML を S3 へ同期した後、CloudFront のキャッシュを破棄して
+              # 新しくする（create-invalidation）ために必要。TTL 満了を待たず更新内容を反映する
+              # （出典: buildspec.yml の s3 sync 後のキャッシュ破棄、本運用対策）。distribution/* に限定。
+              - Sid: InvalidatePortfolioDistribution
+                Effect: Allow
+                Action:
+                  - cloudfront:CreateInvalidation
+                Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
         - PolicyName: CodeBuildCloudWatchLogsWriteAccess
           PolicyDocument:
             Version: '2012-10-17'

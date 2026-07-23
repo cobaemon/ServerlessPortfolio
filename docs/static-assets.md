@@ -35,6 +35,7 @@ S3 へのアップロードは `buildspec.yml` の `aws s3 sync staticfiles/ s3:
 - `python manage.py collectstatic --noinput` を実行。
 - `python manage.py render_static` を実行。
 - `staticfiles/` を `s3://cobaemon-serverless-portfolio-${ENV}-static/` に `--delete` 付きで同期。
+- 同期成功後、CloudFront のキャッシュを破棄して新しくする（`aws cloudfront create-invalidation --paths "/*"`）。S3 更新だけではエッジが TTL 満了まで旧内容を返すため、更新内容を即時反映する。ディストリビューション ID は既存アプリスタックの `CloudFrontDistribution` リソースから解決し、初回デプロイ等で未検出の場合はスキップする（新規配信のため不要）。
 
 `Montserrat.ttf` と `Lato.ttf` のライセンス確認結果は [`external-assets.md`](external-assets.md) に記載しています。
 
