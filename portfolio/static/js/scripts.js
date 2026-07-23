@@ -95,14 +95,22 @@ window.addEventListener('DOMContentLoaded', event => {
         const formData = new FormData(contactForm);
         // API Gatewayでは multipart/form-data の解析が正しく行われないため、
         // URL エンコード形式で送信する
+        const headers = {
+            'X-Requested-With': 'XMLHttpRequest',  // DjangoがAjaxリクエストとして認識するために必要です。
+            'Content-Type': 'application/x-www-form-urlencoded',
+        };
+        // CSRF トークンが存在する場合のみ付与する。静的ファースト配信の事前レンダリング
+        // ページには Django の csrf_token（request 依存）が出力されないため hidden input が
+        // 存在しないことがある。その場合は Contact_Function の Origin 検証で保護されるため
+        // トークンは不要（存在しない要素の参照で例外を出さないようにする）。
+        const csrfInput = contactForm.querySelector('[name="csrfmiddlewaretoken"]');
+        if (csrfInput && csrfInput.value) {
+            headers['X-CSRFToken'] = csrfInput.value;
+        }
         const response = await fetch(contactForm.action, {
             method: 'POST',
             body: new URLSearchParams(formData),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',  // DjangoがAjaxリクエストとして認識するために必要です。
-                'X-CSRFToken': contactForm.querySelector('[name="csrfmiddlewaretoken"]').value,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: headers,
         });
 
         if (response.ok) {
