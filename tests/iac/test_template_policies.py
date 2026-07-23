@@ -486,13 +486,24 @@ class SesLeastPrivilegeTests(unittest.TestCase):
             ses_resources,
             msg="ses:SendEmail ステートメントに Resource が存在しない（R6-2）",
         )
-        # すべての SES Resource が identity ARN に限定されていること。
+        # すべての SES Resource が「検証済み identity ARN」または「from identity の既定
+        # Configuration Set ARN」に限定され（`:identity/` または `:configuration-set/` を含む）、
+        # ワイルドカード `*` でないこと。SES は from identity の既定 Configuration Set を
+        # SendEmail 時に暗黙適用するため、identity に加え configuration-set への権限も必要
+        # （出典: design.md C4、aws sesv2 get-email-identity の ConfigurationSetName、R6-2/R9-3）。
         for resource in ses_resources:
             with self.subTest(resource=resource):
-                self.assertIn(
-                    ":identity/",
+                self.assertNotEqual(
                     resource,
-                    msg=f"SES Resource が identity ARN に限定されていない: {resource}（R6-2）",
+                    "*",
+                    msg=f"SES Resource がワイルドカード（R6-2/R9-3 違反）: {resource}",
+                )
+                self.assertTrue(
+                    (":identity/" in resource) or (":configuration-set/" in resource),
+                    msg=(
+                        "SES Resource が identity/configuration-set ARN に限定されていない: "
+                        f"{resource}（R6-2）"
+                    ),
                 )
 
 

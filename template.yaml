@@ -50,6 +50,19 @@ Parameters:
     Description: "The verified Amazon SES identity (domain or email) used to scope the ses:SendEmail resource ARN"
     Default: /prod/portfolio/parameter/ses_verified_identity
 
+  # SES 送信元 identity に既定関連付けされた Configuration Set 名。
+  # SES は from identity に既定 Configuration Set が設定されている場合、SendEmail 時に
+  # 暗黙適用し、IAM は identity に加えて configuration-set リソースへの ses:SendEmail 権限も
+  # 要求する（未付与だと AccessDeniedException: configuration-set/... となる）。
+  # 値そのものはハードコードせず Parameter Store から取得する（SesVerifiedIdentity と同じ方式）。
+  # 運用注記: 本パラメータが指す SSM パスに、from identity（portfolio.cobaemon.com）の既定
+  # Configuration Set 名（例: Portfolio。aws sesv2 get-email-identity の ConfigurationSetName）を
+  # 事前登録しておく必要がある（出典: design.md C4、requirements.md R6-2/R9-3）。
+  SesConfigurationSet:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: "SES configuration set (default-associated with the from identity) to scope the ses:SendEmail resource ARN"
+    Default: /prod/portfolio/parameter/ses_configuration_set
+
   # CloudFront 用 ACM 証明書（us-east-1）の ARN。
   # CloudFront はビューア証明書を us-east-1 の ACM でのみ受け付ける（出典: AWS 公式
   # https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-cloudfront-distribution-viewercertificate.html 、
@@ -297,8 +310,12 @@ Resources:
         - AWSLambdaBasicExecutionRole
         # SES 送信権限: SESv2 SendEmail のみ（ses_email_sender.py は SendEmail のみ使用し
         # SendRawEmail は使わない、出典: contact_function/adapters/ses_email_sender.py）。
-        # リソースは検証済み identity ARN に限定し、ワイルドカードを用いない
-        # （出典: design.md C4、requirements.md R6-2, R9-3）。リージョンはスタック配備先
+        # リソースは (1) 検証済み identity ARN と (2) from identity に既定関連付けされた
+        # Configuration Set ARN の 2 つに限定し、ワイルドカードを用いない。SES は from identity の
+        # 既定 Configuration Set を SendEmail 時に暗黙適用するため、identity だけでなく
+        # configuration-set への権限も必要（未付与時 AccessDeniedException: configuration-set/...）。
+        # （出典: design.md C4、requirements.md R6-2, R9-3、aws sesv2 get-email-identity の
+        # ConfigurationSetName、実測の SES AccessDenied ログ）。リージョンはスタック配備先
         # （ap-northeast-1）に解決される。
         - Statement:
             - Effect: Allow
@@ -306,6 +323,7 @@ Resources:
                 - ses:SendEmail
               Resource:
                 - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesVerifiedIdentity}"
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/${SesConfigurationSet}"
         # Parameter Store 読み取り権限: SsmConfigProvider が get_parameter で参照する
         # 3 パラメータのみに限定する（GetParameter 単体で十分。出典:
         # contact_function/adapters/config_provider.py、design.md DM4）。

@@ -273,7 +273,8 @@ phases:
             "DomainName": "$DOMAIN_NAME",
             "AllowedOrigin": "/${ENV}/portfolio/parameter/csrf_trusted_origins",
             "AllowedHosts": "/${ENV}/portfolio/parameter/allowed_hosts",
-            "SesVerifiedIdentity": "/${ENV}/portfolio/parameter/ses_verified_identity"
+            "SesVerifiedIdentity": "/${ENV}/portfolio/parameter/ses_verified_identity",
+            "SesConfigurationSet": "/${ENV}/portfolio/parameter/ses_configuration_set"
           }
         }
         EOF
