@@ -668,6 +668,11 @@ Resources:
                   - cloudfront:PublishFunction
                   - cloudfront:UpdateFunction
                   - cloudfront:DeleteFunction
+                  # !GetAtt FunctionMetadata.FunctionARN 取得時および関数のタグ管理に必要
+                  # （CloudFormation は関数の作成・参照時に ListTagsForResource/TagResource を呼ぶ）。
+                  - cloudfront:ListTagsForResource
+                  - cloudfront:TagResource
+                  - cloudfront:UntagResource
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:function/*"
               - Sid: ManagePortfolioS3
                 Effect: Allow
