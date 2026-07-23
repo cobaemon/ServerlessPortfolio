@@ -102,7 +102,7 @@
 
 ## 静的ファイル設定
 
-`prod.py` では `CLOUDFRONT_DOMAIN_NAME` が設定されている場合、`STATIC_URL` を `https://{CLOUDFRONT_DOMAIN_NAME}/` に変更します。その場合、staticfiles backend は `config.storage_backends.LocalManifestS3Storage` です。
+`prod.py` では `CLOUDFRONT_DOMAIN_NAME` が設定されている場合、`STATIC_URL` を `https://{CLOUDFRONT_DOMAIN_NAME}/` に変更します。その場合、staticfiles backend は Django 標準の `django.contrib.staticfiles.storage.ManifestStaticFilesStorage`（ローカル manifest ストレージ）です。静的ファイルは `collectstatic` でローカル `staticfiles/` に収集され、`buildspec.yml` の `aws s3 sync ... --delete` で S3 へ配置されます（URL は `STATIC_URL` ＋ハッシュ名）。
 
 S3 オブジェクトの ACL は `AWS_DEFAULT_ACL = None` です。静的ファイルへの読み取り権限は、公開 ACL ではなく CloudFront OAC と S3 bucket policy で制御します。
 

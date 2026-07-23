@@ -22,9 +22,9 @@ CloudFront の `DefaultCacheBehavior` は次の設定を持ちます。
 
 ## Manifest Storage
 
-`config/storage_backends.py` は `LocalManifestS3Storage` を定義しています。
+`CLOUDFRONT_DOMAIN_NAME` が設定された本番/ステージングでは、`prod.py` の staticfiles backend に Django 標準の `django.contrib.staticfiles.storage.ManifestStaticFilesStorage`（ローカル manifest ストレージ）を使用します。`collectstatic` はハッシュ名付きの静的ファイルをローカルの `STATIC_ROOT`（`staticfiles/`）へ収集し、`staticfiles.json`（manifest）を生成します。URL は `STATIC_URL`（`https://<CLOUDFRONT_DOMAIN_NAME>/`）＋ハッシュ名で生成されます。
 
-`LocalManifestS3Storage` は `S3ManifestStaticStorage` を継承し、manifest storage としてローカルの `staticfiles` ディレクトリを参照します。`load_manifest()` は manifest のパス区切りを `/` に正規化します。
+S3 へのアップロードは `buildspec.yml` の `aws s3 sync staticfiles/ s3://...-static/ --delete` が担います（S3 直アップロード型ストレージは使用しません。直アップロード型は `sync --delete` と衝突し、ローカル `staticfiles/` に存在しないアップロード済みアセットを削除して 403 を招くため）。
 
 ## ビルド時処理
 
@@ -46,7 +46,7 @@ CloudFront の `DefaultCacheBehavior` は次の設定を持ちます。
 
 - [`portfolio/static`](../portfolio/static)
 - [`staticfiles`](../staticfiles)
-- [`config/storage_backends.py`](../config/storage_backends.py)
+- [`config/settings/prod.py`](../config/settings/prod.py)
 - [`portfolio/management/commands/render_static.py`](../portfolio/management/commands/render_static.py)
 - [`scripts/check_static_manifest.py`](../scripts/check_static_manifest.py)
 - [`buildspec.yml`](../buildspec.yml)

@@ -2,7 +2,11 @@
 {% load static %}
 {% load i18n %}
 {% load csp %}
-<html lang="ja">
+{# 有効な言語を lang 属性へ反映する（render_static の translation.override および Lambda の #}
+{# LocaleMiddleware が設定する現在言語を使用）。ハードコードせず多言語ページで正しい lang を出す #}
+{# （出典: WCAG 言語指定、requirements.md R3-5、design.md C2）。 #}
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />

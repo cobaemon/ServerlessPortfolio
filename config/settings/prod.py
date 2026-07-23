@@ -109,10 +109,18 @@ AWS_S3_OBJECT_PARAMETERS = {
 # 静的ファイルの設定
 if AWS_S3_CUSTOM_DOMAIN:
     STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
-    STATICFILES_STORAGE = 'config.storage_backends.LocalManifestS3Storage'
+    # 静的アセットは「ビルド時に collectstatic でローカル STATIC_ROOT へハッシュ名付きで収集し、
+    # buildspec の `aws s3 sync staticfiles/ s3://...-static/ --delete` で S3 へ配置する」モデル
+    # （静的ファースト配信）。したがって staticfiles ストレージはローカルの
+    # ManifestStaticFilesStorage を用い、URL のみ STATIC_URL（CloudFront ドメイン）＋ハッシュ名で
+    # 生成する。S3 直アップロード型ストレージ（S3ManifestStaticStorage 系）は collectstatic が
+    # アセットを S3 へ直接アップロードするため、後続の `s3 sync --delete` が「ローカル staticfiles/ に
+    # 存在しない」当該アセットを削除して 403 を招く。この衝突を避けるため直アップロード型は用いない
+    # （出典: buildspec.yml の collectstatic→s3 sync、requirements.md R3-2/R3-3、design.md C1/C9、本不具合修正）。
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
     STORAGES = {
         "staticfiles": {
-            "BACKEND": "config.storage_backends.LocalManifestS3Storage",
+            "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
         },
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
