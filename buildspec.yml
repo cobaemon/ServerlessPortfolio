@@ -287,6 +287,9 @@ phases:
       - |
         python - <<'EOF'
         import json
+        import os
+
+        import boto3
 
         # collectstatic/render_static が STATIC_ROOT=staticfiles/ に書き出した
         # 統一 CSP マニフェストを読み込む（出典: render_static _MANIFEST_RELATIVE）。
@@ -299,13 +302,33 @@ phases:
                 "prerender_manifest.json に content_security_policy がありません"
                 "（render_static の統一 CSP 生成を確認してください）。"
             )
+
+        # CloudFront ビューア証明書 ARN（us-east-1）を Parameter Store から取得する。
+        # 未設定（ParameterNotFound）はカスタムドメイン未切替を意味し、テンプレート既定 "" と同義で
+        # 非破壊（Aliases/カスタム証明書を付けず既定証明書を維持）。ParameterNotFound 以外の
+        # エラーは握りつぶさず伝播させる（フォールバック禁止。出典: template.yaml CloudFrontCertificateArn、
+        # design.md「移行手順」）。
+        env = os.environ["ENV"]
+        ssm = boto3.client("ssm", region_name="ap-northeast-1")
+        try:
+            cert_arn = ssm.get_parameter(
+                Name=f"/{env}/portfolio/parameter/cloudfront_certificate_arn"
+            )["Parameter"]["Value"]
+        except ssm.exceptions.ParameterNotFound:
+            cert_arn = ""
+
         with open("parameters.json", encoding="utf-8") as params_file:
             params = json.load(params_file)
-        # CloudFront へ供給する CSP を上書き注入する（template Default の下限を置換）。
+        # CSP（template Default の下限を置換）と CloudFront ビューア証明書 ARN（カスタムドメイン
+        # 切替用。空=非破壊）を注入する。
         params["Parameters"]["ContentSecurityPolicy"] = csp
+        params["Parameters"]["CloudFrontCertificateArn"] = cert_arn
         with open("parameters.json", "w", encoding="utf-8") as params_file:
             json.dump(params, params_file, ensure_ascii=False, indent=2)
-        print("ContentSecurityPolicy を parameters.json へ注入しました。")
+        print(
+            "parameters.json へ ContentSecurityPolicy と CloudFrontCertificateArn"
+            f"（{'設定あり' if cert_arn else '空=非破壊'}）を注入しました。"
+        )
         EOF
       - echo "パラメータファイルを作成しました:"
       - cat parameters.json
