@@ -51,9 +51,12 @@ from portfolio.forms import ContactForm
 # `_` 始まりのためコマンド自動探索の対象外であり、明示 import で利用する
 # （出典: portfolio/management/commands/_csp_hash.py の冒頭ドキュメント）。
 from ._csp_hash import (
+    InlineContents,
+    build_csp_directives,
     compute_inline_hashes,
     extract_inline_contents,
     generate_csp_header,
+    render_csp_header_value,
 )
 
 # 静的化対象ページのテンプレート名（出典: portfolio/views.py `Top.template_name`）。
@@ -152,13 +155,27 @@ class Command(BaseCommand):
             )
         )
 
+        # 全ページ横断の統一 CSP を算出する（CloudFront ResponseHeadersPolicy は
+        # 単一の Content-Security-Policy ヘッダを全応答へ付与するため、全 Prerendered_Page の
+        # インライン `'sha256-...'` の和集合を含む単一 CSP が必要。ページ間で言語別に
+        # インライン内容が異なっても、和集合により全ページのインラインを許可する。
+        # 出典: design.md C5/C6「CSP 文字列を CloudFront ResponseHeadersPolicy へ反映」、R7-2/R7-5）。
+        unified_csp = self._build_unified_csp(
+            rendered_html=list(rendered_pages.values()),
+            base_directives=base_directives,
+            cloudfront_domain=cloudfront_domain,
+        )
+
         # マニフェスト（CSP ハッシュ・生成物一覧）を構築する（DM5）。
+        # `content_security_policy`（トップレベル）は CloudFront ResponseHeadersPolicy の
+        # `ContentSecurityPolicy` パラメータへ供給する統一 CSP（buildspec が parameters.json へ反映）。
         manifest = {
             "default_language": default_language,
             "languages": list(languages),
             "cloudfront_domain": cloudfront_domain,
             "root_object": _ROOT_PAGE_RELATIVE,
             "target_page": "/portfolio/top/",
+            "content_security_policy": unified_csp,
             "pages": page_entries,
         }
 
@@ -332,6 +349,48 @@ class Command(BaseCommand):
             "inline_script_hashes": list(inline_hashes.scripts),
             "inline_style_hashes": list(inline_hashes.styles),
         }
+
+    def _build_unified_csp(
+        self,
+        rendered_html: list[str],
+        base_directives: dict,
+        cloudfront_domain: str,
+    ) -> str:
+        """全 Prerendered_Page 横断の統一 CSP ヘッダ値を生成する.
+
+        CloudFront ResponseHeadersPolicy は単一の Content-Security-Policy を全応答へ
+        付与するため、全ページのインライン script/style 内容を和集合として集約し、
+        その `'sha256-...'` を包含する 1 本の CSP を生成する（出典: design.md C5/C6、
+        requirements.md R7-2/R7-5）。per-request nonce は含めず、現行許可元と
+        CloudFront ドメインのみを包含する（新規緩和なし、R7-5）。
+
+        Args:
+            rendered_html: 全ページ（言語別＋ルート）の HTML 文字列一覧。
+            base_directives: 現行 CSP ディレクティブ（base.py 出典）。
+            cloudfront_domain: CloudFront 配信ドメイン（`https://` は付けない）。
+
+        Returns:
+            str: 全ページのインラインを許可する統一 Content-Security-Policy ヘッダ値。
+        """
+        # 全ページのインライン内容を出現順に集約する（compute_inline_hashes が
+        # 重複を排除するため、集約結果は一意なハッシュ集合＝和集合になる）。
+        combined_scripts: list[str] = []
+        combined_styles: list[str] = []
+        for html in rendered_html:
+            contents = extract_inline_contents(html)
+            combined_scripts.extend(contents.scripts)
+            combined_styles.extend(contents.styles)
+        combined = InlineContents(
+            scripts=tuple(combined_scripts),
+            styles=tuple(combined_styles),
+        )
+        # 和集合のハッシュを算出し、現行許可元＋CloudFront ドメインを包含する
+        # ディレクティブを組み立ててヘッダ値へ整形する（nonce 不在, R7-2）。
+        inline_hashes = compute_inline_hashes(combined)
+        directives = build_csp_directives(
+            base_directives, cloudfront_domain, inline_hashes
+        )
+        return render_csp_header_value(directives)
 
     def _write_outputs(
         self,

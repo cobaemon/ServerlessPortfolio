@@ -623,6 +623,10 @@ Resources:
                   - cloudfront:CreateDistribution
                   - cloudfront:CreateOriginAccessControl
                   - cloudfront:CreateResponseHeadersPolicy
+                  # 表示 URL ルーティング用 CloudFront Function（DisplayRouterFunction, template.yaml）
+                  # の作成・一覧に必要（作成・一覧はリソースレベル権限をサポートしないため "*"）。
+                  - cloudfront:CreateFunction
+                  - cloudfront:ListFunctions
                   - cloudfront:ListOriginAccessControls
                   - cloudfront:ListResponseHeadersPolicies
                 # These CloudFront create and list actions do not support resource-level permissions.
@@ -654,6 +658,17 @@ Resources:
                   - cloudfront:GetResponseHeadersPolicyConfig
                   - cloudfront:UpdateResponseHeadersPolicy
                 Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:response-headers-policy/*"
+              # 表示 URL ルーティング用 CloudFront Function（DisplayRouterFunction, template.yaml）の
+              # 参照・更新・公開・削除に必要（リソースレベルを function/* に限定, 最小権限）。
+              - Sid: ManagePortfolioCloudFrontFunctions
+                Effect: Allow
+                Action:
+                  - cloudfront:DescribeFunction
+                  - cloudfront:GetFunction
+                  - cloudfront:PublishFunction
+                  - cloudfront:UpdateFunction
+                  - cloudfront:DeleteFunction
+                Resource: !Sub "arn:aws:cloudfront::${AWS::AccountId}:function/*"
               - Sid: ManagePortfolioS3
                 Effect: Allow
                 Action:

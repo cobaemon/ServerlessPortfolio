@@ -254,6 +254,36 @@ phases:
           }
         }
         EOF
+      # render_static が生成した統一 CSP（全 Prerendered_Page のインライン sha256 の和集合＋
+      # 現行許可元＋CloudFront ドメインを包含。nonce 不在）を parameters.json の
+      # ContentSecurityPolicy へ注入する。これにより CloudFront ResponseHeadersPolicy
+      # （template.yaml DisplayResponseHeadersPolicy の !Ref ContentSecurityPolicy）が
+      # ハッシュ入りの完全な CSP を配信する（出典: design.md C5/C6、requirements.md R7-2/R7-5、
+      # portfolio/management/commands/render_static.py の manifest['content_security_policy']）。
+      # マニフェスト欠落や CSP 未生成はフォールバックせず非ゼロ終了で明示失敗させる。
+      - |
+        python - <<'EOF'
+        import json
+
+        # collectstatic/render_static が STATIC_ROOT=staticfiles/ に書き出した
+        # 統一 CSP マニフェストを読み込む（出典: render_static _MANIFEST_RELATIVE）。
+        with open("staticfiles/prerender_manifest.json", encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+        csp = manifest.get("content_security_policy")
+        # 統一 CSP が無い/空はビルド不整合として握りつぶさず失敗させる（フォールバック禁止）。
+        if not csp:
+            raise SystemExit(
+                "prerender_manifest.json に content_security_policy がありません"
+                "（render_static の統一 CSP 生成を確認してください）。"
+            )
+        with open("parameters.json", encoding="utf-8") as params_file:
+            params = json.load(params_file)
+        # CloudFront へ供給する CSP を上書き注入する（template Default の下限を置換）。
+        params["Parameters"]["ContentSecurityPolicy"] = csp
+        with open("parameters.json", "w", encoding="utf-8") as params_file:
+            json.dump(params, params_file, ensure_ascii=False, indent=2)
+        print("ContentSecurityPolicy を parameters.json へ注入しました。")
+        EOF
       - echo "パラメータファイルを作成しました:"
       - cat parameters.json
       # バケットポリシー用のパラメータファイルを作成

@@ -607,6 +607,69 @@ Resources:
               - "*"
           OriginOverride: true
 
+  # 表示 URL ルーティング用 CloudFront Function（viewer-request）。
+  # 静的ファースト配信では表示 URL が言語中立（/portfolio/top/）で、S3 上の成果物は
+  # /<lang>/portfolio/top/index.html とルート index.html に配置される（出典: design.md DM5、
+  # render_static）。本関数は design.md DM5 で未確定だった言語判定方式を「Accept-Language
+  # ネゴシエーション」に確定し（対応7言語、既定 ja）、ルート `/` と `/portfolio/top/`（言語中立）を
+  # 交渉結果の `/<lang>/portfolio/top/index.html` へ内部書き換えし、末尾 `/` の URI へ index.html を
+  # 補完する（出典: requirements.md R3-3/R3-5、design.md C1/DM5）。問い合わせ（/portfolio/contact）は
+  # 別 Behavior のため本関数（Default Behavior 専用）の対象外。対応言語は config/settings/base.py
+  # LANGUAGES と一致させる（エッジ用の設定複製）。
+  DisplayRouterFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "portfolio-display-router-${Env}"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: "Accept-Language routing and index.html completion for static-first display"
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          // 対応言語（config/settings/base.py LANGUAGES と一致）。既定は 'ja'。
+          var supported = ['ja', 'en', 'fr', 'es', 'ru', 'zh-hans', 'ar'];
+          var fallback = 'ja';
+
+          // Accept-Language から対応言語を交渉する（q 値の厳密解釈は行わず順序優先）。
+          function negotiate() {
+            var headers = request.headers;
+            if (!headers || !headers['accept-language'] || !headers['accept-language'].value) {
+              return fallback;
+            }
+            var value = headers['accept-language'].value.toLowerCase();
+            var items = value.split(',');
+            for (var i = 0; i < items.length; i++) {
+              var tag = items[i].split(';')[0].trim();
+              if (tag === '') { continue; }
+              // 完全一致（例: zh-hans, en）。
+              if (supported.indexOf(tag) !== -1) { return tag; }
+              // 中国語系は簡体字ページ（zh-hans）へ寄せる。
+              var primary = tag.split('-')[0];
+              if (primary === 'zh') { return 'zh-hans'; }
+              // 主要サブタグ一致（例: en-US -> en）。
+              if (supported.indexOf(primary) !== -1) { return primary; }
+            }
+            return fallback;
+          }
+
+          // 言語中立の表示 URL（ルート/表示ページ）は交渉結果の言語ページへ書き換える。
+          // DefaultRootObject による '/'→'/index.html' 置換の前後いずれの URI 形にも対応する。
+          if (uri === '/' || uri === '/index.html' ||
+              uri === '/portfolio/top' || uri === '/portfolio/top/') {
+            request.uri = '/' + negotiate() + '/portfolio/top/index.html';
+            return request;
+          }
+          // 末尾 '/' のディレクトリ相当 URI は index.html を補完する（例: /en/portfolio/top/）。
+          if (uri.charAt(uri.length - 1) === '/') {
+            request.uri = uri + 'index.html';
+            return request;
+          }
+          // それ以外（静的アセット・言語別 index.html 直リンク等）はそのまま。
+          return request;
+        }
+
   # CloudFront ディストリビューション（案A: 単一エントリ + 複数オリジン）。
   # (1) S3 オリジン: 表示/静的（Default Behavior, Lambda 非経由, 出典: design.md 案A/R3-4）。
   # (2) ContactApi オリジン: 問い合わせ POST（Behavior /portfolio/contact, 動的, 出典: design.md C3/C7）。
@@ -670,6 +733,12 @@ Resources:
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
           # 表示レスポンスにセキュリティヘッダ + CSP + CORS を付与（統合ポリシー, design.md C5/C6）。
           ResponseHeadersPolicyId: !Ref DisplayResponseHeadersPolicy
+          # 表示 URL ルーティング（Accept-Language ネゴシエーション + index.html 補完）を
+          # viewer-request で適用する（出典: 上記 DisplayRouterFunction、design.md DM5）。
+          # 本関数は表示（S3 Default）Behavior 専用で、問い合わせ API Behavior には適用しない。
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt DisplayRouterFunction.FunctionMetadata.FunctionARN
         # 問い合わせ POST 用 Behavior（動的経路）。POST を許可するため AllowedMethods は
         # CloudFront が許容する完全 7 メソッド集合を指定する（CloudFront は [GET,HEAD]/
         # [GET,HEAD,OPTIONS]/全7メソッド の 3 集合のみ許可し、POST を含むには全7が必須。
