@@ -24,6 +24,13 @@ Strategy > スナップショット/ポリシーテスト（IaC）」）。
        が設定されている。
     7. WAF リソース既定不在（R8-6）: 合成テンプレートに `AWS::WAFv2::WebACL` /
        `AWS::WAFv2::WebACLAssociation` が既定で含まれない（コメントアウト維持）。
+    8. 退役リソースの不在と未解決参照の不在（tasks.md 11）: 表示経路の
+       `DjangoFunction` / `DjangoFunctionLogGroup` / `DjangoApi`、および API Gateway
+       カスタムドメイン一式（`ApiGatewayCustomDomain` / `ApiGatewayBasePathMapping` /
+       `ServerlessCertificate`）と `Outputs.ApiUrl` が存在せず、`Ref` / `Fn::GetAtt` /
+       `Fn::Sub` / 条件参照に未解決参照が残らない。非破壊対象（`ContactApi` /
+       `ContactFunction` / `CloudFrontDistribution` / `DisplayResponseHeadersPolicy`）は
+       存置される。
 
 解析方針と「合成テンプレート」についての事実（誠実性のため明記）:
     design.md は「`sam build` 相当の合成テンプレート」を検証対象と記す。SAM の
@@ -54,6 +61,7 @@ Strategy > スナップショット/ポリシーテスト（IaC）」）。
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 from typing import Any
@@ -339,7 +347,6 @@ _BUCKETPOLICY_RESOURCES = _resources(_BUCKETPOLICY)
 # bucketpolicy.yaml。文字列リテラルの散在を避け整合性を保つ）。
 _CONTACT_FUNCTION_ID = "ContactFunction"
 _CONTACT_API_ID = "ContactApi"
-_DJANGO_FUNCTION_ID = "DjangoFunction"
 _RESPONSE_HEADERS_POLICY_ID = "DisplayResponseHeadersPolicy"
 _CLOUDFRONT_DISTRIBUTION_ID = "CloudFrontDistribution"
 _STATIC_BUCKET_ID = "StaticFilesBucket"
@@ -371,8 +378,8 @@ class SnapStartAbsenceTests(unittest.TestCase):
         functions = _resources_of_type(
             _TEMPLATE_RESOURCES, "AWS::Serverless::Function"
         )
-        # DjangoFunction と ContactFunction の 2 関数が存在することを前提とする。
-        self.assertIn(_DJANGO_FUNCTION_ID, functions)
+        # 表示経路の DjangoFunction は退役済みで、現存する SAM 関数は ContactFunction のみ
+        # （出典: tasks.md 11、docs/development-records/unused-resource-scan-django-retirement.md）。
         self.assertIn(_CONTACT_FUNCTION_ID, functions)
         for logical_id, body in functions.items():
             with self.subTest(function=logical_id):
@@ -888,6 +895,228 @@ class WafAbsenceTests(unittest.TestCase):
                 "WAF リソースが既定で存在する（R8-6 違反、コメントアウト維持のはず）: "
                 f"{waf_resources!r}"
             ),
+        )
+
+
+class RetiredDisplayPathAbsenceTests(unittest.TestCase):
+    """退役した表示経路リソースの不在と未解決参照の不在を検証する（tasks.md 11）.
+
+    表示経路は静的配信（S3 + CloudFront）へ切替済みであり、Django 表示経路の
+    リソース（`DjangoFunction` / `DjangoFunctionLogGroup` / `DjangoApi`）および
+    API Gateway カスタムドメイン一式（`ApiGatewayCustomDomain` /
+    `ApiGatewayBasePathMapping` / `ServerlessCertificate`）は `template.yaml` から
+    除去した（出典: tasks.md 11、
+    docs/development-records/unused-resource-scan-django-retirement.md
+    「削除対象の確定」「扱いの決定」）。
+
+    本クラスは以下を検証する:
+        1. 退役対象の論理 ID がテンプレートに存在しないこと。
+        2. `Outputs.ApiUrl`（`DjangoApi` を値としていた出力）が存在しないこと。
+        3. 非破壊対象（`ContactApi` / `ContactFunction` / `CloudFrontDistribution` /
+           `DisplayResponseHeadersPolicy`）が存置されていること。
+        4. `Ref` / `Fn::GetAtt` / `Fn::Sub` の参照先が Parameters・Resources・
+           擬似パラメータのいずれかに解決し、未解決参照が残っていないこと。
+        5. 条件参照（`Fn::If` の条件名・`Fn::Condition`・リソースの `Condition`）が
+           `Conditions` セクションに解決すること。
+    """
+
+    # 退役対象の論理 ID（出典: 上記スキャン記録「削除対象の確定」「扱いの決定」）。
+    _RETIRED_LOGICAL_IDS = (
+        "DjangoFunction",
+        "DjangoFunctionLogGroup",
+        "DjangoApi",
+        "ApiGatewayCustomDomain",
+        "ApiGatewayBasePathMapping",
+        "ServerlessCertificate",
+    )
+
+    # 非破壊対象（削除してはならない論理 ID。出典: tasks.md 11）。
+    _PRESERVED_LOGICAL_IDS = (
+        _CONTACT_API_ID,
+        _CONTACT_FUNCTION_ID,
+        _CLOUDFRONT_DISTRIBUTION_ID,
+        _RESPONSE_HEADERS_POLICY_ID,
+    )
+
+    # CloudFormation 擬似パラメータ（Parameters に宣言されないが参照可能）。
+    # 出典: AWS 公式 CloudFormation Pseudo parameters reference。
+    _PSEUDO_PARAMETERS = frozenset(
+        {
+            "AWS::AccountId",
+            "AWS::NoValue",
+            "AWS::NotificationARNs",
+            "AWS::Partition",
+            "AWS::Region",
+            "AWS::StackId",
+            "AWS::StackName",
+            "AWS::URLSuffix",
+        }
+    )
+
+    def _known_names(self) -> frozenset[str]:
+        """参照先として解決可能な名前（Parameters + Resources + 擬似パラメータ）を返す.
+
+        Returns:
+            frozenset[str]: 解決可能な名前の集合。
+
+        Raises:
+            TypeError: `Parameters` がマッピングでない場合（想定外を握りつぶさない）。
+        """
+        # Parameters セクションはテンプレート仕様上省略可能であるため、
+        # 「欠落」と「不正な型」を区別し、後者は明示的に失敗させる。
+        parameters = _TEMPLATE.get("Parameters", {})
+        if not isinstance(parameters, dict):
+            raise TypeError(f"Parameters がマッピングでない (実際: {type(parameters)!r})")
+        return (
+            frozenset(parameters)
+            | frozenset(_TEMPLATE_RESOURCES)
+            | self._PSEUDO_PARAMETERS
+        )
+
+    def _collect_reference_names(self) -> list[str]:
+        """テンプレート全体から参照名（Ref / GetAtt / Sub 内の `${}`）を収集する.
+
+        Returns:
+            list[str]: 参照名の一覧（重複を含む）。
+        """
+        names: list[str] = []
+
+        # 1) Ref: 値は参照名の文字列（{"Ref": "X"}）。
+        for value in _find_all_keys(_TEMPLATE, "Ref"):
+            if isinstance(value, str):
+                names.append(value)
+
+        # 2) Fn::GetAtt: "A.B" 形式、または ["A", "B"] 形式。いずれも先頭が論理 ID。
+        for value in _find_all_keys(_TEMPLATE, "Fn::GetAtt"):
+            if isinstance(value, str):
+                names.append(value.split(".", 1)[0])
+            elif isinstance(value, list) and value and isinstance(value[0], str):
+                names.append(value[0])
+
+        # 3) Fn::Sub: テンプレート文字列中の ${...} を抽出する。
+        for value in _find_all_keys(_TEMPLATE, "Fn::Sub"):
+            names.extend(self._collect_sub_reference_names(value))
+        return names
+
+    @staticmethod
+    def _collect_sub_reference_names(value: Any) -> list[str]:
+        """`Fn::Sub` の値から参照名を抽出する.
+
+        `${A.B}`（GetAtt 相当）は先頭部分を論理 ID として扱い、`${!Literal}`
+        （エスケープ）は参照ではないため除外する。第2形式
+        （`[テンプレート, {変数マップ}]`）の変数マップに定義された名前は
+        テンプレート内で解決されるため参照名から除外する。
+
+        Args:
+            value: `Fn::Sub` の値（文字列、または [文字列, 変数マップ] のリスト）。
+
+        Returns:
+            list[str]: 抽出した参照名の一覧。
+        """
+        # 第1形式（文字列）と第2形式（リスト）を判別し、走査対象を決める。
+        if isinstance(value, str):
+            template_text = value
+            local_vars: frozenset[str] = frozenset()
+        elif isinstance(value, list) and value and isinstance(value[0], str):
+            template_text = value[0]
+            local_vars = (
+                frozenset(value[1])
+                if len(value) > 1 and isinstance(value[1], dict)
+                else frozenset()
+            )
+        else:
+            # 上記以外は Fn::Sub の仕様外であり、参照名を抽出できないため空を返す
+            # （テンプレートの妥当性自体は sam validate が担保する）。
+            return []
+
+        # ${...} を抽出し、エスケープと第2形式のローカル変数を除いた名前を返す。
+        collected: list[str] = []
+        for token in re.findall(r"\$\{([^}]*)\}", template_text):
+            if token.startswith("!"):
+                continue
+            name = token.split(".", 1)[0].strip()
+            if name and name not in local_vars:
+                collected.append(name)
+        return collected
+
+    def test_retired_display_path_resources_absent(self) -> None:
+        """退役した表示経路・カスタムドメインのリソースが存在しない（tasks.md 11）."""
+        # 退役対象の論理 ID がテンプレートに残っていないことを個別に確認する。
+        for logical_id in self._RETIRED_LOGICAL_IDS:
+            with self.subTest(resource=logical_id):
+                self.assertNotIn(
+                    logical_id,
+                    _TEMPLATE_RESOURCES,
+                    msg=(
+                        f"退役対象リソース {logical_id} が template.yaml に残存している"
+                        "（tasks.md 11 の削除対象）"
+                    ),
+                )
+
+    def test_api_url_output_absent(self) -> None:
+        """DjangoApi を値としていた Outputs.ApiUrl が存在しない（tasks.md 11）."""
+        # Outputs セクションは省略可能なため、欠落時は空辞書として扱う。
+        outputs = _TEMPLATE.get("Outputs", {})
+        self.assertNotIn(
+            "ApiUrl",
+            outputs,
+            msg="Outputs.ApiUrl が残存している（DjangoApi 削除に伴い除去済みのはず）",
+        )
+
+    def test_preserved_resources_present(self) -> None:
+        """非破壊対象のリソースが存置されている（tasks.md 11）."""
+        # 削除してはならないリソースが存在することを確認する（非破壊の担保）。
+        for logical_id in self._PRESERVED_LOGICAL_IDS:
+            with self.subTest(resource=logical_id):
+                self.assertIn(
+                    logical_id,
+                    _TEMPLATE_RESOURCES,
+                    msg=(
+                        f"非破壊対象リソース {logical_id} が存在しない"
+                        "（tasks.md 11 は削除対象外と定めている）"
+                    ),
+                )
+
+    def test_no_unresolved_references(self) -> None:
+        """Ref / GetAtt / Sub の参照先がすべて解決する（未解決参照の不在、tasks.md 11）."""
+        # 参照名を全収集し、Parameters・Resources・擬似パラメータのいずれにも
+        # 該当しないものを未解決参照として列挙する。
+        known = self._known_names()
+        unresolved = sorted(
+            {name for name in self._collect_reference_names() if name not in known}
+        )
+        self.assertEqual(
+            unresolved,
+            [],
+            msg=f"未解決の参照が残っている（削除に伴う参照漏れ）: {unresolved!r}",
+        )
+
+    def test_condition_references_resolve(self) -> None:
+        """条件参照（Fn::If / Fn::Condition / リソースの Condition）が解決する."""
+        # Conditions セクションは省略可能なため、欠落時は空辞書として扱う。
+        conditions = _TEMPLATE.get("Conditions", {})
+        referenced: list[str] = []
+
+        # Fn::If は第1要素が条件名（["条件名", 真, 偽]）。
+        for value in _find_all_keys(_TEMPLATE, "Fn::If"):
+            if isinstance(value, list) and value and isinstance(value[0], str):
+                referenced.append(value[0])
+
+        # !Condition 短縮タグは Fn::Condition へ正規化される（Fn::And 等の中で使用）。
+        for value in _find_all_keys(_TEMPLATE, "Fn::Condition"):
+            if isinstance(value, str):
+                referenced.append(value)
+
+        # リソース属性の Condition（リソース単位の作成条件）。
+        for body in _TEMPLATE_RESOURCES.values():
+            if isinstance(body, dict) and isinstance(body.get("Condition"), str):
+                referenced.append(body["Condition"])
+
+        unresolved = sorted({name for name in referenced if name not in conditions})
+        self.assertEqual(
+            unresolved,
+            [],
+            msg=f"未解決の条件参照が残っている: {unresolved!r}",
         )
 
 

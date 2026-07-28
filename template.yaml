@@ -17,13 +17,6 @@ Parameters:
     AllowedValues:
       - staging
       - prod
-  AllowedOrigin:
-    Type: AWS::SSM::Parameter::Value<String>
-    Description: "The allowed origin for CORS and CSRF protection (e.g. https://example.com)"
-    Default: /prod/portfolio/parameter/csrf_trusted_origins
-  AllowedHosts:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /prod/portfolio/parameter/allowed_hosts
   HostedZoneId:
     Type: String
     Description: "Route53 Hosted Zone ID for custom domain"
@@ -41,7 +34,8 @@ Parameters:
   # Contact_Function の SES 実行ロールを検証済み identity ARN にリソース限定する
   # ために使用する（ワイルドカード禁止、出典: design.md C4、requirements.md R6-2, R9-3）。
   # 値そのものはコードにハードコードせず Parameter Store から取得する
-  # （出典: requirements.md R6-7、AllowedOrigin/AllowedHosts と同じ参照方式で一貫性を保つ）。
+  # （出典: requirements.md R6-7。SesConfigurationSet と同じ AWS::SSM::Parameter::Value<String>
+  # 参照方式で一貫性を保つ）。
   # 運用注記: 本パラメータが指す SSM パス（既定 /prod/portfolio/parameter/ses_verified_identity）に、
   # ap-northeast-1 で検証済みの SES identity 文字列（例: ドメイン名または送信元メールアドレス）を
   # 事前登録しておく必要がある（SES identity 検証はリージョン単位、出典: design.md C4）。
@@ -101,141 +95,53 @@ Parameters:
     Description: "Hash-based Content-Security-Policy header value for display responses (finalized value with inline sha256 hashes is supplied by the build step)"
     Default: "default-src 'self' https:; script-src 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; script-src-elem 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; style-src 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; style-src-elem 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'"
 
+  # CloudFront 用 ACM 証明書（us-east-1）の DNS 検証 CNAME レコードの名前と値。
+  # 背景（事実）: 旧 REGIONAL 証明書 `ServerlessCertificate`（API Gateway カスタムドメイン用）と
+  # us-east-1 の CloudFront 用証明書は、同一ドメインに対して同一の検証 CNAME 名・値を共有していた
+  # （出典: docs/development-records/unused-resource-scan-django-retirement.md「確認結果 4」、
+  # aws route53 list-resource-record-sets / aws acm describe-certificate）。当該レコードは
+  # `ServerlessCertificate` の DNS 検証として CloudFormation が作成したものである（同記録「追加調査 1」、
+  # CloudTrail の ChangeResourceRecordSets イベント）。ACM は DNS 検証証明書の自動更新に当該 CNAME の
+  # 存置を要件とするため（同記録「追加調査 3」、AWS 公式 dns-renewal-validation）、`ServerlessCertificate`
+  # 削除に伴って検証 CNAME が失われないよう、本スタックで独立した Route53 レコードとして明示宣言する。
+  # 値はハードコードせず、ビルド（buildspec.yml）が us-east-1 証明書の
+  # DomainValidationOptions[].ResourceRecord から取得して供給する（出典: 同記録「扱いの決定」1）。
+  # 既定は空文字。CloudFrontCertificateArn が空（カスタムドメイン未切替）の場合は検証対象の
+  # us-east-1 証明書が存在しないため、レコードを宣言しない（Conditions: HasAcmValidationRecord）。
+  AcmValidationRecordName:
+    Type: String
+    Description: "DNS validation CNAME record name for the us-east-1 CloudFront ACM certificate (empty skips the record)"
+    Default: ""
+  AcmValidationRecordValue:
+    Type: String
+    Description: "DNS validation CNAME record value for the us-east-1 CloudFront ACM certificate (empty skips the record)"
+    Default: ""
+
 Conditions:
-  IsProd: !Equals [ !Ref Env, prod ]
   CreateARecord: !Equals [ !Ref ExistingARecord, "false" ]
   # CloudFront 用 ACM 証明書 ARN が与えられているか（空文字でない）。
   # True のときのみカスタムビューア証明書 + Aliases を有効化し、False（既定）では
   # 既存の CloudFront 既定証明書を維持して現行デプロイを非破壊に保つ（出典: 上記
   # CloudFrontCertificateArn パラメータ注記、AWS 公式 ViewerCertificate 仕様）。
   HasCloudFrontCertificate: !Not [ !Equals [ !Ref CloudFrontCertificateArn, "" ] ]
-
-Mappings:
-  EnvMapping:
-    staging:
-      SettingsModule: "config.settings.staging"
-    prod:
-      SettingsModule: "config.settings.prod"
+  # カスタムドメインの A(Alias) レコードを本スタックで作成するか。
+  # 表示経路の公開入口は CloudFront のみであり（API Gateway カスタムドメインは廃止。出典:
+  # docs/development-records/unused-resource-scan-django-retirement.md「扱いの決定」）、A レコードの
+  # 向き先は CloudFront に一意である。CloudFront が代替ドメイン名（Aliases）で当該ホスト名を受けるのは
+  # カスタム証明書指定時のみ（AWS 公式 ViewerCertificate は Aliases と対で必要）なので、
+  # 「スタック外に既存 A レコードが無い（CreateARecord）」かつ「CloudFront 証明書が指定済み
+  # （HasCloudFrontCertificate）」の両方が成立するときにのみ作成する。
+  CreateCloudFrontARecord: !And
+    - !Condition CreateARecord
+    - !Condition HasCloudFrontCertificate
+  # ACM 検証 CNAME レコードを本スタックで宣言するか（名前・値の双方が供給済みか）。
+  # CloudFrontCertificateArn が空のときはビルドが空文字を供給するため宣言しない
+  # （出典: 上記 AcmValidationRecordName/Value パラメータ注記、buildspec.yml のパラメータ注入）。
+  HasAcmValidationRecord: !And
+    - !Not [ !Equals [ !Ref AcmValidationRecordName, "" ] ]
+    - !Not [ !Equals [ !Ref AcmValidationRecordValue, "" ] ]
 
 Resources:
-  DjangoFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      # FunctionName: CobaemonServerlessPortfolioFunction
-      Handler: asgi_lambda.handler
-      Runtime: python3.12
-      CodeUri: ./
-      AutoPublishAlias: live
-      Environment:
-        Variables:
-          DJANGO_SETTINGS_MODULE: !FindInMap [EnvMapping, !Ref Env, SettingsModule]
-          DJANGO_SECRET_KEY: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:DJANGO_SECRET_KEY}}"
-          GOOGLE_CLIENT_ID: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GOOGLE_CLIENT_ID}}"
-          GOOGLE_CLIENT_SECRET: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GOOGLE_CLIENT_SECRET}}"
-          GITHUB_CLIENT_ID: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GITHUB_CLIENT_ID}}"
-          GITHUB_CLIENT_SECRET: !Sub "{{resolve:secretsmanager:${Env}/portfolio/secret:SecretString:GITHUB_CLIENT_SECRET}}"
-          ALLOWED_HOSTS: !Ref AllowedHosts
-          CSRF_TRUSTED_ORIGINS: !Ref AllowedOrigin
-          DEFAULT_FROM_EMAIL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/default_from_email}}"
-          DEFAULT_TO_EMAIL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/default_to_mail}}"
-          EMAIL_HOST: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_host}}"
-          EMAIL_PORT: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_port}}"
-          EMAIL_USE_TLS: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_use_tls}}"
-          EMAIL_USE_SSL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/email_use_ssl}}"
-          STATIC_URL: !Sub "https://${CloudFrontDistribution.DomainName}/"
-          CLOUDFRONT_DOMAIN_NAME: !GetAtt CloudFrontDistribution.DomainName
-          LOG_LEVEL: !Sub "{{resolve:ssm:/${Env}/portfolio/parameter/log_level}}"
-          ENV: !Ref Env
-      Events:
-        PostEndpoint:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DjangoApi
-            Path: /
-            Method: POST
-        ProxyGet:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DjangoApi
-            Path: /{proxy+}
-            Method: GET
-        ProxyPost:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DjangoApi
-            Path: /{proxy+}
-            Method: POST
-        ProxyOptions:
-          Type: Api
-          Properties:
-            RestApiId: !Ref DjangoApi
-            Path: /{proxy+}
-            Method: OPTIONS
-    Policies:
-      - AWSLambdaBasicExecutionRole
-      - Statement:
-        Effect: Allow
-        Action:
-          - s3:GetObject
-          - s3:ListBucket
-        Resource:
-          - !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static"
-          - !Sub "arn:aws:s3:::cobaemon-serverless-portfolio-${Env}-static/*"
-    Tags:
-      - Key: env
-        Value: !Ref Env
-      - Key: app
-        Value: portfolio
-      - Key: service
-        Value: lambda
-
-  DjangoFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${DjangoFunction}"
-      RetentionInDays: 365
-  
-  DjangoApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: !Ref Env
-      Name: CobaemonServerlessPortfolioApi
-      MergeDefinitions: true
-      DefinitionBody:
-        swagger: "2.0"
-        info:
-          title: CobaemonServerlessPortfolioApi
-          version: "1.0"
-        paths:
-          /:
-            get:
-              responses:
-                "301":
-                  description: Redirect to the portfolio top page without invoking Lambda.
-                  headers:
-                    Location:
-                      type: string
-                    Cache-Control:
-                      type: string
-              x-amazon-apigateway-integration:
-                type: mock
-                passthroughBehavior: when_no_match
-                requestTemplates:
-                  application/json: '{"statusCode": 301}'
-                responses:
-                  default:
-                    statusCode: "301"
-                    responseParameters:
-                      method.response.header.Location: "'/portfolio/top/'"
-                      method.response.header.Cache-Control: "'no-cache'"
-                    responseTemplates:
-                      application/json: ""
-      Cors:
-        AllowOrigin: !Sub "'${AllowedOrigin}'"
-        AllowMethods: "'GET,POST,OPTIONS'"
-
   # 問い合わせ送信用 API Gateway（Django 非依存の Contact_Function 専用）。
   # 表示は静的配信のため、本 API は動的処理（問い合わせ POST）のみを担う
   # （出典: design.md C3「API Gateway 連携」、目標アーキテクチャ、requirements.md R4-1, R4-2）。
@@ -261,8 +167,7 @@ Resources:
   # 参照、出典: contact_function/handler.py、requirements.md R4-1, R4-2）。
   # ハンドラのモジュールパスが `contact_function.handler` であり絶対 import
   # （`from contact_function.adapters...`）を用いるため、パッケージ親をパスに含める
-  # 既存と同一の CodeUri（リポジトリルート ./）を用いる（DjangoFunction と一貫、
-  # 既存パッケージングを壊さない）。
+  # CodeUri はリポジトリルート（./）とする（既存パッケージングを壊さない）。
   ContactFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -305,8 +210,8 @@ Resources:
       # 実行ロールは最小権限のみを付与する（ワイルドカード禁止、出典: requirements.md R9-3、
       # design.md C4）。SAM の Properties.Policies 直下に定義し、ロールへ確実に適用する。
       Policies:
-        # CloudWatch Logs への基本出力（既存 DjangoFunction と同一の managed policy、
-        # 出典: template.yaml DjangoFunction、requirements.md R9-3 の許容範囲）。
+        # CloudWatch Logs への基本出力に必要な AWS 管理ポリシー
+        # （ログ出力に限定され、requirements.md R9-3 の最小権限の許容範囲）。
         - AWSLambdaBasicExecutionRole
         # SES 送信権限: SESv2 SendEmail のみ（ses_email_sender.py は SendEmail のみ使用し
         # SendRawEmail は使わない、出典: contact_function/adapters/ses_email_sender.py）。
@@ -343,10 +248,10 @@ Resources:
         app: portfolio
         service: contact-lambda
 
-  # Contact_Function 用 CloudWatch Logs ロググループ（既存 DjangoFunctionLogGroup と同一方針）。
+  # Contact_Function 用 CloudWatch Logs ロググループ。
   # 明示定義により保持期間を制御し、無期限保持による Logs コスト増を避ける
   # （コスト最適化の趣旨と整合、出典: design.md C8/C9 の CloudWatch Logs 帰属）。
-  # 保持日数は既存 DjangoFunctionLogGroup（365 日）と一貫させ、後続タスクで調整可能とする。
+  # 保持日数 365 は退役した DjangoFunctionLogGroup の設定を踏襲した値であり、後続タスクで調整可能とする。
   ContactFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
@@ -355,57 +260,46 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${ContactFunction}"
       RetentionInDays: 365
 
-  ServerlessCertificate:
-    Type: AWS::CertificateManager::Certificate
+  # CloudFront 用 ACM 証明書（us-east-1）の DNS 検証 CNAME レコード。
+  # 旧 REGIONAL 証明書 `ServerlessCertificate`（API Gateway カスタムドメイン用）を本テンプレートから
+  # 除去したため、同証明書の DNS 検証として CloudFormation が作成していた検証 CNAME を、本スタックの
+  # 独立したレコードとして引き継ぐ（同一ドメインの us-east-1 証明書は同名・同値の CNAME を共有し、
+  # ACM は自動更新の要件として当該 CNAME の存置を求める。出典:
+  # docs/development-records/unused-resource-scan-django-retirement.md「確認結果 4」「追加調査 1/3」、
+  # AWS 公式 https://docs.aws.amazon.com/acm/latest/userguide/dns-renewal-validation.html ）。
+  # 名前・値はハードコードせず buildspec.yml が us-east-1 証明書から取得して供給する。
+  # TTL 300 は既存レコードの実測値に一致させる（出典: 同記録「確認結果 4」の Route53 レコード一覧）。
+  AcmValidationRecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: HasAcmValidationRecord
     Properties:
-      DomainName: !Ref DomainName
-      ValidationMethod: DNS
-      DomainValidationOptions:
-        - DomainName: !Ref DomainName
-          HostedZoneId: !Ref HostedZoneId
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref AcmValidationRecordName
+      Type: CNAME
+      TTL: "300"
+      ResourceRecords:
+        - !Ref AcmValidationRecordValue
 
-  ApiGatewayCustomDomain:
-    Type: AWS::ApiGateway::DomainName
-    Properties:
-      DomainName: !Ref DomainName
-      RegionalCertificateArn: !Ref ServerlessCertificate
-      EndpointConfiguration:
-        Types:
-          - REGIONAL
-
-  ApiGatewayBasePathMapping:
-    Type: AWS::ApiGateway::BasePathMapping
-    DependsOn:
-    - DjangoApiStage
-    Properties:
-      DomainName: !Ref ApiGatewayCustomDomain
-      RestApiId: !Ref DjangoApi
-      Stage: !Ref Env
-      BasePath: ""
-
-  # カスタムドメインの A(Alias) レコード。DNS カットオーバー（design.md「移行手順」ステップ4）を
-  # IaC で制御する: CloudFront 用証明書 ARN（CloudFrontCertificateArn）が指定されている場合
-  # （HasCloudFrontCertificate=true＝カットオーバー実施）は CloudFront ディストリビューションへ向け、
-  # 未指定（既定）は現行どおり API Gateway カスタムドメインへ向ける（非破壊）。同一 RecordSet の
-  # AliasTarget を差し替える in-place 更新のため、レコードの削除・再作成による切替断は生じない
-  # （出典: design.md「移行手順」/案A、requirements.md R3-3/R3-4）。証明書 ARN を空へ戻せば
-  # API Gateway 向きへロールバックできる。
+  # カスタムドメインの A(Alias) レコード（公開入口は CloudFront に一意）。
+  # 表示は静的配信（S3 + CloudFront）、動的経路は ContactApi のみであり、API Gateway カスタムドメイン
+  # （`ApiGatewayCustomDomain`）と REGIONAL 証明書（`ServerlessCertificate`）は本テンプレートから除去した
+  # （出典: docs/development-records/unused-resource-scan-django-retirement.md「扱いの決定」、
+  # requirements.md R3-3/R3-4）。そのため AliasTarget の分岐は不要となり CloudFront 固定とする。
+  # 論理 ID は `ApiGatewayRecordSet` のまま維持する。論理 ID を変更すると CloudFormation が同一ホスト名の
+  # A レコードを削除・再作成し公開断を生むため、名称の適合性より無停止を優先する（既存スタックの
+  # 物理レコード `serverless.portfolio.cobaemon.com.` を in-place 更新するため）。
   ApiGatewayRecordSet:
     Type: AWS::Route53::RecordSet
-    Condition: CreateARecord
+    Condition: CreateCloudFrontARecord
     Properties:
       HostedZoneId: !Ref HostedZoneId
       Name: !Sub "${DomainName}."
       Type: A
-      AliasTarget: !If
-        - HasCloudFrontCertificate
-        # カットオーバー時: CloudFront ディストリビューションへ向ける。CloudFront の Alias 用
-        # Hosted Zone ID は全ディストリビューション共通の固定グローバル値 Z2FDTNDATAQYW2（AWS 公式）。
-        - DNSName: !GetAtt CloudFrontDistribution.DomainName
-          HostedZoneId: Z2FDTNDATAQYW2
-        # 既定（証明書未指定）: 現行どおり API Gateway カスタムドメインへ向ける（非破壊）。
-        - DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
-          HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
+      AliasTarget:
+        # CloudFront の Alias 用 Hosted Zone ID は全ディストリビューション共通の固定グローバル値
+        # Z2FDTNDATAQYW2（AWS 公式）。
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
 
   # ============================================================
   # WAF（AWS::WAFv2）— 既定不採用（コメントアウトのまま保持）
@@ -528,15 +422,16 @@ Resources:
   #       - Key: service
   #         Value: waf
 
+  # 適用先は現存する唯一の動的経路（ContactApi のステージ）とする。旧 DjangoApi は退役済みで
+  # テンプレートから除去したため参照しない（出典:
+  # docs/development-records/unused-resource-scan-django-retirement.md「削除対象の確定」）。
+  # ContactApi のステージ名は !Ref Env（staging/prod）である（出典: 上記 ContactApi 宣言）。
   # WAFWebACLAssociation:
   #   Type: AWS::WAFv2::WebACLAssociation
-  #   DependsOn: DjangoApiStage
+  #   DependsOn: ContactApiStage
   #   Properties:
   #     WebACLArn: !GetAtt WAFWebACL.Arn
-  #     ResourceArn: !If 
-  #       - IsProd
-  #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/prod"
-  #       - !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${DjangoApi}/stages/dev"
+  #     ResourceArn: !Sub "arn:aws:apigateway:${AWS::Region}::/restapis/${ContactApi}/stages/${Env}"
 
   # 静的ファイル配信用S3バケット（dependencies.yamlで管理）
   # 以下のリソースは dependencies.yaml で定義されているため、ここではコメントアウト
@@ -800,9 +695,6 @@ Resources:
             OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # AllViewerExceptHostHeader
 
 Outputs:
-  ApiUrl:
-    Description: "The URL of the API Gateway"
-    Value: !Ref DjangoApi
   CloudFrontDistributionId:
     Description: "CloudFront Distribution ID for OAC bucket policy"
     Value: !Ref CloudFrontDistribution

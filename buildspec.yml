@@ -271,8 +271,6 @@ phases:
             "ExistingARecord": "$EXISTING_ARECORD",
             "HostedZoneId": "$HOSTED_ZONE_ID",
             "DomainName": "$DOMAIN_NAME",
-            "AllowedOrigin": "/${ENV}/portfolio/parameter/csrf_trusted_origins",
-            "AllowedHosts": "/${ENV}/portfolio/parameter/allowed_hosts",
             "SesVerifiedIdentity": "/${ENV}/portfolio/parameter/ses_verified_identity",
             "SesConfigurationSet": "/${ENV}/portfolio/parameter/ses_configuration_set"
           }
@@ -318,17 +316,51 @@ phases:
         except ssm.exceptions.ParameterNotFound:
             cert_arn = ""
 
+        # CloudFront 用証明書（us-east-1）の DNS 検証 CNAME を ACM から取得する。
+        # 旧 REGIONAL 証明書 ServerlessCertificate の除去に伴い、検証 CNAME は本スタックの
+        # AcmValidationRecordSet として保持する（ACM は DNS 検証証明書の自動更新に当該 CNAME の
+        # 存置を要件とする。出典: docs/development-records/unused-resource-scan-django-retirement.md
+        # 「扱いの決定」1、AWS 公式 acm/latest/userguide/dns-renewal-validation.html）。
+        # 値はハードコードせず証明書の DomainValidationOptions[].ResourceRecord から取得する。
+        # 証明書 ARN が空（カスタムドメイン未切替）のときは検証対象が存在しないため空文字を渡し、
+        # テンプレート側の条件（HasAcmValidationRecord）でレコードを宣言しない。
+        validation_name = ""
+        validation_value = ""
+        if cert_arn:
+            # CloudFront 用証明書は us-east-1 固定（CloudFront の仕様）。
+            acm = boto3.client("acm", region_name="us-east-1")
+            certificate = acm.describe_certificate(CertificateArn=cert_arn)["Certificate"]
+            # DNS 検証の ResourceRecord を抽出する。欠落・複数はフォールバックせず明示失敗させる
+            # （検証レコードを引き継げないまま証明書を除去すると自動更新が損なわれるため）。
+            records = [
+                option["ResourceRecord"]
+                for option in certificate.get("DomainValidationOptions", [])
+                if "ResourceRecord" in option
+            ]
+            if len(records) != 1:
+                raise SystemExit(
+                    "us-east-1 証明書の DNS 検証レコードが 1 件ではありません"
+                    f"（検出 {len(records)} 件, ARN={cert_arn}）。"
+                    "AcmValidationRecordSet で引き継ぐレコードを一意に決定できないため中断します。"
+                )
+            validation_name = records[0]["Name"]
+            validation_value = records[0]["Value"]
+
         with open("parameters.json", encoding="utf-8") as params_file:
             params = json.load(params_file)
         # CSP（template Default の下限を置換）と CloudFront ビューア証明書 ARN（カスタムドメイン
-        # 切替用。空=非破壊）を注入する。
+        # 切替用。空=非破壊）、および ACM 検証 CNAME の名前・値を注入する。
         params["Parameters"]["ContentSecurityPolicy"] = csp
         params["Parameters"]["CloudFrontCertificateArn"] = cert_arn
+        params["Parameters"]["AcmValidationRecordName"] = validation_name
+        params["Parameters"]["AcmValidationRecordValue"] = validation_value
         with open("parameters.json", "w", encoding="utf-8") as params_file:
             json.dump(params, params_file, ensure_ascii=False, indent=2)
         print(
             "parameters.json へ ContentSecurityPolicy と CloudFrontCertificateArn"
-            f"（{'設定あり' if cert_arn else '空=非破壊'}）を注入しました。"
+            f"（{'設定あり' if cert_arn else '空=非破壊'}）、"
+            f"AcmValidationRecord（{'設定あり' if validation_name else '空=宣言しない'}）"
+            "を注入しました。"
         )
         EOF
       - echo "パラメータファイルを作成しました:"

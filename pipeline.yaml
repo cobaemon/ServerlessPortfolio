@@ -452,6 +452,22 @@ Resources:
                   - cloudformation:DescribeStackResource
                 Resource:
                   - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackName}/*"
+        # CloudFront 用 ACM 証明書（us-east-1）の DNS 検証 CNAME を参照するために必要。
+        # buildspec.yml のパラメータ注入段が describe-certificate で
+        # DomainValidationOptions[].ResourceRecord を取得し、template.yaml の
+        # AcmValidationRecordSet（検証 CNAME をスタック管理下に保持する）へ供給する
+        # （出典: buildspec.yml のパラメータ注入、template.yaml AcmValidationRecordName/Value、
+        # docs/development-records/unused-resource-scan-django-retirement.md「扱いの決定」1）。
+        # 参照専用の 1 アクションのみとし、リージョンは CloudFront 証明書の us-east-1 に限定する。
+        - PolicyName: CodeBuildAcmValidationReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadCloudFrontCertificateValidationRecord
+                Effect: Allow
+                Action:
+                  - acm:DescribeCertificate
+                Resource: !Sub "arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/*"
         - PolicyName: CodeBuildCloudFrontOACAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -555,6 +571,10 @@ Resources:
                   - lambda:CreateAlias
                   - lambda:CreateFunction
                   - lambda:DeleteFunction
+                  # 退役リソースのエイリアス（DjangoFunctionAliaslive）をスタック更新で削除するために必要
+                  # （出典: docs/development-records/unused-resource-scan-django-retirement.md
+                  # 「確認結果 3」の削除対象一覧、tasks.md 11）。
+                  - lambda:DeleteAlias
                   # Contact_Function の予約同時実行数（ReservedConcurrentExecutions, C7）の
                   # 設定・解除に必要（出典: template.yaml ContactFunction、design.md C3/C7）。
                   - lambda:PutFunctionConcurrency
