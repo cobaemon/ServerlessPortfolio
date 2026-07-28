@@ -234,7 +234,7 @@ us-east-1 の 2 証明書はいずれのスタックのリソース一覧にも�
 3. `2026-03-29` より前の `DjangoFunction` / `DjangoApi` の呼び出し実績: 本スキャンの照会期間外であり未確認（`undetermined`）。削除判断は「現在の公開経路に含まれないこと」（上記 2・4）と「照会期間内の実績 0」に基づく。
 4. `Outputs.ApiUrl` の外部利用者: `Export` は無く、リポジトリ内参照も検出されなかったが、リポジトリ外（手作業・外部ツール）からの参照有無は未確認（`undetermined`）。
 5. `tests/iac/test_template_policies.py` の `DjangoFunction` 前提アサーションの修正方針: 未決定（タスク 11 で扱う）。
-6. スタック更新（破壊的操作）の実施可否・実施タイミング: 本タスクでは実施していない。人手承認を前提とする運用手順として未実施（`undetermined`）。
+6. スタック更新（破壊的操作）の実施可否・実施タイミング: 本タスク（タスク 10）では実施していない。実施はタスク 11 で 2026-07-28 のユーザー指示（実行命令＝人手承認）に基づき行われ、staging・prod 両環境が `UPDATE_COMPLETE` となった（出典: `docs/development-records/unused-resource-removal-django-retirement.md` 第 8 節）。
 
 ## 本タスクで実施していないこと
 

@@ -4,10 +4,11 @@
 対象は `template.yaml` からの退役リソース宣言の除去、その局所検証、および人手承認を前提とするスタック更新手順の定義である。
 削除対象および扱いの決定は、タスク 10 の記録 `docs/development-records/unused-resource-scan-django-retirement.md`（以下「スキャン記録」）に従う。
 
-- 実施日時: 2026-07-28（作業ツリー上の変更。コミットは未実施）
-- 基準 revision: `8580e717557c242b9f9b68767a2f5a121d61a772`（出典: `git rev-parse HEAD`）
+- 実施日時: 2026-07-28（テンプレート変更、コミット `d7cd60f`、staging・prod のスタック更新）
+- 基準 revision: `8580e717557c242b9f9b68767a2f5a121d61a772`（変更前。出典: `git rev-parse HEAD`）
+- 反映 revision: `d7cd60fb24200bc7b50953532a00830da4ce44ed`（`dev` および `main`。出典: `git log --oneline -1`）
 - 変更ファイル: `template.yaml`, `buildspec.yml`, `pipeline.yaml`, `tests/iac/test_template_policies.py`（出典: `git status --porcelain` の ` M` 4 件）
-- 本記録時点で AWS への変更操作（スタック更新・リソース削除）は実施していない（第 6 節 A 参照）
+- AWS への変更操作（スタック更新によるリソース削除）は 2026-07-28 のユーザー指示（タスク 11 の実行命令）を人手承認として実施した。結果は第 8 節に記録する
 
 ## 1. `template.yaml` の変更内容（除去・改修・追加）
 
@@ -118,15 +119,26 @@ CLI による個別削除は行わない（スタックのドリフトを生み�
 4. 既存の IaC ポリシー（SnapStart 不在・SES 最小権限・OAC 限定・CSP/HTTPS 強制・スロットリング・WAF 不在）が退役後も満たされている（`tests.iac.test_template_policies` 24 件合格）。
 5. `buildspec.yml` の検証段構成が保たれている（`tests.iac.test_buildspec` を含む全 76 件合格）。
 6. スタック更新に必要な削除系 IAM 権限が CloudFormation サービスロールに揃っている（第 2 節の該当行）。
+7. staging・prod 両環境でスタック更新が `UPDATE_COMPLETE` で完了し、ロールバック・失敗イベントがない（第 8.2 節）。
+8. 退役対象リソースが両環境の AWS 実体から不在である（Lambda・API Gateway REST API・カスタムドメイン・REGIONAL 証明書・スタックリソース一覧。第 8.3 節）。
+9. ACM の DNS 検証 CNAME が両環境で存置され、us-east-1 証明書が `ISSUED` / `RenewalEligibility=ELIGIBLE` である（第 8.4 節）。
+10. 公開エンドポイントが両環境で疎通している（`/portfolio/top/` GET = 200、`/portfolio/contact` POST = 200）。非退行検証は両環境 11 チェックすべて `COMPLIANT`（第 8.5 節）。
 
 ## 6. 未確認事項（`undetermined`。完了扱いにしない）
 
-A. スタック更新（staging・prod。各環境で単一の更新。出典: ユーザー指示 2026-07-28）の実施と完了状態: 実施結果は第 8 節に記録する。
-B. 削除後の対象リソース不在の実測: 実施結果は第 8 節に記録する。
-C. 公開エンドポイント（`/portfolio/top/` 表示、`/portfolio/contact` POST）の削除後疎通: 実施結果は第 8 節に記録する。
-D. 既存検証 CNAME との競合の有無: 既存レコードは CloudFormation が `ServerlessCertificate` の DNS 検証として作成したものであり、同名同値のレコードを新規リソースとして宣言した際の CloudFormation の挙動は公式リファレンスに記載がなく実測もない（出典: スキャン記録「追加調査 4」）。単一のスタック更新の結果（第 4 節確認項目 2・4）で判定する。競合が発生した場合はフォールバックせずスタックイベントを根拠に報告して停止する。
-E. 段階分割コミットの作成: ユーザー指示（2026-07-28、スキャン記録「扱いの決定」追加の決定）により単一のスタック更新で実施するため、コミット分割は行わない（不要）。
-F. `DjangoFunctionLogGroup` のログ保全（エクスポート）の要否: スキャン記録「未確認事項 2」のまま未確認。
+A〜E は実施・実測により解消した（第 5 節 7〜10、第 8 節）。以下は解消済み項目の到達点と、残る `undetermined` を区別して記す。
+
+解消済み:
+
+- A. スタック更新（staging・prod。各環境で単一の更新。出典: ユーザー指示 2026-07-28）: 両環境 `UPDATE_COMPLETE`（第 8.2 節）。
+- B. 削除後の対象リソース不在: 実測済み（第 8.3 節）。
+- C. 公開エンドポイントの削除後疎通: GET 200 / POST 200、非退行 11 チェック `COMPLIANT`（第 8.5 節）。
+- D. 既存検証 CNAME との競合: 両環境で `AcmValidationRecordSet` が `CREATE_COMPLETE` となり、検証 CNAME は TTL 300 のまま存置された（第 8.2・8.4 節）。競合は発生していない。
+- E. 段階分割コミットの作成: 単一のスタック更新で実施したため不要（コミット `d7cd60f` 1 件）。
+
+残る `undetermined`:
+
+F. `DjangoFunctionLogGroup` のログ保全（エクスポート）の要否: 未確認のまま更新を実施したため、ログ（prod 375,901 バイト / staging 120,543 バイト）は削除された（第 8.2 節）。保全の要否は依然として未確認であり、削除は取り消せない。
 G. `Outputs.ApiUrl` のリポジトリ外利用者の有無: スキャン記録「未確認事項 4」のまま未確認。
 H. `samconfig.toml` 9 行目の `parameter_overrides` に残る `AllowedOrigin` / `AllowedHosts` / `DomainName`: これらは `pipeline.yaml` の `Parameters`（4-38 行）に存在せず、revision `8580e71` 時点でも当該テンプレートに対応しない指定であった（出典: `git show HEAD:pipeline.yaml` に該当パラメータの記載なし）。本タスクの変更で `template.yaml` 側の同名パラメータも除去されたため、リポジトリ内に対応する宣言は存在しない。除去の可否は未決定。
 I. `asgi_lambda.py` および Django 表示経路向けコードの位置付け: `DjangoFunction` 退役によりデプロイ対象から外れたが、その扱い（保持・除去）は本タスクの範囲外であり未決定。
@@ -139,4 +151,67 @@ I. `asgi_lambda.py` および Django 表示経路向けコードの位置付け:
 ## 8. スタック更新の実施記録（staging → prod）
 
 本節は 2026-07-28 のユーザー指示（タスク 11 の実行命令。これが破壊的操作に対する人手承認）に基づく実施記録である。
-実行の進行に応じて追記する。
+各環境で単一のスタック更新（検証 CNAME 宣言と退役リソース除去を同時適用）を実施した。
+
+### 8.1 コミットと反映
+
+| 項目 | 値 | 出典（実行コマンド） |
+| --- | --- | --- |
+| コミット | `d7cd60fb24200bc7b50953532a00830da4ce44ed`（`refactor(iac): retire Django display path and declare ACM validation CNAME`） | `git commit -F <msg>`（git フックは有効。`commit-msg` は ALLOW） |
+| 対象ファイル | `template.yaml` / `buildspec.yml` / `pipeline.yaml` / `tests/iac/test_template_policies.py` / 本記録 / スキャン記録（6 files changed, 824 insertions, 198 deletions） | `git commit` 出力 |
+| staging 反映 | `git switch dev` → `git push origin dev`（`8580e71..d7cd60f`） | `git push origin dev` |
+| prod 反映 | `git switch main` → `git merge --ff-only dev` → `git push origin main`（`8580e71..d7cd60f`） | `git merge` / `git push origin main` |
+
+反映直前のローカル検証（すべて合格）: `sam validate --template-file template.yaml --region ap-northeast-1 --profile aws_portfolio_profile --lint` = `valid SAM Template`、`python -m unittest discover -s tests -t .` = `Ran 76 tests / OK`、`python -m scripts.control_platform.cli --self-test` = `"ok": false` の出力なし、`python tests/self_test.py` = 全 10 ケース `PASS`。
+
+### 8.2 パイプラインとスタック更新の結果
+
+| 環境 | パイプライン実行 ID / revision | 全ステージ結果 | スタック | 状態 / 最終更新 |
+| --- | --- | --- | --- | --- |
+| staging | `fc88c514-0048-47bc-a8ab-760320613d2f` / `d7cd60f` | Source・UpdatePipeline・BuildDependencies・DeployDependencies・Build・Deploy すべて `Succeeded` | `cobaemon-serverless-portfolio-staging-stack` | `UPDATE_COMPLETE` / 2026-07-28T06:32:18Z |
+| prod | `ae543e31-3fa0-4564-9d60-de254991d718` / `d7cd60f` | 同上すべて `Succeeded` | `cobaemon-serverless-portfolio-stack` | `UPDATE_COMPLETE` / 2026-07-28T06:58:53Z |
+
+出典: `aws codepipeline list-pipeline-executions`、`aws codepipeline get-pipeline-state --name cobaemon-serverless-portfolio-staging-pipeline|cobaemon-serverless-portfolio-pipeline`、`aws cloudformation describe-stacks --query "Stacks[0].{status:StackStatus,updated:LastUpdatedTime}"`（いずれも `--region ap-northeast-1 --profile aws_portfolio_profile`）。
+
+スタックイベント（`aws cloudformation describe-stack-events`）では両環境で `AcmValidationRecordSet` の `CREATE_COMPLETE` が退役リソースの削除より先に記録され、`*_FAILED` および `ROLLBACK` 系のイベントは存在しない。
+
+削除完了（`DELETE_COMPLETE`）が記録された論理 ID（両環境で同一。staging 06:33:02-06:34:10Z / prod 06:59:36-07:00:43Z）:
+`DjangoFunction`、`DjangoFunctionAliaslive`、`DjangoFunctionRole`、`DjangoFunctionLogGroup`、`DjangoFunctionPostEndpointPermissionStage`、`DjangoFunctionProxyGetPermissionStage`、`DjangoFunctionProxyPostPermissionStage`、`DjangoFunctionProxyOptionsPermissionStage`、`DjangoApi`、`DjangoApiStage`、`DjangoApiDeploymentd8051f505f`、`ApiGatewayCustomDomain`、`ApiGatewayBasePathMapping`、`ServerlessCertificate`。
+
+`DjangoFunctionLogGroup` は `DeletionPolicy: Delete` により削除され、当該ロググループのログ（prod 375,901 バイト / staging 120,543 バイト。出典: スキャン記録「確認結果 3」）は失われた。エクスポートは実施していない。
+
+### 8.3 削除後のリソース棚卸し（実測）
+
+| 確認 | コマンド | 結果 |
+| --- | --- | --- |
+| スタックリソース一覧 | `aws cloudformation describe-stack-resources --stack-name <各スタック>` | 両環境とも 13 件で、`AcmValidationRecordSet` / `ApiGatewayRecordSet` / `CloudFrontDistribution` / `ContactApi` / `ContactApiDeployment322166271b` / `ContactApiStage` / `ContactFunction` / `ContactFunctionContactOptionsPermissionStage` / `ContactFunctionContactPostPermissionStage` / `ContactFunctionLogGroup` / `ContactFunctionRole` / `DisplayResponseHeadersPolicy` / `DisplayRouterFunction` のみ。退役対象の論理 ID は存在しない |
+| Lambda 関数 | `aws lambda list-functions` | 残存は `cobaemon-serverless-portfolio-stac-ContactFunction-x7VR1cRQFuz5`（prod）と `cobaemon-serverless-portfolio-stag-ContactFunction-YpXVheb5VsqJ`（staging）の 2 件のみ。`DjangoFunction` を含む関数は 0 件 |
+| API Gateway REST API | `aws apigateway get-rest-apis` | 残存は `4ia2s2c7j3`（prod ContactApi）と `pdf7bj82d5`（staging ContactApi）。`5ao0xzfhph`（prod DjangoApi）・`0vmnuyh30j`（staging DjangoApi）は不在 |
+| API Gateway カスタムドメイン | `aws apigateway get-domain-names` | 0 件（`serverless.portfolio.cobaemon.com` / `staging.serverless.portfolio.cobaemon.com` とも不在） |
+| ACM（ap-northeast-1） | `aws acm list-certificates --region ap-northeast-1` | 旧 `ServerlessCertificate` の物理 ID（prod `576646b5-be52-4217-b38f-d5b61d2a9032` / staging `1b49250a-87a1-454d-a851-798f7a89c1b1`。出典: スキャン記録「確認結果 4」）はいずれも不在。残る 3 件（`3c4b6f02-4db9-49a8-9b03-147ca7baf5fc` / `a51e2a53-eb2a-487f-9a45-944b35980326` / `d21e5ed8-f919-4ec7-a1a7-af8d793d6db5`）は本スタック群の管理外である（スタックリソース一覧に対応する論理 ID なし） |
+
+### 8.4 検証 CNAME と us-east-1 証明書
+
+`aws route53 list-resource-record-sets --hosted-zone-id Z00462201BTRUWFZ0YO7V` の結果、以下が TTL 300 の CNAME として存置されている。
+
+- prod: `_9afd031f8f75b92e5ef70ce914afd8fd.serverless.portfolio.cobaemon.com.` → `_615610039787f7d01a294226ab3ab053.xlfgrmvvlj.acm-validations.aws.`
+- staging: `_d70937ca68d49a47995c0f8a29bb8e9c.staging.serverless.portfolio.cobaemon.com.` → `_6fbea12a2bd06cf8cb2d00d54eb7989a.jkddzztszm.acm-validations.aws.`
+
+A レコードは CloudFront を指したまま維持されている（prod → `d3mh423zcvv61u.cloudfront.net.` / staging → `d2t5vawf3svyin.cloudfront.net.`）。
+
+`aws acm describe-certificate --region us-east-1` の結果、`serverless.portfolio.cobaemon.com`（`E3QK078NBPDKHO` で使用中）と `staging.serverless.portfolio.cobaemon.com`（`E18LO9XBUTT6Y9` で使用中）はともに `Status=ISSUED`、`RenewalEligibility=ELIGIBLE`、`NotAfter=2027-02-06T08:59:59+09:00`。
+
+### 8.5 公開エンドポイントの疎通と非退行検証
+
+| 環境 | 検証 | 結果 |
+| --- | --- | --- |
+| staging | `GET https://staging.serverless.portfolio.cobaemon.com/portfolio/top/` | HTTP 200、本文 38,015 バイト、`Content-Security-Policy` 付与（nonce なし） |
+| staging | `POST https://staging.serverless.portfolio.cobaemon.com/portfolio/contact`（`Origin` 付き、4 項目 JSON） | HTTP 200、`Access-Control-Allow-Origin: https://staging.serverless.portfolio.cobaemon.com`、本文 `{"message": "問い合わせを受け付けました。"}` |
+| staging | `python -m scripts.measurement.non_regression_check --base-url https://staging.serverless.portfolio.cobaemon.com` | 11 チェックすべて `COMPLIANT`、終了コード 0 |
+| prod | `GET https://serverless.portfolio.cobaemon.com/portfolio/top/` | HTTP 200、本文 38,015 バイト |
+| prod | `POST https://serverless.portfolio.cobaemon.com/portfolio/contact`（`Origin` 付き、4 項目 JSON） | HTTP 200、`Access-Control-Allow-Origin: https://serverless.portfolio.cobaemon.com`、本文 `{"message": "問い合わせを受け付けました。"}` |
+| prod | `python -m scripts.measurement.non_regression_check --base-url https://serverless.portfolio.cobaemon.com` | 11 チェックすべて `COMPLIANT`、終了コード 0 |
+
+POST 検証で観測した事実として、`Origin` ヘッダなしの要求は HTTP 403（`{"error": "origin_rejected"}`）、フィールド名が `name` / `phone` の要求は HTTP 400（`{"error": "validation_error", "fields": ["full_name", "phone_number"]}`）となった。いずれも `contact_function/handler.py` の Origin 検証（287-288 行）と `contact_function/domain/validators.py` の `_ALLOWED_FIELDS`（26 行）に一致する設計上の挙動であり、本変更による退行ではない。
+
+なお POST 検証は Amazon SES による実際のメール送信を伴う（staging・prod 各 1 通）。
