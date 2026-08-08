@@ -19,11 +19,19 @@ class Top(FormView):
     def form_valid(self, form):
         """
         フォームが有効な場合の処理
-        お問い合わせ内容をメール送信し、成功メッセージを返す
+
+        お問い合わせ内容をメール送信し、成功メッセージを返す。
+
+        戻り値:
+            HttpResponse: 送信成功時の応答
+        例外:
+            ContactForm.send_email() は成否を戻り値で通知せず、送信失敗時は例外を
+            送出する。本メソッドは当該例外を捕捉せず伝播させる
+            （出典: portfolio/forms.py send_email、requirements.md R4-7、
+            design.md C8 区分 B-6）。
         """
-        if form.send_email():
-            return HttpResponse("Form submission successful")
-        return HttpResponse("Email sending failed", status=500)
+        form.send_email()
+        return HttpResponse("Form submission successful")
 
     def form_invalid(self, form):
         """
@@ -45,10 +53,22 @@ class Top(FormView):
 
 @require_POST
 def contact(request):
+    """
+    お問い合わせ送信を受け付ける POST 専用ビュー
+
+    引数:
+        request (HttpRequest): POST リクエスト
+    戻り値:
+        HttpResponse: 送信成功時は 200、バリデーション失敗時は 400
+    例外:
+        ContactForm.send_email() は成否を戻り値で通知せず、送信失敗時は例外を
+        送出する。本ビューは当該例外を捕捉せず伝播させる
+        （出典: portfolio/forms.py send_email、requirements.md R4-7、
+        design.md C8 区分 B-6）。
+    """
     form = ContactForm(request.POST)
     if form.is_valid():
-        if form.send_email():
-            return HttpResponse("Form submission successful")
-        return HttpResponse("Email sending failed", status=500)
+        form.send_email()
+        return HttpResponse("Form submission successful")
     logger.warning("Invalid contact form submission: %s", form.errors)
     return HttpResponse("Invalid", status=400)

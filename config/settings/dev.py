@@ -1,7 +1,6 @@
 import os
 
 import dotenv
-from django.core.exceptions import ImproperlyConfigured
 
 from .base import *
 
@@ -30,23 +29,13 @@ DATABASES = {
     }
 }
 
-# Email configuration (optional)
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+# メール設定
+# SMTP 接続設定値（ホスト・ポート・TLS 有効化・SSL 有効化）と
+# SMTP 認証情報（ユーザー名・パスワード）の読み込み、および
+# SMTP / console のバックエンド分岐は除去した。ローカル開発では送信を行わず、
+# console バックエンドを単一値として明示設定する
+# （出典: requirements.md R4-1/R4-3、design.md C8 区分 B-3、tasks.md 12.2）。
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "webmaster@localhost")
 DEFAULT_TO_EMAIL = os.environ.get("DEFAULT_TO_EMAIL", "")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False") == "True"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
-
-if EMAIL_USE_TLS and EMAIL_USE_SSL:
-    raise ImproperlyConfigured(
-        "EMAIL_USE_TLS and EMAIL_USE_SSL are mutually exclusive. Set only one to True."
-    )
-
-if EMAIL_HOST:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 

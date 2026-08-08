@@ -1,0 +1,110 @@
+{
+  "applied_stream_b_segments": [
+    "B-1_prod_settings",
+    "B-2_prod_comment",
+    "B-3_dev_settings",
+    "B-4_forms_log",
+    "B-5_forms_exception",
+    "B-6_views_callsite",
+    "B-7_buildspec",
+    "B-8_tests_and_docs"
+  ],
+  "non_regression_records": [
+    {
+      "stream": "A",
+      "commands": [
+        "注記（実測条件・R2-10）: 本レコードは系統 A（tasks.md 7.1 / 9.1 / 9.2）・系統 B（tasks.md 12.1〜12.6）・系統 D（tasks.md 13.1 / 13.2）の 3 系統すべてを適用済みの同一作業ツリー（git rev-parse --abbrev-ref HEAD = v3.7.2、git log --oneline -1 = 5f4ad0d、本 spec による commit 0 件）に対して、tasks.md 14.1 の実行時点で 1 回だけ計測した結果である。系統 A のみを適用した中間状態での再計測は行っていない（未実施）。したがって系統 A / B / D の 3 レコードの実測値は同一であり、系統ごとに異なる値を記録していない。",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.dev\"; python manage.py test",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.dev\"; python manage.py check --fail-level WARNING",
+        "python -m scripts.control_platform.cli --self-test",
+        "python tests/self_test.py",
+        "python -m scripts.measurement.non_regression_check",
+        "aws ssm get-parameter --name /prod/portfolio/parameter/cloudfront_domain_name --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.prod\"; <prod 必須環境変数 10 件を本プロセス限りで供給>; python manage.py collectstatic --noinput",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.prod\"; <prod 必須環境変数 10 件を本プロセス限りで供給>; python manage.py render_static",
+        "注記（render_static 実行前提・tasks.md 10 の実行前提 (1)〜(5)）: DJANGO_SETTINGS_MODULE=config.settings.prod、CLOUDFRONT_DOMAIN_NAME は Parameter Store の実値、ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS は Parameter Store の実値、OAuth 4 件（GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET）と DJANGO_SECRET_KEY はプレースホルダ（config/settings/prod.py:42-56 の非空判定のみに用いられ成果物内容へ影響しない）。環境変数は本プロセス限りで供給し .env / env_dev.json へ書き込まず実行後に削除した。"
+      ],
+      "tests_passed": 174,
+      "tests_failed": 0,
+      "tests_errored": 0,
+      "django_check_exit_code": 0,
+      "control_platform_exit_code": 0,
+      "self_test_exit_code": 0,
+      "non_regression_exit_code": 0,
+      "prerendered_pages": 7,
+      "manifest_files": 1,
+      "content_security_policy": "default-src 'self' https: https://d3mh423zcvv61u.cloudfront.net; script-src 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; script-src-elem 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; style-src 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; style-src-elem 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; font-src 'self' https://d3mh423zcvv61u.cloudfront.net; img-src 'self' data: https://d3mh423zcvv61u.cloudfront.net; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; report-uri /csp-report-endpoint"
+    },
+    {
+      "stream": "B",
+      "commands": [
+        "注記（実測条件・R2-10）: 本レコードは系統 A / B / D の 3 系統すべてを適用済みの同一作業ツリー（v3.7.2 / 5f4ad0d / 本 spec による commit 0 件）に対して、tasks.md 14.1 の実行時点で 1 回だけ計測した結果である。系統 B のみを適用した中間状態での再計測は行っていない（未実施）。系統 A / D のレコードと同一値である。",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.dev\"; python manage.py test",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.dev\"; python manage.py check --fail-level WARNING",
+        "python -m scripts.control_platform.cli --self-test",
+        "python tests/self_test.py",
+        "python -m scripts.measurement.non_regression_check",
+        "aws ssm get-parameter --name /prod/portfolio/parameter/cloudfront_domain_name --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.prod\"; <prod 必須環境変数 10 件を本プロセス限りで供給>; python manage.py collectstatic --noinput",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.prod\"; <prod 必須環境変数 10 件を本プロセス限りで供給>; python manage.py render_static",
+        "AWS 照会（R4-13。読み取り専用。削除は未実施）: aws ssm get-parameter --name /prod/portfolio/parameter/email_host --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1 → 終了コード 0 / 取得値 email-smtp.ap-northeast-1.amazonaws.com（現存）",
+        "AWS 照会（R4-13）: aws ssm get-parameter --name /prod/portfolio/parameter/email_port --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1 → 終了コード 0 / 取得値 587（現存）",
+        "AWS 照会（R4-13）: aws ssm get-parameter --name /prod/portfolio/parameter/email_use_tls --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1 → 終了コード 0 / 取得値 True（現存）",
+        "AWS 照会（R4-13）: aws ssm get-parameter --name /prod/portfolio/parameter/email_use_ssl --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1 → 終了コード 0 / 取得値 False（現存）",
+        "AWS 照会（R4-13）: aws secretsmanager describe-secret --secret-id prod/portfolio/secret --query \"{Name:Name,ARN:ARN,LastChangedDate:LastChangedDate}\" --output json --profile aws_portfolio_profile --region ap-northeast-1 → 終了コード 0 / シークレット prod/portfolio/secret は現存（本 API は平文値を返さない）",
+        "AWS 照会（R4-13、R8-7 / GDPR / ゼロトラスト）: boto3（profile aws_portfolio_profile / region ap-northeast-1）で secretsmanager.get_secret_value(SecretId='prod/portfolio/secret') を実行し、SecretString の JSON からキー名集合のみを取り出して対象 2 キーの存在有無を判定した（終了コード 0 / 総キー数 7 / EMAIL_HOST_USER=PRESENT / EMAIL_HOST_PASSWORD=PRESENT）。平文値・値の一部・長さ・ハッシュはいずれも標準出力・ログ・本記録へ出力していない。",
+        "注記（AWS 側状態・R4-14 / R4-15 / R4-16、R8-1 / R8-4 / R8-5 / R8-8）: 対象環境は prod。照会時点で 6 対象すべてが現存するため absent_targets は空であり、tasks.md 14.1 の範囲は記録ファイルの作成に限られ Destructive_Operation を実行していないため deleted_targets も空である。したがって R4-14 の系統 B 完了判定は未成立（未完了。R4-15）。削除は Approver 承認と scripts/cleanup/approval.py の is_executable の許可を前提とする運用手順であり、承認取得後に R8-4（実行前の現在値取得と記録）→ 実行 → R8-5（不在確認と記録）の順で実施する。",
+        "注記（render_static 実行前提）: 系統 A レコードと同一（tasks.md 10 の実行前提 (1)〜(5)）。"
+      ],
+      "tests_passed": 174,
+      "tests_failed": 0,
+      "tests_errored": 0,
+      "django_check_exit_code": 0,
+      "control_platform_exit_code": 0,
+      "self_test_exit_code": 0,
+      "non_regression_exit_code": 0,
+      "prerendered_pages": 7,
+      "manifest_files": 1,
+      "content_security_policy": "default-src 'self' https: https://d3mh423zcvv61u.cloudfront.net; script-src 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; script-src-elem 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; style-src 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; style-src-elem 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; font-src 'self' https://d3mh423zcvv61u.cloudfront.net; img-src 'self' data: https://d3mh423zcvv61u.cloudfront.net; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; report-uri /csp-report-endpoint"
+    },
+    {
+      "stream": "D",
+      "commands": [
+        "注記（実測条件・R2-10、R7-9）: 本レコードは系統 A / B / D の 3 系統すべてを適用済みの同一作業ツリー（v3.7.2 / 5f4ad0d / 本 spec による commit 0 件）に対して、tasks.md 14.1 の実行時点で 1 回だけ計測した結果である。系統 D のみを適用した中間状態での再計測は行っていない（未実施）。系統 A / B のレコードと同一値である。",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.dev\"; python manage.py test",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.dev\"; python manage.py check --fail-level WARNING",
+        "python -m scripts.control_platform.cli --self-test",
+        "python tests/self_test.py",
+        "python -m scripts.measurement.non_regression_check",
+        "aws ssm get-parameter --name /prod/portfolio/parameter/cloudfront_domain_name --query Parameter.Value --output text --profile aws_portfolio_profile --region ap-northeast-1",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.prod\"; <prod 必須環境変数 10 件を本プロセス限りで供給>; python manage.py collectstatic --noinput",
+        "$env:DJANGO_SETTINGS_MODULE=\"config.settings.prod\"; <prod 必須環境変数 10 件を本プロセス限りで供給>; python manage.py render_static",
+        "注記（R7-8 の範囲）: 変更後の requirements.txt に対するクリーン環境での pip install -r requirements.txt の実行結果は tasks.md 13.2 の記録に属し、本タスク（14.1）では再実行していない（未実施）。本レコードは R2-1〜R2-6 / R7-9 の非退行確認結果のみを保持する。",
+        "注記（render_static 実行前提）: 系統 A レコードと同一（tasks.md 10 の実行前提 (1)〜(5)）。"
+      ],
+      "tests_passed": 174,
+      "tests_failed": 0,
+      "tests_errored": 0,
+      "django_check_exit_code": 0,
+      "control_platform_exit_code": 0,
+      "self_test_exit_code": 0,
+      "non_regression_exit_code": 0,
+      "prerendered_pages": 7,
+      "manifest_files": 1,
+      "content_security_policy": "default-src 'self' https: https://d3mh423zcvv61u.cloudfront.net; script-src 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; script-src-elem 'self' https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; style-src 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; style-src-elem 'self' https://fonts.googleapis.com https://use.fontawesome.com https://cdn.jsdelivr.net https://cdn.startbootstrap.com https://d3mh423zcvv61u.cloudfront.net; font-src 'self' https://d3mh423zcvv61u.cloudfront.net; img-src 'self' data: https://d3mh423zcvv61u.cloudfront.net; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; report-uri /csp-report-endpoint"
+    }
+  ],
+  "aws_smtp_state": {
+    "queried": true,
+    "absent_targets": [],
+    "deleted_targets": [],
+    "expected_targets": [
+      "parameter:email_host",
+      "parameter:email_port",
+      "parameter:email_use_tls",
+      "parameter:email_use_ssl",
+      "secret:EMAIL_HOST_USER",
+      "secret:EMAIL_HOST_PASSWORD"
+    ]
+  }
+}

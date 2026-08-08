@@ -33,10 +33,13 @@ DATABASES = {
     }
 }
 
-# SMTP 認証情報（EMAIL_HOST_USER / EMAIL_HOST_PASSWORD）は本番設定から除去した。
-# 問い合わせメール送信は Amazon SES 直連携（Contact_Function）へ移行するため、
-# SMTP 認証情報を Secrets Manager・ビルド環境・Django 設定のいずれからも保持しない
-# （出典: requirements.md R6-3、design.md C4、tasks.md 5.1/6.1）。
+# SMTP 経路は本番設定から全面的に除去した。対象は SMTP 認証情報（ユーザー名・パスワード）
+# に加え、SMTP 接続設定値（ホスト・ポート・TLS 有効化・SSL 有効化）である。
+# 問い合わせメール送信は Amazon SES 直連携（Contact_Function）が担うため、
+# SMTP 認証情報および接続設定値を Secrets Manager・Parameter Store・ビルド環境・
+# Django 設定のいずれからも保持しない。Django 側の送信バックエンドは後述の
+# EMAIL_BACKEND で console バックエンドを明示設定する
+# （出典: requirements.md R4-1/R4-2/R4-17、design.md C8、tasks.md 12.1）。
 
 # OAuth設定 - 必須項目
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
@@ -69,21 +72,13 @@ DEFAULT_TO_EMAIL = os.environ.get("DEFAULT_TO_EMAIL")
 if not DEFAULT_TO_EMAIL:
     raise ImproperlyConfigured("Set the DEFAULT_TO_EMAIL environment variable")
 
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-if not EMAIL_HOST:
-    raise ImproperlyConfigured("Set the EMAIL_HOST environment variable")
-
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
-if not EMAIL_PORT:
-    raise ImproperlyConfigured("Set the EMAIL_PORT environment variable")
-
-# Optional TLS/SSL settings
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False") == "True"
-EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False") == "True"
-if EMAIL_USE_TLS and EMAIL_USE_SSL:
-    raise ImproperlyConfigured(
-        "EMAIL_USE_TLS and EMAIL_USE_SSL are mutually exclusive. Set only one to True."
-    )
+# メール送信バックエンド - 明示設定（必須）
+# 本番・staging の Django プロセスは SMTP 送信経路を持たない。Django の既定値は
+# SMTP バックエンド（localhost:25）であり、未指定のままでは暗黙の既定へ依存する
+# フォールバック状態となるため、console バックエンドを単一値として明示設定する。
+# config/settings/staging.py の `from .prod import *` により staging も同値を継承する
+# （出典: requirements.md R4-17/R4-11、design.md C8「確定事項（Approver 判断済み）」）。
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # セキュリティ強化のための設定
 SECURE_SSL_REDIRECT = True

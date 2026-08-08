@@ -64,7 +64,15 @@ class ContactForm(forms.Form):
     def send_email(self):
         """
         お問い合わせ内容をメールで送信
-        フォームの内容を管理者宛にメール送信する
+
+        フォームの内容を管理者宛にメール送信する。
+
+        戻り値:
+            None（成否を真偽値で返さない）
+        例外:
+            送信中に発生した例外は握りつぶさず、そのまま呼び出し元へ伝播させる
+            （出典: requirements.md R4-7、design.md C8 区分 B-5、
+            .kiro/steering/principles.md 第三原則3 フォールバック禁止）。
         """
         full_name = self.cleaned_data['full_name']
         email = self.cleaned_data['email']
@@ -81,19 +89,6 @@ class ContactForm(forms.Form):
             to=[settings.DEFAULT_TO_EMAIL],
         )
 
-        logger.info("Using email backend %s", settings.EMAIL_BACKEND)
-        logger.info(
-            "Using SMTP server %s:%s TLS=%s SSL=%s",
-            settings.EMAIL_HOST,
-            settings.EMAIL_PORT,
-            settings.EMAIL_USE_TLS,
-            settings.EMAIL_USE_SSL,
-        )
-
-        try:
-            email.send()
-            logger.info("Contact email sent to %s", settings.DEFAULT_TO_EMAIL)
-            return True
-        except Exception as exc:
-            logger.error("Failed to send contact email: %s", exc, exc_info=True)
-            return False
+        # 送信例外は捕捉せず呼び出し元へ伝播させる（フォールバック禁止）。
+        email.send()
+        logger.info("Contact email sent to %s", settings.DEFAULT_TO_EMAIL)

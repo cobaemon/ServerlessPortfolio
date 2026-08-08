@@ -169,5 +169,8 @@ portfolio/static/assets/fonts/
 portfolio/static/css/styles.min.css
 staticfiles/
 
+# SAM build artifacts
+.aws-sam/
+
 # kiro
 .kiro
