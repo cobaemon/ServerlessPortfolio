@@ -57,10 +57,13 @@ phases:
         import os
         import shlex
 
-        # SMTP 認証情報（EMAIL_HOST_USER / EMAIL_HOST_PASSWORD）は Secrets Manager から
-        # 除外した。問い合わせメール送信は Amazon SES 直連携（Contact_Function）へ移行し、
-        # SMTP 認証情報をビルド環境・Django 設定へ展開しない（出典: requirements.md R6-3、
-        # design.md C4、tasks.md 6.1）。
+        # SMTP 経路はビルド環境から全面的に除外した。Secrets Manager からは SMTP 認証情報
+        # （ユーザー名・パスワード）を読み込まず、Parameter Store からも SMTP 接続設定値
+        # （ホスト・ポート・TLS 有効化・SSL 有効化）を読み込まない。
+        # 問い合わせメール送信は Amazon SES 直連携（Contact_Function）が担い、
+        # Django 側の送信バックエンドは config/settings/prod.py の EMAIL_BACKEND
+        # （console バックエンド）で明示設定する（出典: requirements.md R4-4/R4-17、
+        # design.md C8 区分 B-7、tasks.md 12.5）。
         required_keys = [
             "DJANGO_SECRET_KEY",
             "GOOGLE_CLIENT_ID",
@@ -81,10 +84,6 @@ phases:
         export CSRF_TRUSTED_ORIGINS="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/csrf_trusted_origins" --query Parameter.Value --output text)"
         export DEFAULT_FROM_EMAIL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/default_from_email" --query Parameter.Value --output text)"
         export DEFAULT_TO_EMAIL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/default_to_mail" --query Parameter.Value --output text)"
-        export EMAIL_HOST="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_host" --query Parameter.Value --output text)"
-        export EMAIL_PORT="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_port" --query Parameter.Value --output text)"
-        export EMAIL_USE_TLS="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_tls" --query Parameter.Value --output text)"
-        export EMAIL_USE_SSL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/email_use_ssl" --query Parameter.Value --output text)"
         export LOG_LEVEL="$(aws ssm get-parameter --name "${PARAMETER_PREFIX}/log_level" --query Parameter.Value --output text)"
         # CloudFront 配信ドメイン（bare・スキームなし）。拡張版 render_static（ハッシュベース CSP 生成）は
         # settings.AWS_S3_CUSTOM_DOMAIN（= 環境変数 CLOUDFRONT_DOMAIN_NAME）を必須とし、未設定時は

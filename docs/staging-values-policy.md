@@ -27,8 +27,6 @@ staging/portfolio/secret
 ```json
 {
   "DJANGO_SECRET_KEY": "<staging 用に新規生成した Django secret key>",
-  "EMAIL_HOST_USER": "<staging 用 SMTP ユーザー>",
-  "EMAIL_HOST_PASSWORD": "<staging 用 SMTP パスワード>",
   "GOOGLE_CLIENT_ID": "<staging 用 Google OAuth client id>",
   "GOOGLE_CLIENT_SECRET": "<staging 用 Google OAuth client secret>",
   "GITHUB_CLIENT_ID": "<staging 用 GitHub OAuth client id>",
@@ -52,13 +50,9 @@ staging 用 Parameter Store は次のパス配下に配置する。
 | `/staging/portfolio/parameter/csrf_trusted_origins` | `https://staging.serverless.portfolio.cobaemon.com` |
 | `/staging/portfolio/parameter/default_from_email` | staging 用送信元メールアドレス |
 | `/staging/portfolio/parameter/default_to_mail` | staging 用問い合わせ通知先メールアドレス |
-| `/staging/portfolio/parameter/email_host` | staging 用 SMTP ホスト |
-| `/staging/portfolio/parameter/email_port` | staging 用 SMTP ポート |
-| `/staging/portfolio/parameter/email_use_tls` | `True` または `False` |
-| `/staging/portfolio/parameter/email_use_ssl` | `True` または `False` |
 | `/staging/portfolio/parameter/log_level` | `INFO` |
 
-`email_use_tls` と `email_use_ssl` は同時に `True` にしない。
+SMTP 接続設定値のパラメータは配置しない。staging の Django プロセスは `config/settings/staging.py` の `from .prod import *` を通じて `EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"` を継承し、SMTP 送信経路を持たない（出典: [`config/settings/prod.py`](../config/settings/prod.py) のメール送信バックエンド節、[`config/settings/staging.py`](../config/settings/staging.py)）。問い合わせメール送信は Amazon SES 直連携（`contact_function/`）が担う。
 
 ## SAM / CI/CD に渡す staging 値
 

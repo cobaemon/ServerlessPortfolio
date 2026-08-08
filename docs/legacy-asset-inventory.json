@@ -1,0 +1,689 @@
+{
+  "revision": "5f4ad0d",
+  "items": [
+    {
+      "key": "asgi_lambda",
+      "description": "Django on Lambda のエントリーポイント。:6 `from mangum import Mangum`、:8 `from config.asgi import application`、:12 `handler = Mangum(application, lifespan=\"off\")`。git 追跡下に残存し、参照する IaC は存在しない（由来: requirements.md E-3、design.md C6 A1-1）。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "asgi_lambda.py",
+      "source_lines": "6,8,12",
+      "detection_command": "git ls-files -- asgi_lambda.py .aws-sam/",
+      "confirmation": {
+        "result": "有効なコードおよび IaC からの参照なし。一致 12 件はすべて .aws-sam/build.toml:7、asgi_lambda.py 自身（:6,:10,:12）、requirements.txt:20、docs/ 配下の記録に限られ、template.yaml に一致はない。",
+        "evidence_command": "git grep -n -E \"asgi_lambda|mangum|Mangum\""
+      },
+      "removal_check_command": "git ls-files -- asgi_lambda.py",
+      "approver_decision_required": false
+    },
+    {
+      "key": "aws_sam_build_toml",
+      "description": "SAM ビルド生成物が git 追跡下に残存。:4 `codeuri` は現行の作業ディレクトリと不一致、:7 `handler = \"asgi_lambda.handler\"`、:10 `functions = [\"DjangoFunction\"]` は退役済み関数を指す（由来: requirements.md E-3、design.md C6 A1-2）。`sam build` が本ファイルの存在に依存するかは undetermined_notes の sam_build_toml_dependency として保留する（R3-6）。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": ".aws-sam/build.toml",
+      "source_lines": "4,7,10",
+      "detection_command": "git ls-files -- asgi_lambda.py .aws-sam/",
+      "confirmation": {
+        "result": "`:10` が指す `DjangoFunction` は template.yaml に宣言が存在しない。一致は template.yaml:254 のコメント 1 件のみ（退役済み DjangoFunctionLogGroup への言及）。",
+        "evidence_command": "git grep -n \"DjangoFunction\" -- template.yaml"
+      },
+      "removal_check_command": "git ls-files -- .aws-sam/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "gitignore_aws_sam",
+      "description": ".aws-sam/ の除外規則が .gitignore に存在せず、ビルド生成物が git 追跡下へ入る状態。既存の生成物除外は .gitignore:170 の `staticfiles/`（由来: requirements.md E-3、design.md C6 A1-3。R3-3 により `.aws-sam/` の追記が必要）。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": ".gitignore",
+      "source_lines": "170",
+      "detection_command": "git grep -n \"aws-sam\" -- .gitignore .dockerignore",
+      "confirmation": {
+        "result": ".gitignore / .dockerignore に `aws-sam` の一致 0 件（終了コード 1）。既存の生成物除外規則は .gitignore:170 `staticfiles/` であり、同位置づけで追記が必要であることを確認した。",
+        "evidence_command": "git grep -n \"aws-sam\" -- .gitignore .dockerignore"
+      },
+      "removal_check_command": "git check-ignore -v .aws-sam/build.toml",
+      "approver_decision_required": false
+    },
+    {
+      "key": "prod_smtp_required",
+      "description": "本番設定の SMTP 必須チェック。:72-78 が EMAIL_HOST / EMAIL_PORT 未設定時に ImproperlyConfigured を送出し、:81-86 が EMAIL_USE_TLS / EMAIL_USE_SSL の読み込みと排他チェックを行う（由来: requirements.md E-4、design.md C8 区分 B-1）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "config/settings/prod.py",
+      "source_lines": "72-86",
+      "detection_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/",
+      "confirmation": {
+        "result": "config/ 内の設定箇所は config/settings/prod.py:36,72-86 と config/settings/dev.py:34-48 のみ（一致 20 件）。SMTP 値を読む有効なコードは portfolio/forms.py:84,87-90 の logger.info だけであり、本番の送信経路は Contact_Function（template.yaml:151,171）である。",
+        "evidence_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "prod_smtp_comment",
+      "description": "本番設定のコメント記述。SMTP 認証情報を保持しないと記述する一方、同一ファイル :72-86 が EMAIL_HOST 等を必須としており記述と実装が不整合（由来: requirements.md E-4、design.md C8 区分 B-2。R4-2）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "config/settings/prod.py",
+      "source_lines": "36-39",
+      "detection_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/",
+      "confirmation": {
+        "result": "コメントは config/settings/prod.py:36-39、実装は同ファイル :72-86 に現存し、記述と実装が不整合であることを同一コマンドの一致箇所で確認した。",
+        "evidence_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dev_smtp_block",
+      "description": "開発設定の SMTP 値読み込み（:34-37,40-41）・排他チェック（:43-46）・バックエンド分岐（:48-51）と、分岐除去により未使用となる :4 `from django.core.exceptions import ImproperlyConfigured`（由来: requirements.md E-4、design.md C8 区分 B-3。R4-3）。DEFAULT_FROM_EMAIL / DEFAULT_TO_EMAIL（:38-39）は保持する。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "config/settings/dev.py",
+      "source_lines": "4,34-51",
+      "detection_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/",
+      "confirmation": {
+        "result": "config/settings/dev.py:34-48 に SMTP 値の読み込みと排他チェックが現存し、EMAIL_BACKEND の設定箇所は同ファイル :49（smtp）と :51（console）の 2 件のみであることを確認した。",
+        "evidence_command": "git grep -n \"EMAIL_BACKEND\" -- config/"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "forms_smtp_log",
+      "description": "ContactForm.send_email() 内で settings.EMAIL_BACKEND（:84）と settings.EMAIL_HOST / EMAIL_PORT / EMAIL_USE_TLS / EMAIL_USE_SSL（:87-90）を出力する logger.info（:85-91 が呼び出し全体）（由来: requirements.md E-4、design.md C8 区分 B-4。R4-5）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "portfolio/forms.py",
+      "source_lines": "84-91",
+      "detection_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL|EMAIL_BACKEND\" -- portfolio/",
+      "confirmation": {
+        "result": "portfolio/ 内の一致は portfolio/forms.py:84,87-90 と portfolio/tests/test_regression.py:112-113,121-122 のみ（一致 9 件）。forms.py の参照はログ出力のみで送信処理に影響しない。",
+        "evidence_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL|EMAIL_BACKEND\" -- portfolio/"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL|EMAIL_BACKEND\" -- portfolio/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "forms_send_email_fallback",
+      "description": "send_email()（:64 定義）の :93-99 が `except Exception`（:97）で False を返すフォールバック実装。第三原則3 に反し、R4-7 は例外の呼び出し元への伝播を要求する（由来: requirements.md E-4、design.md C8 区分 B-5）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "portfolio/forms.py",
+      "source_lines": "93-99",
+      "detection_command": "git grep -n \"except Exception\" -- portfolio/forms.py",
+      "confirmation": {
+        "result": "portfolio/forms.py:97 に `except Exception as exc:` が現存。send_email() の呼び出し元は portfolio/views.py:24 と :50 の 2 箇所のみであり、戻り値による成否通知を例外伝播へ変える際は区分 B-6 と同時変更が必要であることを確認した。",
+        "evidence_command": "git grep -n \"send_email\" -- portfolio/"
+      },
+      "removal_check_command": "git grep -n \"except Exception\" -- portfolio/forms.py",
+      "approver_decision_required": false
+    },
+    {
+      "key": "buildspec_smtp_export",
+      "description": "CodeBuild が Parameter Store から SMTP 設定値を export する 4 行（email_host / email_port / email_use_tls / email_use_ssl）（由来: requirements.md E-4、design.md C8 区分 B-7。R4-4）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "buildspec.yml",
+      "source_lines": "84-87",
+      "detection_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml",
+      "confirmation": {
+        "result": "buildspec.yml の一致は :84-87 の 4 件のみ。export された値の消費先は config/settings/prod.py:72-86 であり、同区分の除去と同時変更が必要であることを確認した。",
+        "evidence_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml"
+      },
+      "removal_check_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml",
+      "approver_decision_required": false
+    },
+    {
+      "key": "buildspec_smtp_comment",
+      "description": "buildspec.yml のコメント記述。SMTP 認証情報を Secrets Manager から除外したと記述する一方、:84-87 が SMTP 設定値を依然 export しており記述と実体が不整合（由来: requirements.md E-4、design.md C8 区分 B-7。R4-4）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "buildspec.yml",
+      "source_lines": "60-63",
+      "detection_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml",
+      "confirmation": {
+        "result": "コメントは buildspec.yml:60-63、export は同ファイル :84-87 に現存し、記述と実体が不整合であることを確認した（コメント範囲は実ファイル読み取りで再確認済み）。",
+        "evidence_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml"
+      },
+      "removal_check_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml",
+      "approver_decision_required": false
+    },
+    {
+      "key": "docs_configuration_smtp",
+      "description": "Configuration_Documents の SMTP 関連キー記載。:36 EMAIL_BACKEND の分岐説明、:38 / :66 TLS/SSL 排他の説明、:48-49 / :81-82 Secrets Manager 必須キー、:57-58 本番必須環境変数、:95-98 Parameter Store キー（由来: requirements.md E-4、design.md C8 区分 B-8。R4-8）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "docs/configuration.md",
+      "source_lines": "36,38,48-49,57-58,66,81-82,95-98",
+      "detection_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md",
+      "confirmation": {
+        "result": "docs/configuration.md の一致は :36,48,49,57,58,81,82,95,96,97,98 の 11 件。:38 と :66 は TLS/SSL 排他の説明文であり同コマンドの一致対象外だが、実ファイル読み取りで現存を確認済み。記述は config/settings/prod.py:36-39 の記述および除去後の実体と矛盾する。",
+        "evidence_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md",
+      "approver_decision_required": false
+    },
+    {
+      "key": "docs_staging_policy_smtp",
+      "description": "staging 値ポリシー文書の SMTP 関連キー記載。:30-31 Secrets Manager 必須キー、:55-58 Parameter Store キー、:61 TLS/SSL 排他の注記（由来: requirements.md E-4、design.md C8 区分 B-8。R4-8）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "docs/staging-values-policy.md",
+      "source_lines": "30-31,55-58,61",
+      "detection_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md",
+      "confirmation": {
+        "result": "docs/staging-values-policy.md の一致は :30,31,55,56,57,58,61 の 7 件。いずれも staging の SMTP キー記載であり、除去後の実体と矛盾する。",
+        "evidence_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md",
+      "approver_decision_required": false
+    },
+    {
+      "key": "test_regression_smtp_env",
+      "description": "ProductionStaticStorageSettingsTests（:100）の required_env（:109 開始）が EMAIL_HOST_USER（:112）/ EMAIL_HOST_PASSWORD（:113）/ EMAIL_HOST（:121）/ EMAIL_PORT（:122）を設定して config.settings.prod を reload する（由来: requirements.md E-4、design.md C8 区分 B-8。R4-5）。ContactFormSecurityTests（:15 開始）は保持する。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "portfolio/tests/test_regression.py",
+      "source_lines": "112-113,121-122",
+      "detection_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL|EMAIL_BACKEND\" -- portfolio/",
+      "confirmation": {
+        "result": "portfolio/tests/test_regression.py の一致は :112,113,121,122 の 4 件。required_env の定義開始は :109（`git grep -n \"required_env\"` の一致は :109 と :126）であり、除去対象は SMTP 4 件に限られることを確認した。",
+        "evidence_command": "git grep -n \"required_env\" -- portfolio/tests/test_regression.py"
+      },
+      "removal_check_command": "git grep -n -E \"EMAIL_HOST|EMAIL_PORT|EMAIL_USE_TLS|EMAIL_USE_SSL|EMAIL_BACKEND\" -- portfolio/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "aws_smtp_parameters",
+      "description": "Parameter Store の SMTP 設定パラメータ 4 件（/${Env}/portfolio/parameter/email_host、email_port、email_use_tls、email_use_ssl）。buildspec.yml:84-87 が取得元として参照する。AWS 側の現存有無は照会未実施のため undetermined（由来: requirements.md E-4、R4-13、R9-1）。",
+      "stream": "B",
+      "disposition": "undetermined",
+      "source_path": "buildspec.yml",
+      "source_lines": "84-87",
+      "detection_command": "git grep -n -E \"email_host|email_port|email_use_tls|email_use_ssl\" -- buildspec.yml",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "aws_smtp_secret_keys",
+      "description": "Secrets Manager ${Env}/portfolio/secret の EMAIL_HOST_USER / EMAIL_HOST_PASSWORD。docs/configuration.md:48-49（本番）と :81-82（staging）が必須キーとして記載する。AWS 側の現存有無は照会未実施のため undetermined（由来: requirements.md E-4、R4-13、R9-1）。記録には平文値を含めず、キー名の存在有無と取得コマンドのみを扱う。",
+      "stream": "B",
+      "disposition": "undetermined",
+      "source_path": "docs/configuration.md",
+      "source_lines": "48-49,81-82",
+      "detection_command": "git grep -n -E \"EMAIL_HOST_USER|EMAIL_HOST_PASSWORD|EMAIL_HOST|EMAIL_PORT|email_host|email_port|email_use_tls|email_use_ssl\" -- docs/configuration.md docs/staging-values-policy.md",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "base_unused_imports",
+      "description": "未使用 import。:17 `from django.contrib import messages` と :18 `from django.urls import reverse_lazy`。参照はコメント行のみ（messages は :264-270 の MESSAGE_TAGS、reverse_lazy は :246,250,252,254,258）（由来: requirements.md E-6、design.md C7。R6-3）。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "config/settings/base.py",
+      "source_lines": "17-18",
+      "detection_command": "git grep -n -E \"from django.contrib import messages|from django.urls import reverse_lazy\" -- config/settings/base.py",
+      "confirmation": {
+        "result": "有効なコードからの参照なし。一致は config/settings/base.py:17,18 の import 2 件のみであり、messages / reverse_lazy を使う行はコメントアウトされた :246,250,252,254,258,264-270 に限られる（実ファイル読み取りで確認）。",
+        "evidence_command": "git grep -n -E \"from django.contrib import messages|from django.urls import reverse_lazy\" -- config/settings/base.py"
+      },
+      "removal_check_command": "git grep -n -E \"from django.contrib import messages|from django.urls import reverse_lazy\" -- config/settings/base.py",
+      "approver_decision_required": false
+    },
+    {
+      "key": "base_installed_apps_comments",
+      "description": "INSTALLED_APPS 内のコメントアウト放置。:49-53 allauth 一式、:55-56 django_otp 一式、:58 `# 'accounts',`（由来: requirements.md E-6、design.md C7。R6-1、R6-2）。有効行（:39-48,59）は保持する。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "config/settings/base.py",
+      "source_lines": "49-53,55-56,58",
+      "detection_command": "git grep -n -E \"allauth|django_otp\" -- config/",
+      "confirmation": {
+        "result": "config/ 内の allauth / django_otp の一致 11 件はすべてコメント行（config/settings/base.py:49-53,55-56,73-74,231、config/urls.py:23）。`git grep -n \"accounts\" -- config/` の一致 7 件も同様にコメント行のみ（base.py:58,84,228,232,272、urls.py:24,29）。",
+        "evidence_command": "git grep -n -E \"allauth|django_otp\" -- config/"
+      },
+      "removal_check_command": "git grep -n -E \"allauth|django_otp\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "base_middleware_comments",
+      "description": "MIDDLEWARE 内のコメントアウト放置。:73 allauth AccountMiddleware、:74 django_otp OTPMiddleware（由来: requirements.md E-6、design.md C7。R6-1）。有効行（:63-72）は保持する。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "config/settings/base.py",
+      "source_lines": "73-74",
+      "detection_command": "git grep -n -E \"allauth|django_otp\" -- config/",
+      "confirmation": {
+        "result": "config/settings/base.py:73,74 はいずれもコメント行であり、有効な MIDDLEWARE 定義（:62-75 の非コメント行）から参照されない。",
+        "evidence_command": "git grep -n -E \"allauth|django_otp\" -- config/"
+      },
+      "removal_check_command": "git grep -n -E \"allauth|django_otp\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "base_templates_comment",
+      "description": "TEMPLATES の DIRS 内コメントアウト放置。:84 `# os.path.join(BASE_DIR, 'accounts/templates'),`（由来: requirements.md E-6、design.md C7。R6-2）。有効な DIRS 行（:83）と TEMPLATES 全体（:79-100）は保持する。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "config/settings/base.py",
+      "source_lines": "84",
+      "detection_command": "git grep -n \"accounts\" -- config/",
+      "confirmation": {
+        "result": "config/settings/base.py:84 はコメント行であり、accounts アプリはリポジトリに存在しない（config/ の accounts 一致 7 件はすべてコメント行）。",
+        "evidence_command": "git grep -n \"accounts\" -- config/"
+      },
+      "removal_check_command": "git grep -n \"accounts\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "base_auth_comment_block",
+      "description": "無効化済み認証設定のコメントブロック。:224 見出し、:225 SITE_ID、:228 AUTH_USER_MODEL、:229-233 AUTHENTICATION_BACKENDS、:235-258 ACCOUNT_* 各設定、:260-262 SITE_NAME / APPEND_SLASH、:264-270 MESSAGE_TAGS、:272 SOCIALACCOUNT_ADAPTER（由来: requirements.md E-6、design.md C7。R6-1、R6-2）。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "config/settings/base.py",
+      "source_lines": "224-272",
+      "detection_command": "git grep -n -c -E \"SITE_ID|AUTH_USER_MODEL|AUTHENTICATION_BACKENDS|ACCOUNT_|MESSAGE_TAGS|SOCIALACCOUNT_ADAPTER\" -- config/settings/base.py",
+      "confirmation": {
+        "result": "config/settings/base.py の一致は 15 件で、いずれも :224-272 のコメント行に含まれる（実ファイル読み取りで :224-272 の全行がコメントまたは空行であることを確認）。直後の有効設定は :275 の LOG_LEVEL と :277 の LOGGING。",
+        "evidence_command": "git grep -n -c -E \"SITE_ID|AUTH_USER_MODEL|AUTHENTICATION_BACKENDS|ACCOUNT_|MESSAGE_TAGS|SOCIALACCOUNT_ADAPTER\" -- config/settings/base.py"
+      },
+      "removal_check_command": "git grep -n -E \"allauth|django_otp\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "urls_comments",
+      "description": "config/urls.py のコメントアウト放置。:23-24 allauth ログインリダイレクト、:29 `# path('accounts/', include('accounts.urls')),`（由来: requirements.md E-6、design.md C7。R6-1、R6-2）。RedirectView は :32 の favicon リダイレクトで有効利用中のため :21 の import は保持する。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "config/urls.py",
+      "source_lines": "23-24,29",
+      "detection_command": "git grep -n \"accounts\" -- config/",
+      "confirmation": {
+        "result": "config/urls.py:23,24,29 はコメント行。RedirectView の有効な利用は :32 `path(\"favicon.ico\", RedirectView.as_view(url=\"/static/favicon.ico\"))` であり、:21 の import は保持が必要であることを確認した。",
+        "evidence_command": "git grep -n -E \"RedirectView|accounts\" -- config/urls.py"
+      },
+      "removal_check_command": "git grep -n \"accounts\" -- config/",
+      "approver_decision_required": false
+    },
+    {
+      "key": "template_account_modal",
+      "description": "templates/portfolio_base.html の body_account_modal ブロック（:311 開始、:394 終了）。allauth が提供する URL 名を 11 箇所参照し、:321 の `{% if user.is_authenticated %}` により静的化時は else 分岐が選択される。除去可否は Approver 判断待ちのため undetermined（由来: requirements.md E-6、R6-5、R6-6）。",
+      "stream": "A",
+      "disposition": "undetermined",
+      "source_path": "templates/portfolio_base.html",
+      "source_lines": "311-394",
+      "detection_command": "git grep -n -E \"body_account_modal|user\\.is_authenticated\" -- templates/portfolio_base.html",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "dep_awsgi",
+      "description": "requirements.txt:2 `awsgi==0.0.5; sys_platform != 'win32'`。R7-1: git grep の一致は requirements.txt:2、docs/external-assets.md:18、docs/ai-progress/project-review-report-todo.md:260 の 3 件のみ。Windows venv では未インストールのためトップレベルモジュール名を実体から取得できず未確認。リポジトリ内の全トップレベル import 名 41 件はすべて標準ライブラリ、リポジトリ内ローカル（config / portfolio / contact_function / scripts）、または boto3 / botocore / django-csp / csscompressor / Django / python-dotenv / hypothesis / PyYAML のいずれかに帰属し、判定対象 12 件に帰属する import は 0 件（確認: git grep -h -E \"^\\s*(import|from)\\s+[A-Za-z_]\" -- \"*.py\" と importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:18）。R7-2: Windows venv では marker `sys_platform != 'win32'` により未インストールで `pip show` が `WARNING: Package(s) not found` を返し判定不可、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は undetermined。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "2",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"awsgi\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show awsgi ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^awsgi==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_django_allauth",
+      "description": "requirements.txt:11 `django-allauth==65.14.3`。R7-1: git grep の一致は requirements.txt:11、docs/external-assets.md:27 の 2 件のみ。トップレベルモジュール名は `allauth`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:27）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "11",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"django-allauth|allauth\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show django-allauth ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^django-allauth==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_django_otp",
+      "description": "requirements.txt:14 `django-otp==1.7.0`。R7-1: git grep の一致は requirements.txt:14、docs/external-assets.md:30 の 2 件のみ（`django_otp` 単独の一致は 0 件）。トップレベルモジュール名は `django_otp`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:30）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "14",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"django-otp|django_otp\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show django-otp ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^django-otp==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_gunicorn",
+      "description": "requirements.txt:16 `gunicorn==25.1.0`。R7-1: git grep の一致は requirements.txt:16、docs/external-assets.md:32 の 2 件のみ。トップレベルモジュール名は `gunicorn`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:32）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "16",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"gunicorn\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show gunicorn ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^gunicorn==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_httptools",
+      "description": "requirements.txt:17 `httptools==0.7.1; sys_platform != 'win32'`（バージョンと行番号は Inventory revision 5f4ad0d 時点の実体）。R7-1: git grep の一致は requirements.txt:17、docs/external-assets.md:33 の 2 件のみ（確認: git grep -n -I -i -E \"httptools|uvloop|websockets|werkzeug\" -- . ':(exclude).kiro'）。リポジトリ内のコードからの参照は 0 件であり、template.yaml / buildspec.yml / Dockerfile にも一致はない。R7-2: 13.1 時点では Docker（python:3.12-slim-bookworm）の依存グラフ解決で要求元 awsgi==0.0.5 が存在したため decide は 保持 を返し、`保持` が R1-3 の扱い 3 値に含まれないことから undetermined を保持していた。13.2 で awsgi==0.0.5 の行を requirements.txt から除去した後、同一手順で依存グラフ解決を再実行した結果、要求元は 0 件（実測: 終了コード 0、解決結果 31 件の requires_dist を走査し httptools を要求する要求元 0 件）。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。requirements.txt:17 と docs/external-assets.md:33 の行はタスク 13.2 で除去した。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "17",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"httptools\" -- . ':(exclude).kiro' ; docker run --rm -v <repo>:/repo:ro -v <out>:/out python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /out/r.json -r /repo/requirements.txt'（awsgi==0.0.5 の行を requirements.txt から除去した後に再実行）"
+      },
+      "removal_check_command": "git grep -n -E \"^httptools==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_mangum",
+      "description": "requirements.txt:20 `mangum==0.21.0`。R7-1: git grep の一致は requirements.txt:20、docs/external-assets.md:36、docs/architecture.md:64、docs/incidents/20260607_202416_Incident.md:21 の 4 件のみ（`asgi_lambda.py` はタスク 7.1 で git 追跡下から除去済み）。トップレベルモジュール名は `mangum`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:36）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "20",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"mangum|Mangum\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show mangum ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^mangum==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_psycopg2_binary",
+      "description": "requirements.txt:25 `psycopg2-binary==2.9.11`。R7-1: git grep の一致は requirements.txt:25、docs/external-assets.md:41 の 2 件のみ。トップレベルモジュール名は `psycopg2`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:41）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "25",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"psycopg2-binary|psycopg2\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show psycopg2-binary ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^psycopg2-binary==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_pyjwt",
+      "description": "requirements.txt:27 `pyjwt==2.11.0`。R7-1: git grep の一致は requirements.txt:27、docs/external-assets.md:43 のほか contact_function/tests/test_domain_unit.py:407,418 の 2 件（認証情報関連語の一覧に含まれる文字列リテラルであり `jwt` モジュールの参照ではない）。トップレベルモジュール名は `jwt`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:43）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "27",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"pyjwt|PyJWT|\\bjwt\\b\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show pyjwt ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^pyjwt==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_qrcode",
+      "description": "requirements.txt:30 `qrcode==8.2`。R7-1: git grep の一致は requirements.txt:30、docs/external-assets.md:46 の 2 件のみ。トップレベルモジュール名は `qrcode`（出典: Windows venv の site-packages の top_level.txt および importlib.metadata.packages_distributions()）。コードからの参照は 0 件（License_Ledger の対応行は docs/external-assets.md:46）。R7-2: Windows venv の `pip show` の Required-by は空（要求元 0 件）、Docker（python:3.12-slim-bookworm）の依存グラフ解決でも要求元 0 件。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。参考: 同一入力に対する windows-venv 単独の判定は 除去対象。requirements.txt の行除去はタスク 13.2 の範囲。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "30",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"qrcode\" -- . ':(exclude).kiro' ; python -m pip install --dry-run --report <file> -r requirements.txt ; python -m pip show qrcode ; docker run --rm -v <repo>:/repo:ro python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /tmp/r.json -r /repo/requirements.txt'"
+      },
+      "removal_check_command": "git grep -n -E \"^qrcode==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_uvloop",
+      "description": "requirements.txt:38 `uvloop==0.22.1; sys_platform != 'win32'`（バージョンと行番号は Inventory revision 5f4ad0d 時点の実体）。R7-1: git grep の一致は requirements.txt:38、docs/external-assets.md:54 の 2 件のみ（確認: git grep -n -I -i -E \"httptools|uvloop|websockets|werkzeug\" -- . ':(exclude).kiro'）。リポジトリ内のコードからの参照は 0 件であり、template.yaml / buildspec.yml / Dockerfile にも一致はない。R7-2: 13.1 時点では Docker（python:3.12-slim-bookworm）の依存グラフ解決で要求元 awsgi==0.0.5 が存在したため decide は 保持 を返し、`保持` が R1-3 の扱い 3 値に含まれないことから undetermined を保持していた。13.2 で awsgi==0.0.5 の行を requirements.txt から除去した後、同一手順で依存グラフ解決を再実行した結果、要求元は 0 件（実測: 終了コード 0、解決結果 31 件の requires_dist を走査し uvloop を要求する要求元 0 件）。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。requirements.txt:38 と docs/external-assets.md:54 の行はタスク 13.2 で除去した。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "38",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"uvloop\" -- . ':(exclude).kiro' ; docker run --rm -v <repo>:/repo:ro -v <out>:/out python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /out/r.json -r /repo/requirements.txt'（awsgi==0.0.5 の行を requirements.txt から除去した後に再実行）"
+      },
+      "removal_check_command": "git grep -n -E \"^uvloop==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_websockets",
+      "description": "requirements.txt:39 `websockets==16.0; sys_platform != 'win32'`（バージョンと行番号は Inventory revision 5f4ad0d 時点の実体）。R7-1: git grep の一致は requirements.txt:39、docs/external-assets.md:55 の 2 件のみ（確認: git grep -n -I -i -E \"httptools|uvloop|websockets|werkzeug\" -- . ':(exclude).kiro'）。リポジトリ内のコードからの参照は 0 件であり、template.yaml / buildspec.yml / Dockerfile にも一致はない。R7-2: 13.1 時点では Docker（python:3.12-slim-bookworm）の依存グラフ解決で要求元 awsgi==0.0.5 が存在したため decide は 保持 を返し、`保持` が R1-3 の扱い 3 値に含まれないことから undetermined を保持していた。13.2 で awsgi==0.0.5 の行を requirements.txt から除去した後、同一手順で依存グラフ解決を再実行した結果、要求元は 0 件（実測: 終了コード 0、解決結果 31 件の requires_dist を走査し websockets を要求する要求元 0 件）。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。requirements.txt:39 と docs/external-assets.md:55 の行はタスク 13.2 で除去した。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "39",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"websockets\" -- . ':(exclude).kiro' ; docker run --rm -v <repo>:/repo:ro -v <out>:/out python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /out/r.json -r /repo/requirements.txt'（awsgi==0.0.5 の行を requirements.txt から除去した後に再実行）"
+      },
+      "removal_check_command": "git grep -n -E \"^websockets==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "dep_werkzeug",
+      "description": "requirements.txt:40 `werkzeug==3.1.8; sys_platform != 'win32'`（バージョンと行番号は Inventory revision 5f4ad0d 時点の実体）。R7-1: git grep の一致は requirements.txt:40、docs/external-assets.md:56 の 2 件のみ（確認: git grep -n -I -i -E \"httptools|uvloop|websockets|werkzeug\" -- . ':(exclude).kiro'）。リポジトリ内のコードからの参照は 0 件であり、template.yaml / buildspec.yml / Dockerfile にも一致はない。R7-2: 13.1 時点では Docker（python:3.12-slim-bookworm）の依存グラフ解決で要求元 awsgi==0.0.5 が存在したため decide は 保持 を返し、`保持` が R1-3 の扱い 3 値に含まれないことから undetermined を保持していた。13.2 で awsgi==0.0.5 の行を requirements.txt から除去した後、同一手順で依存グラフ解決を再実行した結果、要求元は 0 件（実測: 終了コード 0、解決結果 31 件の requires_dist を走査し werkzeug を要求する要求元 0 件）。decide の判定: 除去対象（R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312））。requirements.txt:40 と docs/external-assets.md:56 の行はタスク 13.2 で除去した。",
+      "stream": "D",
+      "disposition": "除去対象",
+      "source_path": "requirements.txt",
+      "source_lines": "40",
+      "detection_command": "git grep -n -E \"awsgi|django-allauth|django-otp|gunicorn|httptools|mangum|psycopg2-binary|pyjwt|qrcode|uvloop|websockets|werkzeug\" -- requirements.txt",
+      "confirmation": {
+        "result": "除去対象",
+        "evidence_command": "git grep -n -I -i -E \"werkzeug\" -- . ':(exclude).kiro' ; docker run --rm -v <repo>:/repo:ro -v <out>:/out python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /out/r.json -r /repo/requirements.txt'（awsgi==0.0.5 の行を requirements.txt から除去した後に再実行）"
+      },
+      "removal_check_command": "git grep -n -E \"^werkzeug==\" -- requirements.txt",
+      "approver_decision_required": false
+    },
+    {
+      "key": "prod_oauth_required",
+      "description": "OAuth 認証情報の必須チェック。config/settings/prod.py:42-56 が GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET を必須とし未設定時に ImproperlyConfigured を送出する。buildspec.yml:66-69 が同 4 キーを Secrets Manager の required_keys に含める。参照先の allauth は無効化済み。除去対象への含入は Approver 判断待ちのため undetermined 固定（由来: requirements.md E-8、R1-7）。",
+      "stream": "B",
+      "disposition": "undetermined",
+      "source_path": "config/settings/prod.py",
+      "source_lines": "42-56",
+      "detection_command": "git grep -n -E \"GOOGLE_CLIENT_ID|GITHUB_CLIENT_ID\" -- config/ buildspec.yml",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "steering_inconsistency",
+      "description": ".kiro/steering の記述と実体の不整合。.kiro/steering/project-overview.md:9 が「Mangum (ASGI) として動作」、同 :29 が asgi_lambda.py をエントリーポイントとして記述し、.kiro/steering/sam-templates.md:24-25 が `asgi_lambda.handler` とメモリ 512MB を記述する。ただし .kiro は .gitignore:173 により git 追跡外（`git ls-files -- .kiro` は 0 件）であり Repository のスリム化対象に該当しない。扱いは Approver 判断待ちのため undetermined 固定（由来: requirements.md E-8、R1-7）。",
+      "stream": "A",
+      "disposition": "undetermined",
+      "source_path": ".kiro/steering/project-overview.md",
+      "source_lines": "9,29",
+      "detection_command": "git grep -n --no-index -E \"Mangum|asgi_lambda\" -- .kiro/steering",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "base_debug_print",
+      "description": "デバッグ用標準出力。config/settings/base.py:101 の `print(\"Django is looking for templates in:\", os.path.join(BASE_DIR, 'templates'))` がモジュールロード時に出力される。除去対象への含入は Approver 判断待ちのため undetermined 固定（由来: requirements.md E-8、R1-7、design.md C7 の「除去しない項目」）。",
+      "stream": "A",
+      "disposition": "undetermined",
+      "source_path": "config/settings/base.py",
+      "source_lines": "101",
+      "detection_command": "git grep -n \"print(\" -- config/settings/base.py",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "base_contrib_sites",
+      "description": "本設計作成時の新規検出。config/settings/base.py:48 が `'django.contrib.sites'` を有効な INSTALLED_APPS として登録する一方、対応する SITE_ID は同ファイル :225 でコメントアウト済み。R6-1 / R6-2 の確認パターン（allauth|django_otp、accounts）に一致せず既存受入基準の対象外であり、除去可否は Approver 判断待ちのため undetermined（由来: design.md「本設計作成時に新たに検出した事実」1、R9-4）。",
+      "stream": "A",
+      "disposition": "undetermined",
+      "source_path": "config/settings/base.py",
+      "source_lines": "48",
+      "detection_command": "git grep -n \"django.contrib.sites\" -- config/settings/base.py",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "template_two_factor_url",
+      "description": "本設計作成時の新規検出。templates/portfolio_base.html:340 が `{% url 'two_factor_authentication_settings' as ... %}` を参照するが、当該 URL 名の登録箇所はリポジトリ内に存在しない（一致は当該 1 行のみ）。allauth の有効化とは無関係に解決不能であり、扱いは Approver 判断待ちのため undetermined（由来: design.md「本設計作成時に新たに検出した事実」2、R6-5、R9-4）。",
+      "stream": "A",
+      "disposition": "undetermined",
+      "source_path": "templates/portfolio_base.html",
+      "source_lines": "340",
+      "detection_command": "git grep -n \"two_factor_authentication_settings\"",
+      "confirmation": null,
+      "removal_check_command": null,
+      "approver_decision_required": true
+    },
+    {
+      "key": "docs_deployment_time_record",
+      "description": "本設計作成時の新規検出。docs/development-records/deployment-time-optimization.md:129 のローカル定義一覧が asgi_lambda.py を列挙する。asgi_lambda の除去に言及する Repository_Documents であり R10-1 の更新対象（由来: design.md「本設計作成時に新たに検出した事実」3）。",
+      "stream": "A",
+      "disposition": "除去対象",
+      "source_path": "docs/development-records/deployment-time-optimization.md",
+      "source_lines": "129",
+      "detection_command": "git grep -n \"asgi_lambda\" -- docs/development-records",
+      "confirmation": {
+        "result": "docs/development-records 配下の asgi_lambda 一致 3 件のうち :129 が deployment-time-optimization.md のローカル定義一覧（他 2 件は unused-resource-removal-django-retirement.md と unused-resource-scan-django-retirement.md の作業記録）。asgi_lambda.py の除去後は当該一覧が実体と乖離することを確認した。",
+        "evidence_command": "git grep -n \"asgi_lambda\" -- docs/development-records"
+      },
+      "removal_check_command": "git grep -n \"asgi_lambda\" -- docs/development-records/deployment-time-optimization.md",
+      "approver_decision_required": false
+    },
+    {
+      "key": "prod_email_backend_policy",
+      "description": "本設計作成時の新規検出。prod / staging の EMAIL_BACKEND を `django.core.mail.backends.console.EmailBackend` として明示設定する（R4-17）。実装箇所は config/settings/prod.py:72-86（区分 B-1 で基準 1 の除去と同時に適用）。基準 1 の除去のみでは Django 6.0.3 既定の SMTP バックエンドと localhost:25 が暗黙適用されるため、暗黙の既定値への依存を残さない（第三原則3）。Approver 判断済みの確定事項であり undetermined ではない（由来: design.md C8「確定事項（Approver 判断済み）」、同 DM2 の注記）。",
+      "stream": "B",
+      "disposition": "除去対象",
+      "source_path": "config/settings/prod.py",
+      "source_lines": "72-86",
+      "detection_command": "git grep -n \"EMAIL_BACKEND\" -- config/",
+      "confirmation": {
+        "result": "config/ 内の EMAIL_BACKEND 一致は config/settings/dev.py:49,51 の 2 件のみであり、config/settings/base.py / prod.py / staging.py には設定が存在しない。したがって prod / staging は現状 Django 既定値に依存しており、console バックエンドの明示設定が必要であることを確認した。",
+        "evidence_command": "git grep -n \"EMAIL_BACKEND\" -- config/"
+      },
+      "removal_check_command": "git grep -n \"EMAIL_BACKEND\" -- config/settings/prod.py",
+      "approver_decision_required": false
+    }
+  ],
+  "preserved": [
+    {
+      "key": "views_top",
+      "description": "portfolio/views.py:11 の `Top`（FormView）。本番の表示は静的配信だがビルド時のレンダリングに必要（由来: requirements.md E-5、R5-1、design.md C9）。",
+      "disposition": "保全対象",
+      "source_path": "portfolio/views.py",
+      "source_lines": "11",
+      "detection_command": "git grep -n -E \"class Top|def contact\" -- portfolio/views.py ／ 確定に用いた実行コマンド（R5-5、2026-08-07 実行、DJANGO_SETTINGS_MODULE=config.settings.prod）: `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）",
+      "build_time_dependency": "portfolio/urls.py:8 が name='top' として登録し、templates/portfolio_base.html:33 が {% url 'portfolio:top' %} で参照する。除去すると portfolio/management/commands/render_static.py（:48 の ContactForm import、:64 の _TARGET_TEMPLATE=\"index.html\"、:305 の {\"form\": ContactForm()} context）によるレンダリングが失敗し、Supported_Languages 7 言語の静的化が退行する。確定（R5-5）: 上記 2 コマンドの実行により 7 言語（ja, en, fr, es, ru, zh-hans, ar）の staticfiles/<lang>/portfolio/top/index.html、ルート staticfiles/index.html、staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した（標準出力: Prerendered 7 languages (ja, en, fr, es, ru, zh-hans, ar) + root index.html and CSP manifest）。本項目を含む現行コードでビルド時依存が満たされることを確認済みであり、扱いは「保全対象」で確定する。ビルド時依存の最小集合の確定は undetermined_notes の prerender_minimal_set として保留する（R5-7）。"
+    },
+    {
+      "key": "views_contact",
+      "description": "portfolio/views.py:46-47 の `contact`（:46 `@require_POST`、:47 `def contact(request):`）。本番の問い合わせ POST は ContactApi → ContactFunction が処理するが、URL 名の解決に必要（由来: requirements.md E-5、R5-1、design.md C9）。",
+      "disposition": "保全対象",
+      "source_path": "portfolio/views.py",
+      "source_lines": "46-47",
+      "detection_command": "git grep -n -E \"class Top|def contact\" -- portfolio/views.py ／ 確定に用いた実行コマンド（R5-5、2026-08-07 実行、DJANGO_SETTINGS_MODULE=config.settings.prod）: `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）",
+      "build_time_dependency": "portfolio/urls.py:9 が name='contact' として登録し、templates/portfolio_base.html:226 が {% url 'portfolio:contact' %} で参照する。除去すると render_static のレンダリングが失敗する。確定（R5-5）: 上記 2 コマンドの実行により 7 言語（ja, en, fr, es, ru, zh-hans, ar）の staticfiles/<lang>/portfolio/top/index.html、ルート staticfiles/index.html、staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した（標準出力: Prerendered 7 languages (ja, en, fr, es, ru, zh-hans, ar) + root index.html and CSP manifest）。本項目を含む現行コードでビルド時依存が満たされることを確認済みであり、扱いは「保全対象」で確定する。ビルド時依存の最小集合の確定は undetermined_notes の prerender_minimal_set として保留する（R5-7）。"
+    },
+    {
+      "key": "urls_portfolio",
+      "description": "portfolio/urls.py:8-9 の URL 登録（:8 `path('top/', Top.as_view(), name='top')`、:9 `path('contact', contact, name='contact')`）（由来: requirements.md E-5、R5-2、design.md C9）。",
+      "disposition": "保全対象",
+      "source_path": "portfolio/urls.py",
+      "source_lines": "8-9",
+      "detection_command": "git grep -n -E \"name='top'|name='contact'\" -- portfolio/urls.py ／ 確定に用いた実行コマンド（R5-5、2026-08-07 実行、DJANGO_SETTINGS_MODULE=config.settings.prod）: `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）",
+      "build_time_dependency": "templates/portfolio_base.html:33,226 の {% url %} タグが解決する URL 名の登録元。除去すると render_static のレンダリングが失敗する。確定（R5-5）: 上記 2 コマンドの実行により 7 言語（ja, en, fr, es, ru, zh-hans, ar）の staticfiles/<lang>/portfolio/top/index.html、ルート staticfiles/index.html、staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した（標準出力: Prerendered 7 languages (ja, en, fr, es, ru, zh-hans, ar) + root index.html and CSP manifest）。本項目を含む現行コードでビルド時依存が満たされることを確認済みであり、扱いは「保全対象」で確定する。ビルド時依存の最小集合の確定は undetermined_notes の prerender_minimal_set として保留する（R5-7）。"
+    },
+    {
+      "key": "contactform_fields",
+      "description": "portfolio/forms.py:9-62 の `ContactForm` のフィールド定義（:14-52）と `clean_phone_number`（:54-62）（由来: requirements.md E-5、R5-3、design.md C9）。同ファイルの send_email()（:64-99）は系統 B の変更対象だが、フィールド定義と検証は保全する。",
+      "disposition": "保全対象",
+      "source_path": "portfolio/forms.py",
+      "source_lines": "9-62",
+      "detection_command": "git grep -n -E \"class ContactForm|def clean_phone_number\" -- portfolio/forms.py ／ 確定に用いた実行コマンド（R5-5、2026-08-07 実行、DJANGO_SETTINGS_MODULE=config.settings.prod）: `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）",
+      "build_time_dependency": "portfolio/management/commands/render_static.py:48 が ContactForm を import し、:305 で {\"form\": ContactForm()} を context として index.html をレンダリングする。除去すると 7 言語の静的化が退行する。確定（R5-5）: 上記 2 コマンドの実行により 7 言語（ja, en, fr, es, ru, zh-hans, ar）の staticfiles/<lang>/portfolio/top/index.html、ルート staticfiles/index.html、staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した（標準出力: Prerendered 7 languages (ja, en, fr, es, ru, zh-hans, ar) + root index.html and CSP manifest）。本項目を含む現行コードでビルド時依存が満たされることを確認済みであり、扱いは「保全対象」で確定する。ビルド時依存の最小集合の確定は undetermined_notes の prerender_minimal_set として保留する（R5-7）。"
+    },
+    {
+      "key": "templates_base",
+      "description": "templates/portfolio_base.html。:33 が {% url 'portfolio:top' %}、:226 が {% url 'portfolio:contact' %} を使用する基底テンプレート（由来: requirements.md E-5、R5-4、design.md C9）。",
+      "disposition": "保全対象",
+      "source_path": "templates/portfolio_base.html",
+      "source_lines": "33,226",
+      "detection_command": "git grep -n -E \"portfolio:top|portfolio:contact\" -- templates/portfolio_base.html ／ 確定に用いた実行コマンド（R5-5、2026-08-07 実行、DJANGO_SETTINGS_MODULE=config.settings.prod）: `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）",
+      "build_time_dependency": "portfolio/templates/index.html:1 が {% extends \"portfolio_base.html\" %} で継承する。render_static.py:64 の _TARGET_TEMPLATE=\"index.html\" のレンダリング対象であり、除去すると 7 言語の静的化と CSP 生成が退行する。確定（R5-5）: 上記 2 コマンドの実行により 7 言語（ja, en, fr, es, ru, zh-hans, ar）の staticfiles/<lang>/portfolio/top/index.html、ルート staticfiles/index.html、staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した（標準出力: Prerendered 7 languages (ja, en, fr, es, ru, zh-hans, ar) + root index.html and CSP manifest）。本項目を含む現行コードでビルド時依存が満たされることを確認済みであり、扱いは「保全対象」で確定する。ビルド時依存の最小集合の確定は undetermined_notes の prerender_minimal_set として保留する（R5-7）。"
+    },
+    {
+      "key": "templates_index",
+      "description": "portfolio/templates/index.html。:1 `{% extends \"portfolio_base.html\" %}` により portfolio_base.html を継承する（由来: requirements.md E-5、R5-4、design.md C9）。",
+      "disposition": "保全対象",
+      "source_path": "portfolio/templates/index.html",
+      "source_lines": "1",
+      "detection_command": "git grep -n \"extends\" -- portfolio/templates/index.html ／ 確定に用いた実行コマンド（R5-5、2026-08-07 実行、DJANGO_SETTINGS_MODULE=config.settings.prod）: `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）",
+      "build_time_dependency": "portfolio/management/commands/render_static.py:64 の _TARGET_TEMPLATE=\"index.html\" が指すレンダリング対象。除去すると Prerender_Command が失敗し 7 言語の静的化が退行する。確定（R5-5）: 上記 2 コマンドの実行により 7 言語（ja, en, fr, es, ru, zh-hans, ar）の staticfiles/<lang>/portfolio/top/index.html、ルート staticfiles/index.html、staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した（標準出力: Prerendered 7 languages (ja, en, fr, es, ru, zh-hans, ar) + root index.html and CSP manifest）。本項目を含む現行コードでビルド時依存が満たされることを確認済みであり、扱いは「保全対象」で確定する。ビルド時依存の最小集合の確定は undetermined_notes の prerender_minimal_set として保留する（R5-7）。"
+    }
+  ],
+  "undetermined_notes": [
+    {
+      "key": "outputs_apiurl_external_users",
+      "reason": "Outputs.ApiUrl のリポジトリ外利用者の有無が未確認。リポジトリ内からは既に除去済み（template.yaml に ApiUrl の宣言なし。出典: requirements.md E-1、tests/iac/test_template_policies.py:1057-1063）だが、外部利用者の有無を確認する手段が実行されていない（出典: requirements.md E-9、R9-1）。",
+      "pending_check": "Approver による外部利用者有無の判断（判断者: Approver）。"
+    },
+    {
+      "key": "sam_build_toml_dependency",
+      "reason": "sam build が既存の .aws-sam/build.toml を読み取ってビルド結果に影響を与えるかが未検証。buildspec.yml:257 の `sam build --use-container` は `--cached` を指定していないが、実行検証を行っていない（出典: requirements.md E-3、R9-1、R3-6。requirements.md E-3 は当該コマンドを buildspec.yml:249 と記載するが、実体は :257）。",
+      "pending_check": "build.toml 有り／無しの 2 条件で `sam build --use-container` を各 1 回実行し、.aws-sam/build/template.yaml と生成物一覧を比較する（Docker 必須。出典: design.md C6）。"
+    },
+    {
+      "key": "prerender_minimal_set",
+      "reason": "Prerender_Command がビルド時に依存するコードの最小集合が未確定。確定済みの事実は、系統 A（tasks.md 7.1 / 9.1 / 9.2）および系統 B（同 12.1〜12.6）適用後の作業ツリーにおいて DJANGO_SETTINGS_MODULE=config.settings.prod のもと `python manage.py collectstatic --noinput`（終了コード 0）→ `python manage.py render_static`（終了コード 0）を実行し、7 言語（ja, en, fr, es, ru, zh-hans, ar）+ ルート staticfiles/index.html + staticfiles/prerender_manifest.json 1 件（content_security_policy 919 文字、pages 8 件）の生成成功を確認した点に限られる（2026-08-07 実行。R5-5 の成立。preserved 6 件の disposition は「保全対象」で確定済み）。未確定の理由は 2 点。(1) R5-6 が求める「除去候補ごとの一時除去 → Prerender_Command 実行 → CommandError 発生有無の確認」（出典: requirements.md:250、design.md C9 = design.md:310）を 1 件も実施していないため、集合の各要素の必要性が未確認である（本タスクでは docs/legacy-asset-inventory.json 以外のファイル変更を行わない前提で実施したため、一時除去を伴う確認を実行していない）。(2) 最小性（集合外の候補が Prerender_Command に不要であること）の網羅確認には除去候補の全件確認が必要だが、候補には Approver 判断待ちの template_account_modal（本 Inventory の items、approver_decision_required: true、templates/portfolio_base.html:311-394）が含まれ、除去可否が未決定であるため網羅確認を完了できない（出典: requirements.md E-5、R5-7、R9-1、R6-5）。",
+      "pending_check": "(1) preserved 6 件（views_top / views_contact / urls_portfolio / contactform_fields / templates_base / templates_index）を 1 件ずつ一時除去し、そのつど DJANGO_SETTINGS_MODULE=config.settings.prod のもと `python manage.py collectstatic --noinput` → `python manage.py render_static` を実行して CommandError の発生有無と 7 言語 + ルート + staticfiles/prerender_manifest.json の生成有無を記録する（各要素の必要性の確認。R5-6）。(2) 集合外の除去候補（items のうち disposition が「除去対象」の各件、および template_account_modal）についても同手順で除去後の生成成功を確認する（最小性の確認）。(3) template_account_modal は Approver 判断待ちであるため (2) の完了には Approver 判断が必要（R6-5）。設定前提の不備に由来する CommandError は候補に帰属させない。既知の設定前提: DJANGO_SETTINGS_MODULE=config.settings.prod と prod 設定の必須環境変数 10 件（config/settings/prod.py:19, 24, 42, 46, 50, 54, 58, 64, 68 と :104 の CLOUDFRONT_DOMAIN_NAME）の供給、および `collectstatic` の先行（先行しない場合の実測結果は `CommandError: 言語 'ja' の Prerendered_Page 生成に失敗しました: Missing staticfiles manifest entry for 'assets/favicon.ico'` / 終了コード 1。原因は config/settings/prod.py:115, 118 の ManifestStaticFilesStorage。出典: tasks.md 10 の実測、buildspec.yml:218-219 の実行順序）。"
+    },
+    {
+      "key": "aws_smtp_key_existence",
+      "reason": "AWS 側 Parameter Store / Secrets Manager における SMTP 関連キー 6 件（/${Env}/portfolio/parameter/email_host、email_port、email_use_tls、email_use_ssl、${Env}/portfolio/secret の EMAIL_HOST_USER / EMAIL_HOST_PASSWORD）の現存有無が未確認。AWS 照会コマンドを実行していない（出典: requirements.md E-4、R4-13、R9-1）。",
+      "pending_check": "`aws ssm get-parameter --name /${Env}/portfolio/parameter/<key>` による 4 件の照会と、`aws secretsmanager get-secret-value --secret-id ${Env}/portfolio/secret` によるキー名の存在有無の照会（平文値は記録しない）。削除は Approver 承認を前提とする（出典: design.md C8、C11）。"
+    },
+    {
+      "key": "transitive_dependency_need",
+      "reason": "判定対象 12 件（R7-11）はいずれも decide の判定が 除去対象 で確定し、requirements.txt と docs/external-assets.md の該当行はタスク 13.2 で除去した。内訳は次の 2 段階である。(1) 8 件（awsgi / django-allauth / django-otp / gunicorn / mangum / psycopg2-binary / pyjwt / qrcode）は 13.1 で Windows venv と Docker（python:3.12-slim-bookworm）の 2 環境の確認により直接参照 0 件・要求元 0 件が確定し、decide は 除去対象 と判定した（R7-5）。(2) 残る 4 件（httptools / uvloop / websockets / werkzeug）は 13.1 時点では要求元 awsgi==0.0.5 が存在し decide が 保持 を返したため（`保持` は R1-3 の扱い 3 値に含まれず disposition へ写像できないため）undetermined を保持していたが、13.2 で awsgi==0.0.5 の行を除去した requirements.txt に対して Docker で依存グラフ解決を再実行した結果、4 件いずれも要求元 0 件（実測: `docker run --rm -v <repo>:/repo:ro -v <out>:/out python:3.12-slim-bookworm sh -c 'python -m pip install --dry-run --report /out/r.json -r /repo/requirements.txt'` の終了コード 0、解決結果 31 件の requires_dist 走査で 4 件を要求する要求元 0 件）となり、同一入力で decide を実行した戻り値は 4 件すべて 除去対象（reason: `R7-5: 直接参照の確認（R7-1）実施済みで一致 0 件、かつ推移要求の確認（R7-2）実施済みで要求元 0 件（解決環境: docker-python312）`）であった。marker `sys_platform != 'win32'` を持つ 5 件（awsgi / httptools / uvloop / websockets / werkzeug）は Windows 単独では判定不可であり（実測: `pip show` が `WARNING: Package(s) not found` を返す）、いずれも Docker 側の確認により確定した。本 note は R9-1 が Inventory への記載を義務付けるキーであり（出典: scripts/cleanup/inventory.py の REQUIRED_NOTE_KEYS_E9_CRITERION_1 が当該キーの包含を検証する）、判定対象 12 件が確定しても記載自体は解消せず保持する（出典: requirements.md E-7、R7-2、R7-3、R7-4、R7-5、R9-1、R9-3、design.md「実行環境の差異」および C10）。",
+      "pending_check": "判定対象 12 件（R7-11）について残る未確認事項はない。範囲外として未確認のまま残る事項が 1 件ある: markupsafe（requirements.txt の直接記載、docs/external-assets.md にも記載）は 13.2 の werkzeug 除去前は werkzeug の要求先であったが、除去後の依存グラフ解決（上記コマンド）では要求元 0 件である。markupsafe は R7-11 が定める判定対象 12 件に含まれず本 Inventory の items にも項目が存在しないため、扱いは判定していない。確定手段: markupsafe を判定対象へ含める要件追補について Approver の判断を得たうえで、`git grep -n -I -i -E \"markupsafe\" -- . ':(exclude).kiro'` と上記 Docker の依存グラフ解決により direct / transitive の両確認を行い decide を適用する。"
+    },
+    {
+      "key": "samconfig_allowed_origin",
+      "reason": "samconfig.toml:9 の parameter_overrides に含まれる `AllowedOrigin=\"/prod/portfolio/parameter/csrf_trusted_origins\"` に対応する Parameters 宣言がリポジトリ内に存在しない（pipeline.yaml:4-35 の Parameters は 7 件で AllowedOrigin を含まない）。samconfig.toml:21 の staging プロファイルには当該指定がなく、プロファイル間で不整合。除去の可否は未決定（出典: requirements.md E-9、R9-2）。",
+      "pending_check": "Approver による除去可否の判断（判断者: Approver）。確認コマンド: `git grep -n -E \"AllowedOrigin|AllowedHosts|DomainName\" -- template.yaml pipeline.yaml samconfig.toml`。"
+    },
+    {
+      "key": "samconfig_allowed_hosts",
+      "reason": "samconfig.toml:9 の parameter_overrides に含まれる `AllowedHosts=\"/prod/portfolio/parameter/allowed_hosts\"` に対応する Parameters 宣言がリポジトリ内に存在しない（pipeline.yaml:4-35 の Parameters は 7 件で AllowedHosts を含まない）。samconfig.toml:21 の staging プロファイルには当該指定がなく、プロファイル間で不整合。除去の可否は未決定（出典: requirements.md E-9、R9-2）。",
+      "pending_check": "Approver による除去可否の判断（判断者: Approver）。確認コマンド: `git grep -n -E \"AllowedOrigin|AllowedHosts|DomainName\" -- template.yaml pipeline.yaml samconfig.toml`。"
+    }
+  ]
+}

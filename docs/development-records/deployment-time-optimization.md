@@ -126,7 +126,9 @@ Deps / Build の両方が Source artifact を取得しており、`DOWNLOAD_SOUR
 
 - AWS CodePipeline pipeline type: `cobaemon-serverless-portfolio-pipeline`、`cobaemon-serverless-portfolio-staging-pipeline`。
 - AWS CodePipeline trigger 仕様: V2 pipeline の Git push file path filter。
-- ローカル定義: `pipeline.yaml`、`buildspec.yml`、`buildspec-deps.yml`、`template.yaml`、`dependencies.yaml`、`bucketpolicy.yaml`、`requirements.txt`、`samconfig.toml`、`Dockerfile`、`.dockerignore`、`manage.py`、`asgi_lambda.py`、`config/`、`portfolio/`、`templates/`、`locale/`、`scripts/generate_static_assets.py`、`scripts/check_static_manifest.py`。
+- ローカル定義: `pipeline.yaml`、`buildspec.yml`、`buildspec-deps.yml`、`template.yaml`、`dependencies.yaml`、`bucketpolicy.yaml`、`requirements.txt`、`samconfig.toml`、`Dockerfile`、`.dockerignore`、`manage.py`、`config/`、`portfolio/`、`templates/`、`locale/`、`scripts/generate_static_assets.py`、`scripts/check_static_manifest.py`。
+
+> 注記（後日更新）: 上記「ローカル定義」の列挙から、Mangum ベースの Lambda エントリーポイントモジュール 1 件を除去した。当該モジュールは git 追跡下から除去済みであり、本一覧を実体へ整合させたものである（出典: `docs/current-state.md:19`、`.kiro/specs/legacy-asset-cleanup/requirements.md` Requirement 10 基準 1）。
 
 ### 確認結果
 
