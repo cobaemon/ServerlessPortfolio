@@ -61,6 +61,18 @@ def load_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def protected_branches(policy: dict[str, Any] | None = None) -> frozenset[str]:
+    """Return the protected branch names declared by the policy."""
+
+    source = policy if policy is not None else load_policy()
+    # 欠落時に空集合へ縮退させると「保護対象なし」と誤判定して fail-open になるため、
+    # 既定値を与えず例外で表面化させる。呼び出し側は _decision_for_policy_error で
+    # DENY へ変換する（第三原則3 フォールバック禁止）。
+    if "protected_branches" not in source:
+        raise KeyError("policy is missing protected_branches")
+    return frozenset(str(name) for name in source["protected_branches"])
+
+
 def _hash_text(text: str) -> str:
     """Return a short hash for correlation without logging full content."""
 
@@ -252,6 +264,7 @@ def validate_policy(path: Path = DEFAULT_POLICY_PATH) -> Decision:
         "actors",
         "work_types",
         "invariants",
+        "protected_branches",
         "forbidden_asset_patterns",
         "forbidden_command_patterns",
         "report_gate",
@@ -288,6 +301,7 @@ def validate_policy(path: Path = DEFAULT_POLICY_PATH) -> Decision:
         "INV-DEPLOY-AWS-CONFIRMATION",
         "INV-INCIDENT-LIFECYCLE",
         "INV-HUMAN-NONBLOCKING",
+        "INV-PROTECTED-BRANCH-WRITE",
     }
     missing_invariants = sorted(required_invariants.difference(invariant_ids))
     if missing or missing_work_types or missing_invariants:
@@ -761,6 +775,72 @@ def validate_stg_procedure(path: Path | None = None) -> Decision:
     return Decision("ALLOW", [], "STG fixed procedure validates.", [], [])
 
 
+def _probe_git_non_ascii_decoding() -> Decision:
+    """Probe that Git output containing non-ASCII text decodes to str without raising.
+
+    Returns:
+        非 ASCII を含む git 出力が str として取得できれば ALLOW、
+        例外・異常終了・stdout 欠落・文字化けがあれば DENY。
+
+    Notes:
+        `git rev-parse --sq-quote <文字列>` は与えた引数をシェル引用して出力するだけで
+        リポジトリ内容や HEAD 状態を読まないため、staged 内容や履歴に依存せず決定的に
+        非 ASCII 出力を得られる。ロケール既定コーデック（cp932 等）でデコードする回帰が
+        入ると UnicodeDecodeError により stdout が None になり、この検査が DENY になる。
+    """
+
+    probe = "日本語テキスト"
+    try:
+        result = _run_git(["rev-parse", "--sq-quote", probe])
+    except Exception as exc:  # git 呼び出しが例外で落ちる回帰も検出するため型を限定しない
+        return Decision(
+            "DENY",
+            ["INV-P1-EVIDENCE"],
+            f"Git invocation raised while reading non-ASCII output: {type(exc).__name__}",
+            ["Keep explicit UTF-8 decoding in _run_git."],
+            ["git rev-parse --sq-quote output"],
+        )
+    if result.returncode != 0 or not isinstance(result.stdout, str) or probe not in result.stdout:
+        return Decision(
+            "DENY",
+            ["INV-P1-EVIDENCE"],
+            "Non-ASCII Git output was not decoded into str locale-independently.",
+            ["Keep explicit UTF-8 decoding in _run_git."],
+            ["git rev-parse --sq-quote output"],
+        )
+    return Decision("ALLOW", [], "Non-ASCII Git output decodes to str locale-independently.", [], [])
+
+
+def _probe_missing_git_stdout_denial() -> Decision:
+    """Probe that missing Git stdout is converted into an evidence DENY.
+
+    Returns:
+        stdout 欠落が INV-P1-EVIDENCE の DENY になればその DENY を返し、
+        通過（fail-open）や不変条件不一致なら ALLOW を返して期待値 DENY と不一致にする。
+
+    Notes:
+        stdout=None の CompletedProcess を合成して判定経路のみを検証するため、
+        リポジトリの staged 状態に依存しない決定的な検査になる。
+    """
+
+    missing = subprocess.CompletedProcess(
+        args=["git", "diff", "--cached"],
+        returncode=0,
+        stdout=None,
+        stderr="",
+    )
+    failure = _staged_diff_evidence_failure(missing, missing)
+    if failure is None or failure.invariant_ids != ["INV-P1-EVIDENCE"]:
+        return Decision(
+            "ALLOW",
+            [],
+            "Missing Git stdout was not denied under INV-P1-EVIDENCE.",
+            [],
+            [],
+        )
+    return failure
+
+
 def run_self_test() -> dict[str, Any]:
     """Run invariant-category negative and positive self-tests."""
 
@@ -900,10 +980,108 @@ def run_self_test() -> dict[str, Any]:
     )
     add("human manual push warn-only", evaluate_git_hook("pre-push", actor="human", dry_run=True), "WARN")
     add("codex main push denied", evaluate_git_hook("pre-push", actor="codex", branch_name="main", dry_run=True), "DENY")
+    add("codex dev push denied", evaluate_git_hook("pre-push", actor="codex", branch_name="dev", dry_run=True), "DENY")
+    add("codex work branch push allowed", evaluate_git_hook("pre-push", actor="codex", branch_name="v0.0.0", dry_run=True), "ALLOW")
+    add("codex main commit denied", evaluate_git_hook("pre-commit", actor="codex", branch_name="main", dry_run=True), "DENY")
+    add("codex dev commit denied", evaluate_git_hook("pre-commit", actor="codex", branch_name="dev", dry_run=True), "DENY")
+    add("codex work branch commit allowed", evaluate_git_hook("pre-commit", actor="codex", branch_name="v0.0.0", dry_run=True), "ALLOW")
+    add("codex main worktree write denied", evaluate_worktree_write(branch_name="main", actor="codex"), "DENY")
+    add("codex dev worktree write denied", evaluate_worktree_write(branch_name="dev", actor="codex"), "DENY")
+    add("codex work branch worktree write allowed", evaluate_worktree_write(branch_name="v0.0.0", actor="codex"), "ALLOW")
+    add("ci main worktree write denied", evaluate_worktree_write(branch_name="main", actor="ci"), "DENY")
+    # ブランチ判定不能（detached HEAD 等）は通過させない。fail-open の回帰検出。
+    add("undeterminable branch worktree write denied", evaluate_worktree_write(branch_name="", actor="codex"), "DENY")
+    # 人間非拘束の回帰。以下 3 件が DENY へ変化した場合、人間を拘束する制御変更が
+    # 混入したものとして検出する（INV-HUMAN-NONBLOCKING）。
+    add("human main commit warn-only", evaluate_git_hook("pre-commit", actor="human", branch_name="main", dry_run=True), "WARN")
+    add("human main worktree write warn-only", evaluate_worktree_write(branch_name="main", actor="human"), "WARN")
+    add("human undeterminable branch worktree write warn-only", evaluate_worktree_write(branch_name="", actor="human"), "WARN")
+    add("unknown actor worktree write denied", evaluate_worktree_write(branch_name="v0.0.0", actor="unknown"), "DENY")
     add("validate policy", validate_policy(), "ALLOW")
     add("validate stg procedure", validate_stg_procedure(), "ALLOW")
+    # Git 出力のロケール依存デコード回帰（cp932 等での UnicodeDecodeError による
+    # stdout 欠落）を検出する正例と、欠落時に検査を通過させない負例。
+    add("git non-ascii output decodes locale-independently", _probe_git_non_ascii_decoding(), "ALLOW")
+    add("missing git stdout denied as evidence failure", _probe_missing_git_stdout_denial(), "DENY")
 
     return {"ok": all(case["ok"] for case in cases), "tests": cases}
+
+
+def _resolve_current_branch(
+    branch_name: str | None,
+    dry_run: bool,
+    context: str,
+) -> tuple[str | None, Decision | None]:
+    """Resolve the checked-out branch, or return a DENY decision when it cannot be read."""
+
+    if branch_name is not None:
+        return branch_name, None
+    if dry_run:
+        # dry-run では Git を実行しない。呼び出し側は branch_name を明示すること。
+        return None, None
+    result = _run_git(["branch", "--show-current"])
+    # stdout が None（デコード失敗等）の場合もブランチ判定不能として拒否する。
+    # 空文字列で補完すると判定不能を通過させる fail-open になる。
+    if result.returncode != 0 or result.stdout is None:
+        return None, Decision(
+            "DENY",
+            ["INV-PROTECTED-BRANCH-WRITE"],
+            f"Unable to identify current branch before {context}.",
+            ["Run from a valid Git repository and retry."],
+            ["git branch evidence"],
+        )
+    return result.stdout.strip(), None
+
+
+def evaluate_worktree_write(
+    branch_name: str | None = None,
+    actor: str | None = None,
+    dry_run: bool = False,
+) -> Decision:
+    """Evaluate whether the actor may modify the worktree on the current branch."""
+
+    normalized_actor = normalize_actor(actor or actor_from_environment())
+    if normalized_actor == "human":
+        return Decision(
+            "WARN",
+            ["INV-HUMAN-NONBLOCKING"],
+            "Human actor worktree write is warn-only and is not blocked by AI controls.",
+            [],
+            [],
+        )
+    if normalized_actor == "unknown":
+        return Decision(
+            "DENY",
+            ["INV-HUMAN-NONBLOCKING"],
+            "Worktree write actor is unknown; set GUARD_ACTOR=human, codex, or ci.",
+            ["Set GUARD_ACTOR explicitly before retrying."],
+            ["actor evidence"],
+        )
+    try:
+        protected = protected_branches()
+    except Exception as exc:
+        return _decision_for_policy_error(exc, normalized_actor)
+    branch, failure = _resolve_current_branch(branch_name, dry_run, "worktree write")
+    if failure is not None:
+        return failure
+    # detached HEAD や空文字は判定不能である。通過させると fail-open になるため拒否する。
+    if not branch:
+        return Decision(
+            "DENY",
+            ["INV-PROTECTED-BRANCH-WRITE"],
+            "Current branch is undeterminable; strict actor worktree write is denied.",
+            ["Check out a named work branch and retry."],
+            ["git branch evidence"],
+        )
+    if branch in protected:
+        return Decision(
+            "DENY",
+            ["INV-PROTECTED-BRANCH-WRITE"],
+            f"AI/CI worktree write on protected branch is denied: {branch}",
+            ["Switch to a work branch and use the project branch-finalization procedure."],
+            ["branch name"],
+        )
+    return Decision("ALLOW", [], f"Worktree write is allowed on branch: {branch}", [], [])
 
 
 def evaluate_git_hook(
@@ -935,7 +1113,7 @@ def evaluate_git_hook(
 
     hook = hook_name.strip()
     if hook == "pre-commit":
-        return _evaluate_pre_commit(dry_run=dry_run)
+        return _evaluate_pre_commit(branch_name=branch_name, dry_run=dry_run)
     if hook == "commit-msg":
         return _evaluate_commit_msg(commit_msg_path)
     if hook == "pre-push":
@@ -950,26 +1128,56 @@ def evaluate_git_hook(
 
 
 def _run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
-    """Run a local Git read-only command for hook evaluation."""
+    """Run a local Git read-only command for hook evaluation.
+
+    Args:
+        args: git へ渡す読み取り専用サブコマンドと引数。
+
+    Returns:
+        stdout / stderr を UTF-8 でデコードした CompletedProcess。
+
+    Notes:
+        encoding を省略すると text=True はロケール既定コーデック（Windows では
+        cp932 等）でデコードするため、UTF-8 の非 ASCII を含む git 出力で
+        UnicodeDecodeError が発生し、stdout が None になって後続の検査が例外で
+        落ちる。git の出力は UTF-8 であるため明示的に指定してロケール依存を
+        除去する。errors="replace" は不正バイト混入時も検査を継続させるため
+        であり、stdout 欠落を黙って通過させるものではない（欠落時は
+        _staged_diff_evidence_failure などが DENY にする）。
+    """
 
     return subprocess.run(
         ["git", *args],
         cwd=REPO_ROOT,
         check=False,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
 
 
-def _evaluate_pre_commit(dry_run: bool = False) -> Decision:
-    """Inspect staged changes for secret-like content and control schema validity."""
+def _staged_diff_evidence_failure(
+    names: subprocess.CompletedProcess[str],
+    diff: subprocess.CompletedProcess[str],
+) -> Decision | None:
+    """Return a DENY decision when staged diff evidence is unreadable, otherwise None.
 
-    if dry_run:
-        return Decision("ALLOW", [], "Dry-run pre-commit check passes.", [], [])
-    names = _run_git(["diff", "--cached", "--name-only"])
-    diff = _run_git(["diff", "--cached", "--unified=0"])
-    if names.returncode != 0 or diff.returncode != 0:
+    Args:
+        names: `git diff --cached --name-only` の実行結果。
+        diff: `git diff --cached --unified=0` の実行結果。
+
+    Returns:
+        証跡が読めない場合は INV-P1-EVIDENCE の DENY、読める場合は None。
+
+    Notes:
+        stdout が None のとき既定値（空文字列）で補完すると、差分を検査せずに
+        通過する fail-open になる。第三原則3（フォールバック禁止）に従い、
+        戻り値異常と同じ DENY へ合流させる。
+    """
+
+    if names.returncode != 0 or diff.returncode != 0 or names.stdout is None or diff.stdout is None:
         return Decision(
             "DENY",
             ["INV-P1-EVIDENCE"],
@@ -977,6 +1185,38 @@ def _evaluate_pre_commit(dry_run: bool = False) -> Decision:
             ["Repair Git state or run the hook from repository root."],
             ["git diff --cached output"],
         )
+    return None
+
+
+def _evaluate_pre_commit(branch_name: str | None = None, dry_run: bool = False) -> Decision:
+    """Inspect the checked-out branch, staged changes, and control schema validity."""
+
+    # 本関数は evaluate_git_hook が human / unknown actor を除外した後にのみ到達する
+    # ため、ここでの拒否は strict actor（codex / ci）に限定される。したがって
+    # INV-HUMAN-NONBLOCKING は保たれる。
+    try:
+        protected = protected_branches()
+    except Exception as exc:
+        return _decision_for_policy_error(exc, "codex")
+    branch, failure = _resolve_current_branch(branch_name, dry_run, "commit")
+    if failure is not None:
+        return failure
+    if branch in protected:
+        return Decision(
+            "DENY",
+            ["INV-PROTECTED-BRANCH-WRITE"],
+            f"AI/CI commit on protected branch is denied: {branch}",
+            ["Switch to a work branch and use the project branch-finalization procedure."],
+            ["branch name"],
+        )
+    if dry_run:
+        return Decision("ALLOW", [], "Dry-run pre-commit check passes.", [], [])
+    names = _run_git(["diff", "--cached", "--name-only"])
+    diff = _run_git(["diff", "--cached", "--unified=0"])
+    # 戻り値異常と stdout 欠落を同一の証跡不足として扱う（_staged_diff_evidence_failure）。
+    evidence_failure = _staged_diff_evidence_failure(names, diff)
+    if evidence_failure is not None:
+        return evidence_failure
     staged = [line.strip() for line in names.stdout.splitlines() if line.strip()]
     forbidden = [path for path in staged if path.startswith(".codex/audit/") or path.startswith(".codex/state/") or path == ".git/config"]
     if forbidden:
@@ -1076,7 +1316,9 @@ def _evaluate_pre_push(branch_name: str | None = None, dry_run: bool = False) ->
     branch = branch_name
     if branch is None and not dry_run:
         result = _run_git(["rev-parse", "--abbrev-ref", "HEAD"])
-        if result.returncode != 0:
+        # stdout が None（デコード失敗等）の場合もブランチ判定不能として拒否する
+        # （_resolve_current_branch と同一方針）。
+        if result.returncode != 0 or result.stdout is None:
             return Decision(
                 "DENY",
                 ["INV-P1-EVIDENCE"],
@@ -1085,11 +1327,17 @@ def _evaluate_pre_push(branch_name: str | None = None, dry_run: bool = False) ->
                 ["git branch evidence"],
             )
         branch = result.stdout.strip()
-    if branch in {"main", "dev"}:
+    # 保護対象ブランチの列挙はコード側へ持たず policy を単一の出所とする
+    # （第三原則2 整合性。_evaluate_pre_commit / evaluate_worktree_write と共有）。
+    try:
+        protected = protected_branches()
+    except Exception as exc:
+        return _decision_for_policy_error(exc, "codex")
+    if branch in protected:
         return Decision(
             "DENY",
             ["INV-HUMAN-NONBLOCKING"],
-            "AI/CI direct push to main or dev is denied.",
+            f"AI/CI direct push to a protected branch is denied: {branch}",
             ["Use the project branch-finalization procedure."],
             ["branch name"],
         )

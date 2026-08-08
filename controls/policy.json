@@ -87,6 +87,10 @@
     "Stop"
   ],
   "hook_timeout_seconds": 5,
+  "protected_branches": [
+    "main",
+    "dev"
+  ],
   "invariants": [
     {
       "id": "INV-P1-EVIDENCE",
@@ -146,7 +150,12 @@
     {
       "id": "INV-HUMAN-NONBLOCKING",
       "category": "actor_model",
-      "title": "AI-only Git controls must not block human manual push."
+      "title": "AI-only Git and worktree controls must not block human manual operations."
+    },
+    {
+      "id": "INV-PROTECTED-BRANCH-WRITE",
+      "category": "actor_model",
+      "title": "AI/CI must not modify the worktree or commit while a protected branch is checked out, and must not proceed when the branch is undeterminable."
     }
   ],
   "forbidden_asset_patterns": [

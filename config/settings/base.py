@@ -14,9 +14,6 @@ import os
 from pathlib import Path
 from csp import constants as csp_constants
 
-from django.contrib import messages
-from django.urls import reverse_lazy
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -46,16 +43,6 @@ INSTALLED_APPS = [
     'csp',
 
     'django.contrib.sites',
-    # 'allauth',
-    # 'allauth.account',
-    # 'allauth.socialaccount',
-    # 'allauth.socialaccount.providers.google',
-    # 'allauth.socialaccount.providers.github',
-
-    # 'django_otp',
-    # 'django_otp.plugins.otp_totp',
-
-    # 'accounts',
     'portfolio',
 ]
 
@@ -70,8 +57,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
-    # 'allauth.account.middleware.AccountMiddleware',
-    # 'django_otp.middleware.OTPMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -81,7 +66,6 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
             os.path.join(BASE_DIR, 'templates'),
-            # os.path.join(BASE_DIR, 'accounts/templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -220,56 +204,6 @@ CONTENT_SECURITY_POLICY = {
         'report-uri': ['/csp-report-endpoint'],
     }
 }
-
-# Django Allauth設定
-# SITE_ID = 1
-
-# カスタムユーザ
-# AUTH_USER_MODEL = 'accounts.CustomUser'
-# AUTHENTICATION_BACKENDS = [
-#     'django.contrib.auth.backends.ModelBackend',
-#     'allauth.account.auth_backends.AuthenticationBackend',
-#     'accounts.auth_backends.CustomBackend',
-# ]
-
-# # メール認証を必須にする設定
-# ACCOUNT_LOGIN_METHODS = ['email']        
-# ACCOUNT_SIGNUP_FIELDS = ['email*', 'password'] 
-
-# # メールアドレスに関する設定
-# ACCOUNT_UNIQUE_EMAIL = True               
-# ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  
-# ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
-
-# # リダイレクト設定
-# # ユーザーがログインした後にリダイレクトされるURL
-# LOGIN_REDIRECT_URL = reverse_lazy('portfolio:top')
-# # ユーザーがログアウトした後にリダイレクトされるURL
-# LOGOUT_REDIRECT_URL = LOGIN_REDIRECT_URL
-# # メール確認が成功した後、ログインしていないユーザーがリダイレクトされるURL
-# ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = reverse_lazy('account_login')
-# # メール確認が成功した後、ログインしているユーザーがリダイレクトされるURL
-# ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = reverse_lazy('account_email')
-# # パスワードリセットが成功した後にリダイレクトされるURL
-# ACCOUNT_PASSWORD_RESET_REDIRECT_URL = reverse_lazy('account_password_reset_done')
-# # パスワード変更が成功した後にリダイレクトされるURL
-# ACCOUNT_PASSWORD_CHANGE_REDIRECT_URL = LOGIN_REDIRECT_URL
-# # 新規登録が成功した後にリダイレクトされるURL
-# ACCOUNT_SIGNUP_REDIRECT_URL = reverse_lazy('account_verification_sent')
-
-# # Custom
-# SITE_NAME = 'Cobaemon Portfolio'
-# APPEND_SLASH = True
-
-# MESSAGE_TAGS = {
-#     messages.DEBUG: 'debug',
-#     messages.INFO: 'info',
-#     messages.SUCCESS: 'success',
-#     messages.WARNING: 'warning',
-#     messages.ERROR: 'danger',
-# }
-
-# SOCIALACCOUNT_ADAPTER = 'accounts.adapters.MySocialAccountAdapter'
 
 # Logging configuration
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")

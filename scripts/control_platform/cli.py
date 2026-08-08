@@ -30,6 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--validate-rag-sources", action="store_true")
     parser.add_argument("--validate-skills", action="store_true")
     parser.add_argument("--validate-stg-procedure", action="store_true")
+    parser.add_argument("--eval-worktree-write", action="store_true")
     parser.add_argument("--git-hook", choices=["pre-commit", "commit-msg", "pre-push"])
     parser.add_argument("git_hook_args", nargs="*")
     parser.add_argument("--case", help="Compatibility named case evaluator.")
@@ -64,6 +65,10 @@ def main(argv: list[str] | None = None) -> int:
         return _print_decision(engine.validate_skills_index())
     if args.validate_stg_procedure:
         return _print_decision(engine.validate_stg_procedure())
+    if args.eval_worktree_write:
+        # 呼び出し側（Kiro preToolUse フック等）が --actor codex を明示することで、
+        # GUARD_ACTOR 未設定の環境でも AI actor として strict 判定される。
+        return _print_decision(engine.evaluate_worktree_write(actor=git_actor))
     if args.git_hook:
         msg_path = Path(args.git_hook_args[0]) if args.git_hook == "commit-msg" and args.git_hook_args else None
         decision = engine.evaluate_git_hook(args.git_hook, actor=git_actor, commit_msg_path=msg_path)

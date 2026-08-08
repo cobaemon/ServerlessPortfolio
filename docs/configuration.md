@@ -33,9 +33,11 @@
 - `SECRET_KEY`: `DJANGO_SECRET_KEY` 環境変数、未設定時は `dev-default-secret-key`
 - `ALLOWED_HOSTS`: `ALLOWED_HOSTS` 環境変数、未設定時は `localhost,127.0.0.1`
 - `127.0.0.1` と `127.0.0.1:3000` を `ALLOWED_HOSTS` に追加
-- `EMAIL_BACKEND`: `EMAIL_HOST` があれば SMTP、なければ console backend
+- `EMAIL_BACKEND`: `django.core.mail.backends.console.EmailBackend`（単一値。SMTP 分岐なし）
+- `DEFAULT_FROM_EMAIL`: 未設定時は `webmaster@localhost`
+- `DEFAULT_TO_EMAIL`: 未設定時は空文字
 
-`EMAIL_USE_TLS` と `EMAIL_USE_SSL` が同時に `True` の場合は `ImproperlyConfigured` を送出します。
+SMTP 接続設定値と SMTP 認証情報は `dev.py` から除去済みです（出典: [`config/settings/dev.py`](../config/settings/dev.py) のメール設定節）。
 
 ## 本番設定
 
@@ -45,8 +47,6 @@
 
 - `DJANGO_SECRET_KEY`
 - `ALLOWED_HOSTS`
-- `EMAIL_HOST_USER`
-- `EMAIL_HOST_PASSWORD`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`
@@ -54,8 +54,6 @@
 - `CSRF_TRUSTED_ORIGINS`
 - `DEFAULT_FROM_EMAIL`
 - `DEFAULT_TO_EMAIL`
-- `EMAIL_HOST`
-- `EMAIL_PORT`
 
 本番設定では次のセキュリティ関連値が設定されています。
 
@@ -63,7 +61,7 @@
 - `SESSION_COOKIE_SECURE = True`
 - `CSRF_COOKIE_SECURE = True`
 
-`EMAIL_USE_TLS` と `EMAIL_USE_SSL` が同時に `True` の場合は `ImproperlyConfigured` を送出します。
+メール送信バックエンドは `EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"` を単一値として明示設定します。本番・staging の Django プロセスは SMTP 送信経路を持たず、SMTP 接続設定値と SMTP 認証情報を保持しません。問い合わせメール送信は Amazon SES 直連携（`contact_function/`）が担います（出典: [`config/settings/prod.py`](../config/settings/prod.py) のメール送信バックエンド節）。
 
 ## Staging 設定
 
@@ -78,8 +76,6 @@
 `template.yaml` は `${Env}/portfolio/secret` から次の値を参照します。
 
 - `DJANGO_SECRET_KEY`
-- `EMAIL_HOST_USER`
-- `EMAIL_HOST_PASSWORD`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`
@@ -92,10 +88,6 @@
 - `/${Env}/portfolio/parameter/allowed_hosts`
 - `/${Env}/portfolio/parameter/default_from_email`
 - `/${Env}/portfolio/parameter/default_to_mail`
-- `/${Env}/portfolio/parameter/email_host`
-- `/${Env}/portfolio/parameter/email_port`
-- `/${Env}/portfolio/parameter/email_use_tls`
-- `/${Env}/portfolio/parameter/email_use_ssl`
 - `/${Env}/portfolio/parameter/log_level`
 
 `AllowedOrigin` と `AllowedHosts` パラメータは `AWS::SSM::Parameter::Value<String>` 型です。
